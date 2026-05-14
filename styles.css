@@ -826,6 +826,9 @@
 	transition: border-color 0.2s ease, background 0.2s ease;
 	backdrop-filter: var(--db-backdrop-blur);
 	-webkit-backdrop-filter: var(--db-backdrop-blur);
+	max-height: 500px;
+	display: flex;
+	flex-direction: column;
 }
 
 .dashboard-section-header {
@@ -833,6 +836,7 @@
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 12px;
+	flex-shrink: 0;
 }
 
 .dashboard-section-title-wrap {
@@ -885,12 +889,16 @@
 	display: flex;
 	gap: 12px;
 	flex-wrap: wrap;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
 }
 
 .dashboard-section-cards > .dashboard-card {
 	flex: 1 1 calc(33.333% - 8px);
 	min-width: 200px;
 	max-width: calc(33.333% - 8px);
+	max-height: 100%;
 }
 
 /* Memo & Todo: horizontal scroll, no wrap */
@@ -931,13 +939,6 @@
 	align-items: stretch;
 }
 
-/* Todo & Projects: max height with scroll */
-.dashboard-section-row[data-section-type="todo"] > .dashboard-section-cards,
-.dashboard-section-row[data-section-type="projects"] > .dashboard-section-cards {
-	max-height: 400px;
-	overflow-y: auto;
-}
-
 .dashboard-section-row[data-section-type="memo"] .dashboard-card {
 	overflow: hidden;
 	display: flex;
@@ -962,17 +963,7 @@
 	flex-shrink: 0;
 }
 
-/* Todo cards: scrollable body */
-.dashboard-section-row[data-section-type="todo"] .dashboard-card {
-	overflow: hidden;
-	display: flex;
-	flex-direction: column;
-}
-
-.dashboard-section-row[data-section-type="todo"] .dashboard-card-header {
-	flex-shrink: 0;
-}
-
+/* Todo cards: body uses flex column so task-list scrolls inside */
 .dashboard-section-row[data-section-type="todo"] .dashboard-card-body {
 	flex: 1;
 	min-height: 0;
@@ -1023,6 +1014,9 @@
 	position: relative;
 	backdrop-filter: var(--db-backdrop-blur);
 	-webkit-backdrop-filter: var(--db-backdrop-blur);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
 }
 
 .dashboard-card:hover {
@@ -1050,6 +1044,7 @@
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 10px;
+	flex-shrink: 0;
 }
 
 .dashboard-card-title {
@@ -1109,6 +1104,9 @@
 	font-size: 0.95em;
 	color: var(--db-text-muted);
 	line-height: 1.6;
+	flex: 1;
+	min-height: 0;
+	overflow-y: auto;
 }
 
 /* ===== Tasks ===== */
@@ -1440,6 +1438,7 @@
 	font-size: 0.82em;
 	opacity: 0.6;
 	margin-top: 8px;
+	flex-shrink: 0;
 }
 
 /* ===== Memo Color Accent ===== */
@@ -2356,9 +2355,9 @@
 		gap: 8px;
 	}
 
-	/* Section rows: fixed height at 30vh */
+	/* Section rows: fixed height at 50vh (Memo keeps 30vh via own rule) */
 	.dashboard-section-row {
-		height: 30vh;
+		height: 50vh;
 		flex-shrink: 0;
 		overflow: hidden;
 		display: flex;
