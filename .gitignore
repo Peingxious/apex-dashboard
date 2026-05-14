@@ -1,0 +1,21 @@
+# Dependencies
+node_modules
+package-lock.json
+
+# Obsidian plugin data
+data.json
+
+# macOS
+.DS_Store
+
+# Build artifacts
+*.map
+
+# IDE
+.vscode
+.idea
+*.iml
+
+# AI / Dev helpers
+AGENTS.md
+.github/
