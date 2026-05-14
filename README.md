@@ -1,6 +1,6 @@
 # Apex Dashboard
 
-> Stop switching between notes. One page. Everything you need. Memo your thoughts, crush your todos, track your projects — and make it look incredible doing it.
+> Stop switching between notes. One page. Everything you need. Memo your thoughts, crush your todos, track your projects — and make it look incredible doing it. [【中文版】](README_ZH.md)
 
 ## Screenshot
 
