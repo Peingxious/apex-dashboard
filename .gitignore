@@ -8,6 +8,15 @@ data.json
 # macOS
 .DS_Store
 
+# Source code
+src/
+esbuild.config.mjs
+tsconfig.json
+eslint.config.mts
+version-bump.mjs
+.npmrc
+.editorconfig
+
 # Build artifacts
 *.map
 
