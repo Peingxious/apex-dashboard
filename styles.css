@@ -1391,6 +1391,32 @@
 	opacity: 0.5;
 }
 
+.dashboard-memo-view {
+	width: 100%;
+	min-height: 90px;
+	background: var(--db-bg-input);
+	border: 1px solid transparent;
+	border-radius: var(--db-radius-sm);
+	color: var(--db-text);
+	font-size: 0.95em;
+	font-family: var(--db-font);
+	padding: 10px;
+	line-height: 1.6;
+	cursor: pointer;
+	white-space: pre-wrap;
+	word-break: break-word;
+	transition: border-color 0.15s ease;
+}
+
+.dashboard-memo-view:hover {
+	border-color: var(--db-border-input);
+}
+
+.dashboard-memo-view--empty {
+	color: var(--db-text-faint);
+	opacity: 0.5;
+}
+
 .theme-light .dashboard-memo-textarea {
 	color: var(--db-text);
 }
