@@ -2488,7 +2488,7 @@
 		display: flex;
 		gap: 8px;
 		position: absolute;
-		bottom: 8px;
+		bottom: 16px;
 		left: 10px;
 		z-index: 1;
 	}
@@ -2508,11 +2508,21 @@
 		color: rgba(255, 255, 255, 0.7);
 	}
 
+	/* Hide banner edit btn on mobile by default, show only after tapping right half */
+	.dashboard-banner .dashboard-banner-edit-btn {
+		opacity: 0 !important;
+	}
+
+	.dashboard-banner:hover .dashboard-banner-edit-btn {
+		opacity: 0 !important;
+	}
+
 	/* Mobile drawer overlay */
 	.dashboard-mobile-drawer {
 		position: fixed;
 		left: 0;
 		right: 0;
+		top: 114px;
 		bottom: 0;
 		z-index: 100;
 		display: flex;
