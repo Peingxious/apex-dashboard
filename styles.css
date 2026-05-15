@@ -885,6 +885,48 @@
 	color: var(--db-text) !important;
 }
 
+.dashboard-add-section-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.dashboard-add-section-row .dashboard-task-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.dashboard-section-type-picker {
+	display: flex;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.dashboard-section-type-btn {
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 0.7em;
+	cursor: pointer;
+	background: transparent !important;
+	color: var(--db-text-faint);
+	border: 1px solid var(--db-border) !important;
+	box-shadow: none !important;
+	transition: all 0.15s ease;
+	outline: none;
+	white-space: nowrap;
+}
+
+.dashboard-section-type-btn:hover {
+	color: var(--db-text);
+	border-color: var(--db-accent) !important;
+}
+
+.dashboard-section-type-btn.active {
+	color: var(--db-accent) !important;
+	border-color: var(--db-accent) !important;
+	background: rgba(139, 92, 246, 0.08) !important;
+}
+
 .dashboard-section-cards {
 	display: flex;
 	gap: 12px;
