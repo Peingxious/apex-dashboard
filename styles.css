@@ -1342,6 +1342,8 @@
 
 .dashboard-project-add-doc {
 	margin-top: 6px;
+	border-top: 1px solid var(--db-border);
+	padding-top: 6px;
 	position: relative;
 }
 
@@ -1358,7 +1360,11 @@
 	z-index: 1;
 }
 
-.dashboard-project-doc-result {
+.dashboard-project-doc-results:empty {
+		display: none;
+	}
+
+	.dashboard-project-doc-result {
 	padding: 5px 8px;
 	font-size: 0.88em;
 	cursor: pointer;
