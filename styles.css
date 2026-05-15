@@ -2514,7 +2514,7 @@
 		display: flex;
 		gap: 8px;
 		position: absolute;
-		bottom: 16px;
+		bottom: 4px;
 		left: 10px;
 		z-index: 1;
 	}
@@ -2534,13 +2534,22 @@
 		color: rgba(255, 255, 255, 0.7);
 	}
 
-	/* Hide banner edit btn on mobile by default, show only after tapping right half */
+	/* Hide banner edit btn on mobile by default */
 	.dashboard-banner .dashboard-banner-edit-btn {
 		opacity: 0 !important;
+		pointer-events: none;
 	}
 
-	.dashboard-banner:hover .dashboard-banner-edit-btn {
+	/* Show edit btn only when hovering/tapping right half of banner on mobile */
+	.dashboard-banner-overlay:hover .dashboard-banner-edit-btn {
 		opacity: 0 !important;
+		pointer-events: none;
+	}
+
+	.dashboard-banner-edit-btn--mobile-visible {
+		opacity: 1 !important;
+		pointer-events: auto !important;
+		color: rgba(255, 255, 255, 0.8) !important;
 	}
 
 	/* Mobile drawer overlay */
@@ -2548,7 +2557,6 @@
 		position: fixed;
 		left: 0;
 		right: 0;
-		top: 114px;
 		bottom: 0;
 		z-index: 100;
 		display: flex;
