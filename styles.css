@@ -616,6 +616,15 @@
 	color: #ffffff !important;
 }
 
+/* ===== Mobile Drawer (hidden on desktop) ===== */
+.dashboard-mobile-actions {
+	display: none;
+}
+
+.dashboard-mobile-drawer {
+	display: none;
+}
+
 /* ===== Main Layout ===== */
 .dashboard-main {
 	display: flex;
@@ -2412,6 +2421,72 @@
 	/* Sidebar: hidden on phone */
 	.dashboard-sidebar {
 		display: none;
+	}
+
+	/* Mobile action buttons on banner */
+	.dashboard-mobile-actions {
+		display: flex;
+		gap: 8px;
+		position: absolute;
+		bottom: 8px;
+		left: 10px;
+		z-index: 1;
+	}
+
+	.dashboard-mobile-action-btn {
+		background: none !important;
+		border: none !important;
+		box-shadow: none !important;
+		color: rgba(255, 255, 255, 0.35);
+		padding: 2px;
+		cursor: pointer;
+		transition: opacity 0.2s ease;
+		outline: none;
+	}
+
+	.dashboard-mobile-action-btn:active {
+		color: rgba(255, 255, 255, 0.7);
+	}
+
+	/* Mobile drawer overlay */
+	.dashboard-mobile-drawer {
+		position: fixed;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 100;
+		display: flex;
+		pointer-events: auto;
+	}
+
+	.dashboard-mobile-drawer-content {
+		width: 80%;
+		height: 100%;
+		background: var(--db-bg-sidebar);
+		border-right: 1px solid var(--db-border);
+		border-top: 1px solid var(--db-border);
+		border-top-right-radius: 12px;
+		overflow-y: auto;
+		padding: 16px;
+		transform: translateX(-100%);
+		transition: transform 0.25s ease-out;
+	}
+
+	.dashboard-mobile-drawer-content--open {
+		transform: translateX(0);
+	}
+
+	.dashboard-mobile-drawer-title {
+		font-size: 0.85em;
+		font-weight: 700;
+		margin: 0 0 12px 0;
+		color: var(--db-text);
+	}
+
+	.dashboard-mobile-drawer-backdrop {
+		width: 20%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.2);
 	}
 
 	/* Kanban: full width, allow scroll */
