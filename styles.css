@@ -616,6 +616,66 @@
 	color: #ffffff !important;
 }
 
+/* ===== File Suggest Dropdown ===== */
+.dashboard-file-suggest {
+	background: var(--db-bg-sidebar);
+	border: 1px solid var(--db-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	max-height: 200px;
+	overflow-y: auto;
+	z-index: 200;
+}
+
+.dashboard-file-suggest-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 10px;
+	cursor: pointer;
+	font-size: 0.8em;
+	gap: 8px;
+}
+
+.dashboard-file-suggest-item:hover,
+.dashboard-file-suggest-item.active {
+	background: var(--db-accent, #6366f1);
+}
+
+.dashboard-file-suggest-name {
+	color: var(--db-text);
+	flex-shrink: 0;
+}
+
+.dashboard-file-suggest-item.active .dashboard-file-suggest-name {
+	color: white;
+}
+
+.dashboard-file-suggest-path {
+	color: var(--db-text-faint);
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.dashboard-file-suggest-item.active .dashboard-file-suggest-path {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+/* ===== Wikilink (clickable [[link]]) ===== */
+.dashboard-wikilink {
+	color: var(--db-accent, #6366f1);
+	cursor: pointer;
+	text-decoration: underline;
+	text-decoration-style: dotted;
+	text-underline-offset: 2px;
+}
+
+.dashboard-wikilink:hover {
+	color: var(--db-accent-light, #818cf8);
+}
+
 /* ===== Mobile Drawer (hidden on desktop) ===== */
 .dashboard-mobile-actions {
 	display: none;
