@@ -2,8 +2,7 @@
    Dashboard Plugin — Multi-Theme Design System
    ================================================================= */
 
-/* ===== Google Font ===== */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&family=LXGW+WenKai:wght@300;400;700&family=Merriweather:wght@300;400;700&family=Outfit:wght@200;300;400;500&family=Quicksand:wght@400;500;600;700&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap');
+/* ===== Google Font (loaded async via JS — see main.ts) ===== */
 
 /* ===== Aurora Gradient Animation ===== */
 @keyframes db-aurora-shift {
