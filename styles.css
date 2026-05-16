@@ -618,11 +618,13 @@
 
 /* ===== File Suggest Dropdown ===== */
 .dashboard-file-suggest {
-	background: var(--db-bg-sidebar);
+	background: color-mix(in srgb, var(--db-bg-sidebar) 92%, transparent);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
 	border: 1px solid var(--db-border);
 	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	max-height: 200px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+	max-height: 240px;
 	overflow-y: auto;
 	z-index: 200;
 }
@@ -673,6 +675,18 @@
 }
 
 .dashboard-wikilink:hover {
+	color: var(--db-accent-light, #818cf8);
+}
+
+/* ===== External Link (clickable [text](url)) ===== */
+.dashboard-external-link {
+	color: var(--db-accent, #6366f1);
+	cursor: pointer;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+}
+
+.dashboard-external-link:hover {
 	color: var(--db-accent-light, #818cf8);
 }
 

@@ -75,6 +75,22 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 2. A `dashboard.md` file is automatically created in your vault root
 3. All changes are saved directly to the file — it's your data, in plain text
 
+> **Note:** Deleting, renaming, or reordering sections must be done by editing the `dashboard.md` file directly. Any changes made to the note will take effect in the dashboard view immediately.
+
+## What's New
+
+### v1.0.3
+- **Wikilink support** — Memo and Todo cards now render `[[wikilinks]]` as clickable links
+- **Section type selector** — Choose section type when creating new sections
+- **Mobile sidebar drawer** — Slide-in animation for mobile navigation
+- **Section creation UX** — Confirm button for mobile section creation, 'Add new section' command shortcut
+- **Bug fixes** — Card drag restricted to header/cover area, mobile banner edit button, drawer alignment
+
+### v1.0.2
+- **Section management** — Manual section deletion, section type selector
+- **Mobile improvements** — Better card scrolling and mobile layout
+- **Bug fixes** — Respect body section order, form reset prevention
+
 ## Compatibility
 
 - Obsidian v0.15.0+
