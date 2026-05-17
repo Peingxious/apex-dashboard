@@ -982,6 +982,10 @@
 	flex-direction: column;
 }
 
+.dashboard-section-row[data-section-type="notes"] {
+	max-height: none;
+}
+
 .dashboard-section-header {
 	display: flex;
 	justify-content: space-between;
@@ -1111,10 +1115,15 @@
 }
 
 .dashboard-section-cards > .dashboard-card {
-	flex: 1 1 calc(33.333% - 8px);
+	flex: 1 1 200px;
 	min-width: 200px;
-	max-width: calc(33.333% - 8px);
 	max-height: 100%;
+}
+
+/* Notes (no cover): max 5 per row */
+.dashboard-section-row[data-section-type="notes"] .dashboard-section-cards > .dashboard-card {
+	flex: 1 1 calc(20% - 8px);
+	max-width: calc(20% - 8px);
 }
 
 /* Memo & Todo: horizontal scroll, no wrap */
