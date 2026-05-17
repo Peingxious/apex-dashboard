@@ -8,28 +8,31 @@
 
 ## Features
 
-### Memo
-Capture thoughts instantly with a built-in memo pad. Each memo card has a writable textarea — jot down ideas, meeting notes, or daily reflections without leaving your dashboard.
+### 🗒️ Memo
+Capture thoughts instantly with a built-in memo pad. Each memo card has a writable textarea — jot down ideas, meeting notes, or daily reflections without leaving your dashboard. Supports `[[wikilinks]]` that render as clickable links.
 
-### Todo
-Manage tasks with interactive checklists. Add, reorder, drag-and-drop, and check off tasks. A progress bar shows completion percentage at a glance.
+### ✅ Todo
+Manage tasks with interactive checklists. Add, reorder, drag-and-drop, and check off tasks. A progress bar shows completion percentage at a glance. Todo items also support `[[wikilinks]]` for cross-referencing notes.
 
-### Projects
-Organize your vault documents into project cards. Each card links to related notes, displays a cover image, and supports inline document search to add new files quickly.
+### 📁 Projects
+Organize your vault documents into project cards. Each card links to related notes, displays a cover image, and supports inline document search to add new files quickly. Manage multiple file types including Markdown notes, PDFs, images, audio, and video.
 
-### Quick Links
-Pin your most-used documents to the sidebar for one-click access. Add, remove, and reorder links freely.
+### 📝 Notes
+A compact, list-style section for organizing reference documents and quick-access files. Displays up to 5 cards per row without cover images for maximum density.
 
-### Banner
+### ⚡ Quick Actions
+Pin your most-used shortcuts to the sidebar. Supports two action types: **File** links to open any document, and **Command** shortcuts to trigger any Obsidian command. Includes built-in presets for New Journal and New Note.
+
+### 🎨 Banner
 A customizable banner with an inspirational quote and optional background image. Double-click to edit.
 
-### Drag & Drop
+### 🔄 Drag & Drop
 Drag cards between sections to reorganize your workspace. Drag task items within Todo cards to reorder.
 
-### Custom Sections
-Need more than the defaults? Add custom sections to organize your workflow your way.
+### 🧩 Custom Sections
+Create sections with 4 built-in types — **Memo**, **Todo**, **Projects**, and **Notes** — each with its own layout and behavior. Mix and match to fit your workflow.
 
-### Recent Documents
+### 🕐 Recent Documents
 The sidebar shows recently edited files with relative timestamps, so you can jump back into your latest work.
 
 ## Themes
