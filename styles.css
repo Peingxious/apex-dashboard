@@ -2021,7 +2021,7 @@
 .dashboard-kanban:hover::-webkit-scrollbar-thumb,
 .dashboard-sidebar:hover::-webkit-scrollbar-thumb,
 .dashboard-section-cards:hover::-webkit-scrollbar-thumb {
-	background: var(--db-border);
+	background: color-mix(in srgb, var(--db-text-muted) 25%, transparent);
 }
 
 /* ===== Theme-specific enhancements ===== */
