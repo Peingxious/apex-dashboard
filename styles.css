@@ -2,8 +2,6 @@
    Dashboard Plugin — Multi-Theme Design System
    ================================================================= */
 
-/* ===== Google Font (loaded async via JS — see main.ts) ===== */
-
 /* ===== Aurora Gradient Animation ===== */
 @keyframes db-aurora-shift {
 	0% { background-position: 0% 50%; }
