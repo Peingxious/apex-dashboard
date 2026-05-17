@@ -1123,6 +1123,7 @@
 /* Notes (no cover): max 5 per row */
 .dashboard-section-row[data-section-type="notes"] .dashboard-section-cards > .dashboard-card {
 	flex: 1 1 calc(20% - 8px);
+	min-width: 0;
 	max-width: calc(20% - 8px);
 }
 
