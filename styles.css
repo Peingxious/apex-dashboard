@@ -1114,19 +1114,17 @@
 	flex-shrink: 0;
 }
 
-/* Memo card resize handle */
+/* Memo card resize handle (desktop only) */
 .dashboard-card-resize-handle {
 	position: absolute;
-	top: 0;
+	top: 4px;
 	right: 0;
-	bottom: 0;
+	bottom: 4px;
 	width: 8px;
 	cursor: ew-resize;
-	opacity: 0;
-	transition: opacity 0.15s ease;
-	background: var(--db-accent);
-	border-radius: 0 var(--db-radius-md) var(--db-radius-md) 0;
 	z-index: 10;
+	border-right: 2px solid transparent;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover {
@@ -1135,12 +1133,13 @@
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover .dashboard-card-resize-handle,
 .dashboard-section-row[data-section-type="memo"] .dashboard-card--resizing .dashboard-card-resize-handle {
-	opacity: 0.4;
+	border-right-color: var(--db-border-card);
+	box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
 }
 
 .dashboard-card-resize-handle:hover {
-	opacity: 0.7 !important;
-	background: var(--db-accent);
+	border-right-color: var(--db-text-muted) !important;
+	box-shadow: 2px 0 8px rgba(0, 0, 0, 0.25) !important;
 }
 
 .dashboard-card--resizing {
@@ -2796,5 +2795,14 @@
 	/* Quick link remove: always visible */
 	.dashboard-ql-remove {
 		opacity: 1;
+	}
+
+	/* Hide memo resize handle on mobile */
+	.dashboard-card-resize-handle {
+		display: none;
+	}
+
+	.dashboard-section-row[data-section-type="memo"] .dashboard-card:hover {
+		overflow: hidden;
 	}
 }
