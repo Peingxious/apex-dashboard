@@ -15,7 +15,7 @@ Capture thoughts instantly with a built-in memo pad. Each memo card has a writab
 Manage tasks with interactive checklists. Add, reorder, drag-and-drop, and check off tasks. A progress bar shows completion percentage at a glance. Todo items also support `[[wikilinks]]` for cross-referencing notes.
 
 ### 📁 Projects
-Organize your vault documents into project cards. Each card links to related notes, displays a cover image, and supports inline document search to add new files quickly. Manage multiple file types including Markdown notes, PDFs, images, audio, and video.
+Organize your vault documents into project cards. Each card links to related notes, displays a cover image (supports both local vault images and web URLs), and supports inline document search to add new files quickly. Manage multiple file types including Markdown notes, PDFs, images, audio, and video.
 
 ### 📝 Notes
 A compact, list-style section for organizing reference documents and quick-access files. Displays up to 5 cards per row without cover images for maximum density.
@@ -24,7 +24,7 @@ A compact, list-style section for organizing reference documents and quick-acces
 Pin your most-used shortcuts to the sidebar. Supports two action types: **File** links to open any document, and **Command** shortcuts to trigger any Obsidian command. Includes built-in presets for New Journal and New Note.
 
 ### 🎨 Banner
-A customizable banner with an inspirational quote and optional background image. Double-click to edit.
+A customizable banner with an inspirational quote and optional background image. Supports both local vault images and web URLs. Double-click to edit.
 
 ### 🔄 Drag & Drop
 Drag cards between sections to reorganize your workspace. Drag task items within Todo cards to reorder.
@@ -56,7 +56,7 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 ## Settings
 
 - **Dashboard file** — customize the file path for your dashboard data
-- **Style** — choose from 7 visual themes
+- **Style** — choose from 5 visual themes
 - **Language** — English or Chinese interface
 - **Recent documents count** — control how many recent files appear
 
