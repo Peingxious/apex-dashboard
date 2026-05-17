@@ -82,6 +82,16 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 
 ## What's New
 
+### v1.0.4
+- **Quick Actions** — Quick Links upgraded to Quick Actions, supporting both file links and Obsidian command shortcuts
+- **Add Action modal** — Two tabs (File / Command) for adding custom actions, with built-in presets for New Journal and New Note
+- **4 Section types** — Memo, Todo, Projects, and Notes, each with its own layout and behavior
+- **Multi-format document support** — Manage Markdown, PDF, images (PNG, JPG, GIF, SVG, WebP), audio (MP3, M4A), and video (MP4, MOV) in project cards
+- **Bidirectional links** — Memo and Todo cards render `[[wikilinks]]` as clickable links with basename fallback
+- **Journal path setting** — Configure where new diary entries are saved
+- **UI polish** — Vertical scrollbars hidden on desktop, theme-colored horizontal scrollbar, notes section layout optimization
+- **Bug fixes** — Fixed wiki link clicks in memo cards, quick link rename race condition, rename listener cleanup on plugin unload
+
 ### v1.0.3
 - **Wikilink support** — Memo and Todo cards now render `[[wikilinks]]` as clickable links
 - **Section type selector** — Choose section type when creating new sections
