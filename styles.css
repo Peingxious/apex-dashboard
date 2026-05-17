@@ -1051,6 +1051,7 @@
 .dashboard-section-row[data-section-type="todo"] .dashboard-section-cards {
 	flex-wrap: nowrap;
 	overflow-x: auto;
+	scrollbar-width: thin;
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-section-cards > .dashboard-card {
@@ -1997,19 +1998,30 @@
 
 /* ===== Scrollbar ===== */
 .dashboard-kanban::-webkit-scrollbar,
-.dashboard-sidebar::-webkit-scrollbar {
+.dashboard-sidebar::-webkit-scrollbar,
+.dashboard-section-cards::-webkit-scrollbar {
 	width: 6px;
+	height: 6px;
 }
 
 .dashboard-kanban::-webkit-scrollbar-track,
-.dashboard-sidebar::-webkit-scrollbar-track {
+.dashboard-sidebar::-webkit-scrollbar-track,
+.dashboard-section-cards::-webkit-scrollbar-track {
 	background: transparent;
 }
 
 .dashboard-kanban::-webkit-scrollbar-thumb,
-.dashboard-sidebar::-webkit-scrollbar-thumb {
-	background: var(--db-border);
+.dashboard-sidebar::-webkit-scrollbar-thumb,
+.dashboard-section-cards::-webkit-scrollbar-thumb {
+	background: transparent;
 	border-radius: 3px;
+	transition: background 0.2s ease;
+}
+
+.dashboard-kanban:hover::-webkit-scrollbar-thumb,
+.dashboard-sidebar:hover::-webkit-scrollbar-thumb,
+.dashboard-section-cards:hover::-webkit-scrollbar-thumb {
+	background: var(--db-border);
 }
 
 /* ===== Theme-specific enhancements ===== */
@@ -2652,7 +2664,8 @@
 		flex: 0 0 75vw !important;
 		min-width: 75vw !important;
 		max-width: 75vw !important;
-		overflow: hidden;
+		overflow-y: auto;
+		scrollbar-width: thin;
 	}
 
 	/* Memo section: override fixed height — use same 30vh */
