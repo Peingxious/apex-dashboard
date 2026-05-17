@@ -713,7 +713,12 @@
 	flex-direction: column;
 	gap: 16px;
 	overflow-y: auto;
+	scrollbar-width: none;
 	padding-top: 0;
+}
+
+.dashboard-sidebar::-webkit-scrollbar {
+	width: 0;
 }
 
 .dashboard-section {
@@ -773,14 +778,14 @@
 }
 
 /* ===== Quick Links ===== */
-.dashboard-ql-list {
+.dashboard-qa-list {
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
 	margin-bottom: 12px;
 }
 
-.dashboard-ql-item {
+.dashboard-qa-item {
 	display: flex;
 	align-items: center;
 	gap: 8px;
@@ -790,11 +795,11 @@
 	transition: background 0.15s ease;
 }
 
-.dashboard-ql-item:hover {
+.dashboard-qa-item:hover {
 	background: var(--db-bg-hover);
 }
 
-.dashboard-ql-name {
+.dashboard-qa-name {
 	font-size: 0.9em;
 	flex: 1;
 	overflow: hidden;
@@ -803,7 +808,7 @@
 	line-height: 1.0;
 }
 
-.dashboard-ql-remove {
+.dashboard-qa-remove {
 	background: none !important;
 	border: none !important;
 	box-shadow: none !important;
@@ -818,20 +823,20 @@
 	align-items: center;
 }
 
-.dashboard-ql-remove:hover {
+.dashboard-qa-remove:hover {
 	color: var(--db-text);
 }
 
-.dashboard-ql-remove svg {
+.dashboard-qa-remove svg {
 	width: 14px;
 	height: 14px;
 }
 
-.dashboard-ql-item:hover .dashboard-ql-remove {
+.dashboard-qa-item:hover .dashboard-qa-remove {
 	opacity: 1;
 }
 
-.dashboard-ql-add {
+.dashboard-qa-add {
 	width: 100%;
 	background: var(--db-bg-btn);
 	border: 1px solid var(--db-border-btn);
@@ -845,39 +850,100 @@
 	-webkit-backdrop-filter: var(--db-backdrop-blur);
 }
 
-.dashboard-ql-add:hover {
+.dashboard-qa-add:hover {
 	background: var(--db-bg-btn-hover);
 }
 
 /* Quick Links: fixed height with internal scroll */
-.dashboard-quick-links {
+.dashboard-quick-actions {
 	height: 250px;
 	display: flex;
 	flex-direction: column;
 	flex-shrink: 0;
 }
 
-.dashboard-quick-links .dashboard-ql-list {
+.dashboard-quick-actions .dashboard-qa-list {
 	overflow-y: auto;
 	margin-bottom: 0;
 }
 
-.dashboard-quick-links .dashboard-ql-add {
+.dashboard-quick-actions .dashboard-qa-add {
 	flex-shrink: 0;
 	margin-top: 8px;
 }
 
-.dashboard-ql-list::-webkit-scrollbar {
-	width: 4px;
+.dashboard-qa-list::-webkit-scrollbar {
+	width: 0;
+	display: none;
 }
 
-.dashboard-ql-list::-webkit-scrollbar-track {
-	background: transparent;
+/* Quick Actions: icon, badge, preset */
+.dashboard-qa-icon {
+	display: flex;
+	align-items: center;
+	color: var(--db-text-muted);
+	flex-shrink: 0;
 }
 
-.dashboard-ql-list::-webkit-scrollbar-thumb {
-	background: var(--db-border);
-	border-radius: 2px;
+.dashboard-qa-icon svg {
+	width: 15px;
+	height: 15px;
+}
+
+.dashboard-qa-badge {
+	font-size: 0.65em;
+	padding: 1px 5px;
+	border-radius: 3px;
+	background: var(--db-bg-btn);
+	color: var(--db-text-muted);
+	flex-shrink: 0;
+	line-height: 1.2;
+}
+
+.dashboard-qa-item--preset {
+	opacity: 0.75;
+}
+
+.dashboard-qa-item--preset:hover {
+	opacity: 1;
+}
+
+.dashboard-preset-actions {
+	flex-shrink: 0;
+}
+
+.dashboard-preset-actions .dashboard-qa-list {
+	margin-bottom: 0;
+}
+
+/* Quick Actions: Add Action Modal tabs */
+.dashboard-action-tabs {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 12px;
+}
+
+.dashboard-action-tab {
+	flex: 1;
+	padding: 8px;
+	border: 1px solid var(--db-border-btn);
+	border-radius: var(--db-radius-sm);
+	background: var(--db-bg-btn);
+	color: var(--db-text-muted);
+	cursor: pointer;
+	font-size: 0.85em;
+	text-align: center;
+	transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dashboard-action-tab:hover {
+	background: var(--db-bg-btn-hover);
+}
+
+.dashboard-action-tab.active {
+	background: var(--db-accent);
+	color: var(--db-text-on-accent);
+	border-color: var(--db-accent);
 }
 
 /* ===== Kanban ===== */
@@ -895,7 +961,12 @@
 	gap: 16px;
 	flex: 1;
 	overflow-y: auto;
+	scrollbar-width: none;
 	padding: 0;
+}
+
+.dashboard-kanban::-webkit-scrollbar {
+	width: 0;
 }
 
 .dashboard-section-row {
@@ -2035,10 +2106,14 @@
 
 /* ===== Scrollbar ===== */
 .dashboard-kanban::-webkit-scrollbar,
-.dashboard-sidebar::-webkit-scrollbar,
+.dashboard-sidebar::-webkit-scrollbar {
+	width: 0;
+	height: 0;
+}
+
 .dashboard-section-cards::-webkit-scrollbar {
-	width: 6px;
-	height: 6px;
+	width: 0;
+	height: 4px;
 }
 
 .dashboard-kanban::-webkit-scrollbar-track,
@@ -2055,10 +2130,22 @@
 	transition: background 0.2s ease;
 }
 
-.dashboard-kanban:hover::-webkit-scrollbar-thumb,
-.dashboard-sidebar:hover::-webkit-scrollbar-thumb,
 .dashboard-section-cards:hover::-webkit-scrollbar-thumb {
-	background: color-mix(in srgb, var(--db-text-muted) 25%, transparent);
+	background: color-mix(in srgb, var(--db-accent) 18%, transparent);
+}
+
+.dashboard-section-cards::-webkit-scrollbar-thumb:hover {
+	background: color-mix(in srgb, var(--db-accent) 30%, transparent);
+}
+
+/* Firefox */
+.dashboard-section-cards {
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+}
+
+.dashboard-section-cards:hover {
+	scrollbar-color: color-mix(in srgb, var(--db-accent) 18%, transparent) transparent;
 }
 
 /* ===== Theme-specific enhancements ===== */
@@ -2793,7 +2880,7 @@
 	}
 
 	/* Quick link remove: always visible */
-	.dashboard-ql-remove {
+	.dashboard-qa-remove {
 		opacity: 1;
 	}
 
