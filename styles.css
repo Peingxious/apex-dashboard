@@ -1055,9 +1055,9 @@
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-section-cards > .dashboard-card {
-	flex: 1 1 calc(33.333% - 8px);
-	min-width: 200px;
-	max-width: calc(33.333% - 8px);
+	flex: 0 0 260px;
+	min-width: 260px;
+	max-width: 300px;
 }
 
 .dashboard-section-row[data-section-type="todo"] .dashboard-section-cards > .dashboard-card {
