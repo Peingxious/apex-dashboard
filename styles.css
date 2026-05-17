@@ -982,7 +982,8 @@
 	flex-direction: column;
 }
 
-.dashboard-section-row[data-section-type="notes"] {
+.dashboard-section-row[data-section-type="notes"],
+.dashboard-section-row[data-section-type="projects"] {
 	max-height: none;
 }
 
@@ -1120,16 +1121,17 @@
 	max-height: 100%;
 }
 
-/* Notes (no cover): max 5 per row */
+/* Notes (no cover): max 4 per row, card width matches Projects */
 .dashboard-section-row[data-section-type="notes"] .dashboard-section-cards > .dashboard-card {
-	flex: 1 1 calc(20% - 8px);
+	flex: 1 1 calc(25% - 10px);
 	min-width: 0;
-	max-width: calc(20% - 8px);
+	max-width: calc(25% - 10px);
 }
 
-/* Memo & Todo: horizontal scroll, no wrap */
+/* Memo, Todo & Projects: horizontal scroll, no wrap */
 .dashboard-section-row[data-section-type="memo"] .dashboard-section-cards,
-.dashboard-section-row[data-section-type="todo"] .dashboard-section-cards {
+.dashboard-section-row[data-section-type="todo"] .dashboard-section-cards,
+.dashboard-section-row[data-section-type="projects"] .dashboard-section-cards {
 	flex-wrap: nowrap;
 	overflow-x: auto;
 	scrollbar-width: thin;
