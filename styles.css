@@ -1090,6 +1090,7 @@
 	display: flex;
 	flex-direction: column;
 	padding: 10px 12px;
+	flex-shrink: 0;
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card-body {
@@ -1107,6 +1108,33 @@
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card-header {
 	flex-shrink: 0;
+}
+
+/* Memo card resize handle */
+.dashboard-card-resize-handle {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	width: 6px;
+	cursor: ew-resize;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	background: var(--db-accent);
+	border-radius: 0 var(--db-radius-md) var(--db-radius-md) 0;
+}
+
+.dashboard-card--resizing .dashboard-card-resize-handle,
+.dashboard-card:hover .dashboard-card-resize-handle {
+	opacity: 0.3;
+}
+
+.dashboard-card-resize-handle:hover {
+	opacity: 0.6 !important;
+}
+
+.dashboard-card--resizing {
+	user-select: none;
 }
 
 /* Todo cards: body uses flex column so task-list scrolls inside */
