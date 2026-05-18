@@ -1029,6 +1029,22 @@
 	opacity: 1;
 }
 
+.dashboard-section-row[data-section-type="memo"] .dashboard-section-toggle::before {
+	border-top-color: #f59e0b;
+}
+
+.dashboard-section-row[data-section-type="todo"] .dashboard-section-toggle::before {
+	border-top-color: #6366f1;
+}
+
+.dashboard-section-row[data-section-type="projects"] .dashboard-section-toggle::before {
+	border-top-color: #10b981;
+}
+
+.dashboard-section-row[data-section-type="notes"] .dashboard-section-toggle::before {
+	border-top-color: #8b5cf6;
+}
+
 .dashboard-section-row--collapsed > .dashboard-section-header .dashboard-section-toggle {
 	transform: rotate(-90deg);
 }
