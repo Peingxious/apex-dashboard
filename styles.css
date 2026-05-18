@@ -2781,6 +2781,18 @@
 		color: var(--db-text);
 	}
 
+		/* Mobile drawer: quick actions fill available space */
+		.dashboard-mobile-drawer-content .dashboard-quick-actions {
+			height: auto;
+			flex: 1;
+		}
+
+		.dashboard-mobile-drawer-content .dashboard-qa-list {
+			max-height: none;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
+		}
+
 	.dashboard-mobile-drawer-backdrop {
 		width: 20%;
 		height: 100%;
