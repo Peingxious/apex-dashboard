@@ -2802,13 +2802,16 @@
 		color: var(--db-text);
 	}
 
-		/* Mobile drawer: taller quick-actions and recent docs */
+		/* Mobile drawer: quick actions fill available space */
 		.dashboard-mobile-drawer-content .dashboard-quick-actions {
-			height: 550px;
+			height: auto;
+			flex: 1;
 		}
 
-		.dashboard-mobile-drawer-content .dashboard-recent {
-			height: 550px;
+		.dashboard-mobile-drawer-content .dashboard-qa-list {
+			max-height: none;
+			overflow-y: auto;
+			-webkit-overflow-scrolling: touch;
 		}
 
 	.dashboard-mobile-drawer-backdrop {
