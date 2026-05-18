@@ -2781,7 +2781,7 @@
 	.dashboard-mobile-drawer-content {
 		width: 80%;
 		height: 100%;
-		background: var(--db-bg-sidebar);
+		background: var(--db-bg);
 		border-right: 1px solid var(--db-border);
 		border-top: 1px solid var(--db-border);
 		border-top-right-radius: 12px;
