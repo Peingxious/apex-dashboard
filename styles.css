@@ -836,22 +836,10 @@
 	opacity: 1;
 }
 
-.dashboard-qa-add {
-	width: 100%;
-	background: var(--db-bg-btn);
-	border: 1px solid var(--db-border-btn);
-	border-radius: var(--db-radius-sm);
-	color: var(--db-text-muted);
-	padding: 6px;
-	font-size: 0.78em;
-	cursor: pointer;
-	transition: background 0.15s ease;
-	backdrop-filter: var(--db-backdrop-blur);
-	-webkit-backdrop-filter: var(--db-backdrop-blur);
-}
-
-.dashboard-qa-add:hover {
-	background: var(--db-bg-btn-hover);
+.dashboard-qa-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 }
 
 /* Quick Links: fixed height with internal scroll */
@@ -865,11 +853,6 @@
 .dashboard-quick-actions .dashboard-qa-list {
 	overflow-y: auto;
 	margin-bottom: 0;
-}
-
-.dashboard-quick-actions .dashboard-qa-add {
-	flex-shrink: 0;
-	margin-top: 8px;
 }
 
 .dashboard-qa-list::-webkit-scrollbar {
