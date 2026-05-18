@@ -781,7 +781,7 @@
 .dashboard-qa-list {
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: 1px;
 	margin-bottom: 12px;
 }
 
@@ -789,7 +789,7 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 2px 10px;
+	padding: 1px 10px;
 	border-radius: var(--db-radius-sm);
 	cursor: pointer;
 	transition: background 0.15s ease;
@@ -886,8 +886,8 @@
 }
 
 .dashboard-qa-icon svg {
-	width: 15px;
-	height: 15px;
+	width: 8px;
+	height: 8px;
 }
 
 .dashboard-qa-badge {
