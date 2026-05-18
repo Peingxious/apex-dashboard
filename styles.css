@@ -1002,17 +1002,27 @@
 }
 
 .dashboard-section-toggle {
+	width: 26px;
+	height: 24px;
+	flex-shrink: 0;
+	cursor: pointer;
+	position: relative;
+	transition: transform 0.2s ease;
+	opacity: 0.7;
+}
+
+.dashboard-section-toggle::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -60%);
 	width: 0;
 	height: 0;
 	border-left: 5px solid transparent;
 	border-right: 5px solid transparent;
 	border-top: 8px solid var(--section-color, var(--db-text-muted));
-	flex-shrink: 0;
-	cursor: pointer;
-	transition: transform 0.2s ease, border-top-color 0.15s ease;
-	opacity: 0.7;
-	padding: 8px 12px 8px 8px;
-	margin: -8px -12px -8px -8px;
+	transition: border-top-color 0.15s ease;
 }
 
 .dashboard-section-toggle:hover {
