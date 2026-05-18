@@ -781,7 +781,7 @@
 .dashboard-qa-list {
 	display: flex;
 	flex-direction: column;
-	gap: 0px;
+	gap: 2px;
 	margin-bottom: 12px;
 }
 
@@ -789,10 +789,11 @@
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	padding: 0px 10px;
+	padding: 3px 10px;
 	border-radius: var(--db-radius-sm);
 	cursor: pointer;
 	transition: background 0.15s ease;
+	height: 18px;
 }
 
 .dashboard-qa-item:hover {
@@ -2845,6 +2846,15 @@
 		.dashboard-mobile-drawer-content .dashboard-quick-actions {
 			height: auto;
 			flex: 1;
+		}
+
+		/* Hide duplicate section titles inside mobile drawer */
+		.dashboard-mobile-drawer-content .dashboard-qa-header {
+			display: none;
+		}
+
+		.dashboard-mobile-drawer-content > .dashboard-recent > .dashboard-section-title {
+			display: none;
 		}
 
 		.dashboard-mobile-drawer-content .dashboard-qa-list {
