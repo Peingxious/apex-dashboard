@@ -1376,6 +1376,13 @@
 	scrollbar-width: none;
 }
 
+.dashboard-card-body--doc-drop {
+	outline: 2px dashed var(--db-border-accent);
+	outline-offset: -2px;
+	border-radius: var(--db-radius-sm);
+	background: var(--db-bg-card-hover);
+}
+
 .dashboard-card-body::-webkit-scrollbar {
 	width: 0;
 }
@@ -1385,6 +1392,13 @@
 	display: flex;
 	flex-direction: column;
 	gap: 6px;
+}
+
+.dashboard-task-list--drop-target {
+	min-height: 40px;
+	border: 2px dashed var(--db-border-accent);
+	border-radius: var(--db-radius-sm);
+	background: var(--db-bg-card-hover);
 }
 
 .dashboard-task-item {
@@ -1576,6 +1590,17 @@
 	flex-direction: column;
 	gap: 4px;
 	margin-bottom: 8px;
+}
+
+.dashboard-project-docs:empty {
+	min-height: 32px;
+}
+
+.dashboard-project-docs--drop-target {
+	min-height: 40px;
+	border: 2px dashed var(--db-border-accent);
+	border-radius: var(--db-radius-sm);
+	background: var(--db-bg-card-hover);
 }
 
 .dashboard-project-doc-item {
@@ -2627,6 +2652,11 @@
    MOBILE LAYOUT (phones only, <=640px)
    Tablets (>=641px) keep the desktop layout unchanged.
    ================================================================= */
+/* Hide memo color picker on Obsidian mobile app (color input doesn't work) */
+.is-mobile .dashboard-card-btn--color {
+	display: none;
+}
+
 @media (max-width: 640px) {
 	/* Root: allow vertical scrolling */
 	.dashboard-root {
@@ -2903,6 +2933,11 @@
 
 	/* Hide memo resize handle on mobile */
 	.dashboard-card-resize-handle {
+		display: none;
+	}
+
+	/* Hide memo color picker on mobile (color input doesn't work on mobile) */
+	.dashboard-card-btn--color {
 		display: none;
 	}
 
