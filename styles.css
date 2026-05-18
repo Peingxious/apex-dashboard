@@ -1001,11 +1001,32 @@
 	gap: 10px;
 }
 
-.dashboard-section-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
+.dashboard-section-toggle {
+	width: 0;
+	height: 0;
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-top: 8px solid var(--section-color, var(--db-text-muted));
 	flex-shrink: 0;
+	cursor: pointer;
+	transition: transform 0.2s ease, border-top-color 0.15s ease;
+	opacity: 0.7;
+}
+
+.dashboard-section-toggle:hover {
+	opacity: 1;
+}
+
+.dashboard-section-row--collapsed > .dashboard-section-header .dashboard-section-toggle {
+	transform: rotate(-90deg);
+}
+
+.dashboard-section-row--collapsed > .dashboard-section-cards {
+	display: none;
+}
+
+.dashboard-section-row--collapsed {
+	height: auto !important;
 }
 
 .dashboard-section-row .dashboard-section-title {
