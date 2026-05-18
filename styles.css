@@ -828,8 +828,8 @@
 }
 
 .dashboard-qa-remove svg {
-	width: 14px;
-	height: 14px;
+	width: 8px;
+	height: 8px;
 }
 
 .dashboard-qa-item:hover .dashboard-qa-remove {
@@ -886,8 +886,8 @@
 }
 
 .dashboard-qa-icon svg {
-	width: 15px;
-	height: 15px;
+	width: 8px;
+	height: 8px;
 }
 
 .dashboard-qa-badge {
