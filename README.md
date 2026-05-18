@@ -27,7 +27,7 @@ Pin your most-used shortcuts to the sidebar. Supports two action types: **File**
 A customizable banner with an inspirational quote and optional background image. Supports both local vault images and web URLs. Double-click to edit.
 
 ### 🔄 Drag & Drop
-Drag cards between sections to reorganize your workspace. Drag task items within Todo cards to reorder.
+Drag cards between sections to reorganize your workspace. Drag task items within Todo cards to reorder. Drag document links between project/note cards.
 
 ### 🧩 Custom Sections
 Create sections with 4 built-in types — **Memo**, **Todo**, **Projects**, and **Notes** — each with its own layout and behavior. Mix and match to fit your workflow.
@@ -81,6 +81,14 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 > **Note:** Deleting, renaming, or reordering sections must be done by editing the `dashboard.md` file directly. Any changes made to the note will take effect in the dashboard view immediately.
 
 ## What's New
+
+### v1.0.5
+- **Collapsible sections** — Click the triangle indicator on section headers to collapse/expand sections. Collapse state persists across sessions
+- **Cross-card drag & drop** — Drag document links between project/note cards, and drag task items between todo cards
+- **Section type preservation** — Fixed a bug where renaming a section in the markdown file would reset its type to Projects
+- **Empty card interaction** — Cards with all items removed can now receive new items via drag-and-drop or the add input
+- **Mobile improvements** — Memo color picker button hidden on mobile, mobile drawer uses solid background for all themes, taller quick actions list
+- **Distinct toggle colors** — Each section type (Memo, Todo, Projects, Notes) has its own triangle indicator color
 
 ### v1.0.4
 - **Quick Actions** — Quick Links upgraded to Quick Actions, supporting both file links and Obsidian command shortcuts
