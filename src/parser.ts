@@ -681,16 +681,21 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
 			if (trimmed.startsWith('- ')) {
 				if (mapArrayObj) {
 					mapArray.push(mapArrayObj);
-				}
-				const rest = trimmed.slice(2);
-				const colonIdx = rest.indexOf(':');
-				if (colonIdx !== -1) {
-					const key = rest.slice(0, colonIdx).trim();
-					const val = rest.slice(colonIdx + 1).trim();
-					mapArrayObj = { [key]: parseYamlStringValue(val) };
-				} else {
-					mapArray.push(parseYamlValue(rest));
 					mapArrayObj = null;
+				}
+				const rest = trimmed.slice(2).trim();
+				// Quoted strings (e.g. - "https://...") are values, not key-value pairs
+				if ((rest.startsWith('"') && rest.endsWith('"')) || (rest.startsWith("'") && rest.endsWith("'"))) {
+					mapArray.push(parseYamlStringValue(rest));
+				} else {
+					const colonIdx = rest.indexOf(':');
+					if (colonIdx !== -1) {
+						const key = rest.slice(0, colonIdx).trim();
+						const val = rest.slice(colonIdx + 1).trim();
+						mapArrayObj = { [key]: parseYamlStringValue(val) };
+					} else {
+						mapArray.push(parseYamlValue(rest));
+					}
 				}
 			} else if (mapArrayObj) {
 				const colonIdx = trimmed.indexOf(':');
