@@ -87,15 +87,17 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 - **Banner image rotation** — Add multiple background images that rotate every 2 hours with a smooth fade transition
 - **Quote auto-rotation** — Quotes rotate every 2 hours (offset 1 hour from image rotation so they never swap simultaneously)
 - **Double-click rename sections** — Double-click any section title to rename it inline (Enter to save, Escape to cancel)
-- **Section type preservation** — Fixed Memo and Todo sections losing their type when renamed, both for new and existing dashboards
-- **Smart section type detection** — Sections with only generic cards now correctly stay as Memo type after title changes
 - **Collapsible sections** — Click the triangle indicator on section headers to collapse/expand sections. Collapse state persists across sessions
 - **Cross-card drag & drop** — Drag document links between project/note cards, and drag task items between todo cards
 - **Card reordering fix** — Fixed card drag-and-drop positioning in all sections (Todo, Projects, Notes). Cards now land exactly where you drop them instead of always moving to the first position
-- **Section type preservation** — Fixed a bug where renaming a section in the markdown file would reset its type to Projects
 - **Empty card interaction** — Cards with all items removed can now receive new items via drag-and-drop or the add input
 - **Mobile improvements** — Memo color picker button hidden on mobile, mobile drawer uses solid background for all themes, taller quick actions list
 - **Distinct toggle colors** — Each section type (Memo, Todo, Projects, Notes) has its own triangle indicator color
+- **Banner modal button sizing** — "Add quote" and "Add image" buttons in the banner edit modal now use fit-content width instead of stretching full width
+- **Projects card default width** — Fixed new project cards stretching across the entire section; cards now have a proper default width (280px)
+- **Section type robustness** — Three-layer defense for section type preservation: frontmatter `type:` field, name-based heuristics, and card type distribution analysis. Section types survive manual file edits, heading renames, and position swaps
+- **Project card type persistence** — `type: project` is now written to the file and preserved across save/reload cycles, preventing cards from reverting to generic type
+- **Default template fix** — Projects and Library sections now include `sectionType` in the default template and column definitions
 
 ### v1.0.4
 - **Quick Actions** — Quick Links upgraded to Quick Actions, supporting both file links and Obsidian command shortcuts
