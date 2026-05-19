@@ -3172,11 +3172,11 @@
 			flex: 1;
 		}
 
-		/* Hide section title inside mobile drawer but keep add button visible */
+		/* Mobile drawer: style add button as dashed-border row */
 		.dashboard-mobile-drawer-content .dashboard-qa-header {
 			border-bottom: none;
 			margin: 0 0 6px 0;
-			justify-content: flex-end;
+			justify-content: center;
 		}
 
 		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-title {
@@ -3185,6 +3185,28 @@
 
 		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn {
 			opacity: 1;
+			width: 100%;
+			padding: 10px 0;
+			font-size: 0.85em;
+			border: 1px dashed var(--db-border) !important;
+			border-radius: 8px;
+			justify-content: center;
+			color: var(--db-text-faint);
+		}
+
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn::after {
+			content: 'Add action';
+			margin-left: 6px;
+		}
+
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn:lang(zh)::after {
+			content: '添加操作';
+		}
+
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn:hover,
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn:active {
+			background: var(--db-bg-secondary) !important;
+			color: var(--db-text) !important;
 		}
 
 		.dashboard-mobile-drawer-content > .dashboard-recent > .dashboard-section-title {
