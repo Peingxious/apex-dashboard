@@ -1198,8 +1198,8 @@
 
 /* Notes (no cover): max 4 per row, card width matches Projects */
 .dashboard-section-row[data-section-type="notes"] .dashboard-section-cards > .dashboard-card {
-	flex: 1 1 calc(25% - 10px);
-	min-width: 0;
+	flex: 1 1 200px;
+	min-width: 200px;
 	max-width: calc(25% - 10px);
 }
 
