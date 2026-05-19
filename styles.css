@@ -3172,9 +3172,19 @@
 			flex: 1;
 		}
 
-		/* Hide duplicate section titles inside mobile drawer */
+		/* Hide section title inside mobile drawer but keep add button visible */
 		.dashboard-mobile-drawer-content .dashboard-qa-header {
+			border-bottom: none;
+			margin: 0 0 6px 0;
+			justify-content: flex-end;
+		}
+
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-title {
 			display: none;
+		}
+
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn {
+			opacity: 1;
 		}
 
 		.dashboard-mobile-drawer-content > .dashboard-recent > .dashboard-section-title {
