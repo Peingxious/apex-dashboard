@@ -82,7 +82,13 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 
 ## What's New
 
-### v1.0.5
+### v1.0.6
+- **Multi-quote banner** — Store multiple quotes in the banner, each with its own author. Add, edit, and delete quotes in the edit modal
+- **Banner image rotation** — Add multiple background images that rotate every 2 hours with a smooth fade transition
+- **Quote auto-rotation** — Quotes rotate every 2 hours (offset 1 hour from image rotation so they never swap simultaneously)
+- **Double-click rename sections** — Double-click any section title to rename it inline (Enter to save, Escape to cancel)
+- **Section type preservation** — Fixed Memo and Todo sections losing their type when renamed, both for new and existing dashboards
+- **Smart section type detection** — Sections with only generic cards now correctly stay as Memo type after title changes
 - **Collapsible sections** — Click the triangle indicator on section headers to collapse/expand sections. Collapse state persists across sessions
 - **Cross-card drag & drop** — Drag document links between project/note cards, and drag task items between todo cards
 - **Card reordering fix** — Fixed card drag-and-drop positioning in all sections (Todo, Projects, Notes). Cards now land exactly where you drop them instead of always moving to the first position
