@@ -92,6 +92,8 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 - **Card reordering fix** — Fixed card drag-and-drop positioning in all sections (Todo, Projects, Notes). Cards now land exactly where you drop them instead of always moving to the first position
 - **Empty card interaction** — Cards with all items removed can now receive new items via drag-and-drop or the add input
 - **Mobile improvements** — Memo color picker button hidden on mobile, mobile drawer uses solid background for all themes, taller quick actions list
+
+### v1.0.5
 - **Distinct toggle colors** — Each section type (Memo, Todo, Projects, Notes) has its own triangle indicator color
 - **Banner modal button sizing** — "Add quote" and "Add image" buttons in the banner edit modal now use fit-content width instead of stretching full width
 - **Projects card default width** — Fixed new project cards stretching across the entire section; cards now have a proper default width (280px)
