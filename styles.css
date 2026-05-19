@@ -1960,7 +1960,27 @@
 	box-shadow: none !important;
 	backdrop-filter: none !important;
 	border-radius: var(--db-radius-lg, 12px);
-	overflow: hidden;
+	overflow-y: auto;
+	max-height: 85vh;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.modal:has(.dashboard-modal)::-webkit-scrollbar {
+	width: 4px;
+}
+
+.modal:has(.dashboard-modal)::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.modal:has(.dashboard-modal)::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
+}
+
+.modal:has(.dashboard-modal)::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.25);
 }
 
 .modal-bg:has(.dashboard-modal) {
@@ -2042,6 +2062,21 @@
 	max-height: 340px;
 	overflow-y: auto;
 	padding: 2px 0;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.dashboard-modal-quotes-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.dashboard-modal-quotes-list::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dashboard-modal-quotes-list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
 }
 
 .dashboard-modal-quote-item {
@@ -2137,6 +2172,21 @@
 	max-height: 200px;
 	overflow-y: auto;
 	padding: 2px 0;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.dashboard-modal-images-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.dashboard-modal-images-list::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dashboard-modal-images-list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
 }
 
 .dashboard-modal-image-item {
@@ -2207,6 +2257,21 @@
 	max-height: 200px;
 	overflow-y: auto;
 	margin-bottom: 4px;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.dashboard-modal-docs-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.dashboard-modal-docs-list::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dashboard-modal-docs-list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
 }
 
 .dashboard-modal-docs-empty {
@@ -2268,6 +2333,21 @@
 	max-height: 150px;
 	overflow-y: auto;
 	margin-top: 4px;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.dashboard-modal-search-results::-webkit-scrollbar {
+	width: 4px;
+}
+
+.dashboard-modal-search-results::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dashboard-modal-search-results::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
 }
 
 .dashboard-modal-search-hint {
@@ -2370,6 +2450,21 @@
 	overflow-y: auto;
 	border: 1px solid var(--db-border);
 	border-radius: var(--db-radius-sm);
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.dashboard-docsearch-results::-webkit-scrollbar {
+	width: 4px;
+}
+
+.dashboard-docsearch-results::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.dashboard-docsearch-results::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
 }
 
 .dashboard-docsearch-hint {
