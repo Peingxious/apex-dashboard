@@ -1321,7 +1321,7 @@
 	padding-bottom: 0;
 }
 
-.dashboard-qa-add-btn {
+.dashboard-section-add-btn {
 	background: none !important;
 	border: none !important;
 	box-shadow: none !important;
@@ -1338,11 +1338,11 @@
 	outline: none;
 }
 
-.dashboard-section-header:hover .dashboard-qa-add-btn {
+.dashboard-section-header:hover .dashboard-section-add-btn {
 	opacity: 1;
 }
 
-.dashboard-qa-add-btn:hover {
+.dashboard-section-add-btn:hover {
 	color: var(--db-text) !important;
 }
 
@@ -3790,7 +3790,7 @@
 	}
 
 	/* Section add button: always visible */
-	.dashboard-qa-add-btn {
+	.dashboard-section-add-btn {
 		opacity: 1;
 	}
 
@@ -4309,4 +4309,97 @@
 .chart-config-bar-add:hover {
 	border-color: var(--db-accent);
 	color: var(--db-accent);
+}
+
+/* ===== Chart Type Preview Icons ===== */
+.chart-config-type-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 48px;
+	margin-bottom: 6px;
+}
+
+/* Stat preview */
+.chart-preview-stat-num {
+	font-size: 1.6em;
+	font-weight: 700;
+	line-height: 1;
+	font-family: var(--db-font);
+}
+
+.chart-preview-stat-label {
+	font-size: 0.65em;
+	color: var(--db-text-faint);
+	margin-top: 2px;
+	text-align: center;
+}
+
+/* Ring preview */
+.chart-preview-ring {
+	width: 40px;
+	height: 40px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.chart-preview-ring-inner {
+	width: 26px;
+	height: 26px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.chart-preview-ring-text {
+	font-size: 0.6em;
+	font-weight: 700;
+	color: var(--db-text);
+	font-family: var(--db-font);
+}
+
+/* Bars preview */
+.chart-preview-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	width: 56px;
+}
+
+.chart-preview-bar-row {
+	height: 5px;
+	background: var(--db-bg-hover);
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.chart-preview-bar-fill {
+	height: 100%;
+	border-radius: 2px;
+	background: linear-gradient(90deg, var(--db-progress-from), var(--db-progress-to));
+}
+
+.chart-config-type-name {
+	font-size: 0.88em;
+	font-weight: 600;
+}
+
+/* Source section divider */
+.chart-config-source-section {
+	font-size: 0.75em;
+	font-weight: 600;
+	color: var(--db-text-faint);
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	margin-top: 10px;
+	margin-bottom: 4px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--db-border);
+}
+
+.chart-config-source-section:first-child {
+	margin-top: 0;
 }
