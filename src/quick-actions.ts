@@ -16,9 +16,11 @@ export function renderQuickActions(
 	const header = section.createDiv({ cls: 'dashboard-qa-header' });
 	header.createEl('h3', { text: t('quickActions.title'), cls: 'dashboard-section-title' });
 
+	const btnGroup = header.createDiv({ cls: 'dashboard-qa-btn-group' });
+
 	// Pin button (left of add button)
 	if (onTogglePin) {
-		const pinBtn = header.createEl('button', {
+		const pinBtn = btnGroup.createEl('button', {
 			cls: 'dashboard-qa-pin-btn',
 			attr: { 'aria-label': 'Toggle pin' },
 		});
@@ -35,7 +37,7 @@ export function renderQuickActions(
 		});
 	}
 
-	const addBtn = header.createEl('button', {
+	const addBtn = btnGroup.createEl('button', {
 		cls: 'dashboard-qa-add-btn',
 		attr: { 'aria-label': t('quickActions.addAction') },
 	});

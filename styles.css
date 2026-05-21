@@ -925,7 +925,7 @@
 	height: 14px;
 }
 
-.dashboard-qa-header:hover .dashboard-qa-pin-btn {
+.dashboard-qa-header:hover .dashboard-qa-btn-group .dashboard-qa-pin-btn {
 	opacity: 0.5;
 }
 
@@ -1068,6 +1068,13 @@
 	border-bottom: 1px solid var(--db-border);
 }
 
+.dashboard-qa-btn-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
 .dashboard-qa-header .dashboard-section-title {
 	font-size: 0.85em;
 	font-weight: 600;
@@ -1096,7 +1103,7 @@
 	outline: none;
 }
 
-.dashboard-qa-header:hover .dashboard-qa-add-btn {
+.dashboard-qa-header:hover .dashboard-qa-btn-group .dashboard-qa-add-btn {
 	opacity: 1;
 }
 
