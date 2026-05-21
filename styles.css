@@ -485,6 +485,101 @@
 	--db-link: #60a5fa;
 }
 
+/* ----- 6. ISLAND (动物森友会 — 淡彩无人岛) ----- */
+.dashboard-root[data-theme="island"] {
+	/* 背景：奶油白底，区块/侧栏用淡绿淡蓝 */
+	--db-bg: #f8f8f0;
+	--db-bg-section: #e6f4e8;
+	--db-bg-card: #faf6ee;
+	--db-bg-card-hover: #fefefa;
+	--db-bg-sidebar: #e8f6ea;
+	--db-bg-input: rgba(25, 200, 185, 0.04);
+	--db-bg-btn: #f8f8f0;
+	--db-bg-btn-hover: #e6f9f6;
+	--db-bg-banner: rgba(111, 186, 44, 0.08);
+	--db-bg-overlay: linear-gradient(135deg, rgba(30,60,40,0.40) 0%, rgba(40,80,60,0.15) 100%);
+	--db-bg-hover: rgba(25, 200, 185, 0.06);
+	--db-bg-hover-strong: rgba(25, 200, 185, 0.10);
+	--db-bg-add-section: rgba(25, 200, 185, 0.06);
+	--db-bg-drop-indicator: rgba(25, 200, 185, 0.10);
+
+	/* 边框：暖灰+绿色调 */
+	--db-border: #c8dcc5;
+	--db-border-card: #b5d4b0;
+	--db-border-section: #b8d8b5;
+	--db-border-sidebar: #b0d0ac;
+	--db-border-input: #b5d4b0;
+	--db-border-input-focus: #ffcc00;
+	--db-border-btn: #b5d4b0;
+	--db-border-add-section: #19c8b9;
+
+	/* 文字：森林棕绿（非纯棕） */
+	--db-text: #4a6741;
+	--db-text-muted: #5a7247;
+	--db-text-faint: #8aaa80;
+	--db-text-inverse: rgba(255, 255, 255, 0.95);
+	--db-text-inverse-muted: rgba(255, 255, 255, 0.6);
+
+	/* 强调色：薄荷青+草绿双主色 */
+	--db-accent: #19c8b9;
+	--db-accent-light: #6fba2c;
+	--db-danger: #e05a5a;
+
+	/* 阴影：3D 按键感 */
+	--db-shadow-card: 0 4px 0 0 #a8c8a5, 0 4px 10px rgba(74, 103, 65, 0.12);
+	--db-shadow-card-hover: 0 5px 0 0 #a8c8a5, 0 8px 24px rgba(74, 103, 65, 0.15);
+	--db-backdrop-blur: none;
+
+	/* 圆角：最大最圆润 */
+	--db-radius-sm: 12px;
+	--db-radius-md: 18px;
+	--db-radius-lg: 20px;
+
+	/* 字体：Nunito 圆体 */
+	--db-font: 'Nunito', 'Noto Sans SC', 'Zen Maru Gothic', -apple-system, 'PingFang SC', var(--font-interface);
+
+	/* 进度条/复选框：薄荷→草绿渐变 */
+	--db-progress-from: #19c8b9;
+	--db-progress-to: #6fba2c;
+	--db-checkbox: #6fba2c;
+	--db-quote-border: #82d5bb;
+	--db-link: #19c8b9;
+}
+.theme-dark .dashboard-root[data-theme="island"] {
+	--db-bg: #1a2a1e;
+	--db-bg-section: #223428;
+	--db-bg-card: #263830;
+	--db-bg-card-hover: #2e4438;
+	--db-bg-sidebar: #1e3024;
+	--db-bg-input: rgba(255, 255, 255, 0.04);
+	--db-bg-btn: #2e4438;
+	--db-bg-btn-hover: rgba(25, 200, 185, 0.12);
+	--db-bg-banner: rgba(25, 200, 185, 0.06);
+	--db-bg-overlay: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%);
+	--db-bg-hover: rgba(25, 200, 185, 0.06);
+	--db-bg-hover-strong: rgba(25, 200, 185, 0.10);
+	--db-bg-add-section: rgba(25, 200, 185, 0.05);
+	--db-border: #3a5a3e;
+	--db-border-card: #3a5a3e;
+	--db-border-section: #3a5a3e;
+	--db-border-sidebar: #3a5a3e;
+	--db-border-input: #3a5a3e;
+	--db-border-input-focus: #ffcc00;
+	--db-text: #c8e0c4;
+	--db-text-muted: #98b894;
+	--db-text-faint: #688864;
+	--db-accent: #3dd4c6;
+	--db-accent-light: #86d67a;
+	--db-danger: #e05a5a;
+	--db-shadow-card: 0 4px 0 0 #2a4a2e, 0 4px 10px rgba(0, 0, 0, 0.25);
+	--db-shadow-card-hover: 0 5px 0 0 #2a4a2e, 0 8px 24px rgba(0, 0, 0, 0.25);
+	--db-progress-from: #3dd4c6;
+	--db-progress-to: #86d67a;
+	--db-checkbox: #86d67a;
+	--db-quote-border: #3dd4c6;
+	--db-link: #3dd4c6;
+}
+
 /* =================================================================
    COMPONENT STYLES
    ================================================================= */
@@ -519,11 +614,14 @@
 	background: var(--db-aurora-bg);
 	background-size: var(--db-aurora-size);
 	animation: db-aurora-shift var(--db-aurora-speed) ease-in-out infinite;
+	transition: color 0.3s ease;
+	will-change: background-position;
 }
 
 /* Prism: static gradient background */
 .dashboard-root[data-theme="prism"] {
 	background: var(--db-aurora-bg);
+	transition: color 0.3s ease;
 }
 
 /* ===== Banner ===== */
@@ -3031,6 +3129,207 @@
 
 .dashboard-root[data-theme="nordic"] .dashboard-add-section:hover {
 	border-color: #3b82f6;
+}
+
+/* -- Island: Animal Crossing — forest greens, ocean accents, 3D press -- */
+.dashboard-root[data-theme="island"] .dashboard-card {
+	border: 2px solid var(--db-border-card);
+	box-shadow: 0 4px 0 0 #a8c8a5;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-root[data-theme="island"] .dashboard-card:hover {
+	box-shadow: 0 5px 0 0 #98b894, 0 8px 24px rgba(74, 103, 65, 0.15);
+	transform: translateY(-2px);
+	border-color: #82b87e;
+}
+
+.theme-dark .dashboard-root[data-theme="island"] .dashboard-card {
+	box-shadow: 0 4px 0 0 #2a4a2e;
+}
+
+.theme-dark .dashboard-root[data-theme="island"] .dashboard-card:hover {
+	box-shadow: 0 5px 0 0 #2a4a2e, 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.dashboard-root[data-theme="island"] .dashboard-memo-textarea:focus {
+	border-color: #ffcc00;
+	box-shadow: 0 3px 0 0 #e0b800, 0 0 0 3px rgba(255, 204, 0, 0.15);
+}
+
+.dashboard-root[data-theme="island"] .dashboard-modal-input:focus {
+	border-color: #ffcc00;
+	box-shadow: 0 3px 0 0 #e0b800, 0 0 0 3px rgba(255, 204, 0, 0.15);
+}
+
+.dashboard-root[data-theme="island"] .dashboard-section-row--drag-over {
+	border-color: #19c8b9;
+	box-shadow: 0 0 0 2px rgba(25, 200, 185, 0.15);
+}
+
+.dashboard-root[data-theme="island"] .dashboard-note-quote {
+	border-left-color: #82d5bb;
+}
+
+.dashboard-root[data-theme="island"] .dashboard-add-section {
+	border-radius: 50px;
+	border: 2px dashed rgba(25, 200, 185, 0.35);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+
+.dashboard-root[data-theme="island"] .dashboard-add-section:hover {
+	border-color: #19c8b9;
+	background: rgba(25, 200, 185, 0.06);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 0 0 #a8c8a5;
+}
+
+.theme-dark .dashboard-root[data-theme="island"] .dashboard-add-section:hover {
+	box-shadow: 0 4px 0 0 #2a4a2e;
+}
+
+/* Island: modal — cream parchment, green-tinted */
+[data-theme="island"] .dashboard-modal {
+	border-radius: 20px;
+	border: 2px solid #b5d4b0;
+	background: #faf8f2 !important;
+	box-shadow: 0 6px 0 0 #a8c8a5, 0 12px 40px rgba(74, 103, 65, 0.20);
+}
+.theme-dark [data-theme="island"] .dashboard-modal {
+	background: #263830 !important;
+	border-color: #3a5a3e;
+	box-shadow: 0 6px 0 0 #1a2a1e, 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+[data-theme="island"] .dashboard-modal h2 {
+	color: #4a6741;
+	border-bottom: 2px solid rgba(130, 213, 187, 0.3);
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+.theme-dark [data-theme="island"] .dashboard-modal h2 {
+	color: #c8e0c4;
+	border-bottom-color: rgba(61, 212, 198, 0.2);
+}
+[data-theme="island"] .dashboard-modal-form label {
+	color: #5a7247;
+	font-weight: 500;
+}
+.theme-dark [data-theme="island"] .dashboard-modal-form label {
+	color: #98b894;
+}
+[data-theme="island"] .dashboard-modal-input {
+	background: rgba(25, 200, 185, 0.04);
+	border: 2.5px solid #b5d4b0;
+	color: #4a6741;
+	border-radius: 50px;
+	box-shadow: 0 3px 0 0 #c8dcc5;
+	font-weight: 500;
+}
+.theme-dark [data-theme="island"] .dashboard-modal-input {
+	background: rgba(255, 255, 255, 0.04);
+	border-color: #3a5a3e;
+	color: #c8e0c4;
+	box-shadow: 0 3px 0 0 #2a4a2e;
+}
+[data-theme="island"] .dashboard-modal-input:focus {
+	border-color: #ffcc00;
+	box-shadow: 0 3px 0 0 #e0b800, 0 0 0 3px rgba(255, 204, 0, 0.15);
+}
+.theme-dark [data-theme="island"] .dashboard-modal-input:focus {
+	border-color: #ffcc00;
+	box-shadow: 0 3px 0 0 #e0b800, 0 0 0 3px rgba(255, 204, 0, 0.10);
+}
+[data-theme="island"] .dashboard-modal-actions button {
+	border-radius: 50px;
+	font-weight: 600;
+	box-shadow: 0 4px 0 0 #a8c8a5;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+[data-theme="island"] .dashboard-modal-actions button:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 5px 0 0 #98b894;
+}
+[data-theme="island"] .dashboard-modal-actions button:active {
+	transform: translateY(2px);
+	box-shadow: 0 1px 0 0 #a8c8a5;
+}
+[data-theme="island"] .dashboard-modal-actions .mod-cta {
+	background: #ffcc00;
+	color: #4a6741;
+	border: 2px solid #ffcc00;
+	font-weight: 600;
+}
+.theme-dark [data-theme="island"] .dashboard-modal-actions .mod-cta {
+	background: #ffcc00;
+	color: #1a2a1e;
+	border-color: #ffcc00;
+}
+[data-theme="island"] .dashboard-modal-actions .mod-cta:hover {
+	background: #e0b800;
+	border-color: #e0b800;
+}
+.theme-dark [data-theme="island"] .dashboard-modal-actions .mod-cta:hover {
+	background: #e0b800;
+	border-color: #e0b800;
+}
+[data-theme="island"] .dashboard-modal-actions .mod-cta:active {
+	background: #ccaa00;
+	border-color: #ccaa00;
+}
+
+/* Island: checkbox — grass green */
+.dashboard-root[data-theme="island"] .task-checkbox:checked {
+	accent-color: #6fba2c;
+}
+
+/* Island: banner — forest frame */
+.dashboard-root[data-theme="island"] .dashboard-banner {
+	border-radius: 20px;
+	border: 2px solid #b5d4b0;
+}
+
+/* Island: card title — round, friendly */
+.dashboard-root[data-theme="island"] .dashboard-card-title {
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	color: #4a6741;
+}
+
+/* Island: section headers — forest accent */
+.dashboard-root[data-theme="island"] .dashboard-section-header {
+	color: #4a6741;
+}
+
+/* Island: sidebar links — ocean tint on hover */
+.dashboard-root[data-theme="island"] .dashboard-quick-link:hover {
+	background: #e4f0f8;
+}
+
+/* Island: NookPhone-style pastel tints on memo cards */
+.dashboard-root[data-theme="island"] .dashboard-card[data-type="memo"] {
+	border-left: 4px solid #82d5bb;
+}
+
+.dashboard-root[data-theme="island"] .dashboard-card[data-type="todo"] {
+	border-left: 4px solid #6fba2c;
+}
+
+.dashboard-root[data-theme="island"] .dashboard-card[data-type="project"] {
+	border-left: 4px solid #889df0;
+}
+
+.dashboard-root[data-theme="island"] .dashboard-card[data-type="link"] {
+	border-left: 4px solid #f8a6b2;
+}
+
+.dashboard-root[data-theme="island"] .dashboard-card[data-type="notes"] {
+	border-left: 4px solid #f7cd67;
+}
+
+/* Island: progress bar — teal to grass green gradient */
+.dashboard-root[data-theme="island"] .dashboard-progress-fill {
+	background: linear-gradient(90deg, #19c8b9, #6fba2c);
 }
 
 /* =================================================================

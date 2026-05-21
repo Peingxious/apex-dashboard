@@ -10,6 +10,8 @@ import type {
 
 const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width']);
 
+const REMINDER_REGEX = /\s*⏰\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*$/;
+
 const DEFAULT_BANNER: BannerData = {
 	quote: 'The mind is everything. What you think you become.',
 	author: 'Buddha',
@@ -528,7 +530,14 @@ function extractCardParts(body: string): {
 
 		const taskMatch = trimmed.match(/^- \[([ xX])\]\s*(.+)$/);
 		if (taskMatch && taskMatch[1] && taskMatch[2]) {
-			tasks.push({ checked: taskMatch[1] !== ' ', text: taskMatch[2] });
+			let taskText = taskMatch[2];
+			let taskReminder: string | undefined;
+			const reminderMatch = taskText.match(REMINDER_REGEX);
+			if (reminderMatch) {
+				taskText = taskText.replace(REMINDER_REGEX, '');
+				taskReminder = reminderMatch[1];
+			}
+			tasks.push({ checked: taskMatch[1] !== ' ', text: taskText, reminder: taskReminder });
 			continue;
 		}
 
