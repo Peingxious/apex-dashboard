@@ -82,6 +82,15 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 
 ## What's New
 
+### v1.0.7
+- **Task reminders** — Set per-task reminders with a calendar popup. Click the bell icon on any task to pick a date and time
+- **Calendar picker** — Visual month calendar with navigation, day selection, and hour/minute dropdowns (no manual date typing)
+- **Overdue indicator** — Overdue task bell icon turns red with a pulse animation
+- **Obsidian notifications** — 60-second periodic checker triggers an Obsidian Notice when a task is due
+- **Inline markdown storage** — Reminders stored as `⏰ YYYY-MM-DD HH:MM` in task text, fully readable and editable in the markdown file
+- **Island theme** — New Animal Crossing-inspired pastel theme with forest green sections and ocean blue accents
+- **i18n** — Reminder UI supports both English and Chinese
+
 ### v1.0.6
 - **Multi-quote banner** — Store multiple quotes in the banner, each with its own author. Add, edit, and delete quotes in the edit modal
 - **Banner image rotation** — Add multiple background images that rotate every 2 hours with a smooth fade transition
