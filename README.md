@@ -90,6 +90,8 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 - **Inline markdown storage** — Reminders stored as `⏰ YYYY-MM-DD HH:MM` in task text, fully readable and editable in the markdown file
 - **Island theme** — New Animal Crossing-inspired pastel theme with forest green sections and ocean blue accents
 - **i18n** — Reminder UI supports both English and Chinese
+- **Resizable section cards** — Drag to resize any card within a section, with min/max width constraints and persistent sizing
+- **Collapsible sidebar** — Left sidebar is now resizable; click the pin button to fix it in place
 
 ### v1.0.6
 - **Multi-quote banner** — Store multiple quotes in the banner, each with its own author. Add, edit, and delete quotes in the edit modal
