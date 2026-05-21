@@ -903,44 +903,43 @@
 	opacity: 1;
 }
 
-/* --- Pin button: flex child at bottom --- */
-.dashboard-sidebar-pin {
-	flex-shrink: 0;
-	margin-top: auto;
-	width: 100%;
-	height: 32px;
+/* --- Pin button in quick actions header --- */
+.dashboard-qa-pin-btn {
+	background: none !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--db-text-faint);
+	cursor: pointer;
+	padding: 2px 4px;
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
-	padding-right: 8px;
-	gap: 6px;
-	cursor: pointer;
+	justify-content: center;
 	opacity: 0;
-	transition: opacity 0.2s ease, color 0.15s ease, background 0.15s ease;
-	color: var(--db-text-faint);
-	border-radius: var(--db-radius-sm);
+	transition: opacity 0.2s ease, color 0.15s ease;
+	line-height: 1;
+	outline: none;
 }
 
-.dashboard-sidebar-pin svg {
+.dashboard-qa-pin-btn svg {
 	width: 14px;
 	height: 14px;
 }
 
-.dashboard-sidebar:hover .dashboard-sidebar-pin {
+.dashboard-qa-header:hover .dashboard-qa-pin-btn {
 	opacity: 0.5;
 }
 
-.dashboard-sidebar-pin:hover {
+.dashboard-qa-pin-btn:hover {
 	opacity: 1 !important;
 	color: var(--db-accent);
 }
 
-.dashboard-sidebar-pin--active {
+.dashboard-qa-pin-btn--active {
 	opacity: 0.4;
 	color: var(--db-accent);
 }
 
-.dashboard-sidebar--collapsed .dashboard-sidebar-pin {
+.dashboard-sidebar--collapsed .dashboard-qa-pin-btn {
 	display: none;
 }
 
@@ -1080,12 +1079,33 @@
 	opacity: 0.7;
 }
 
-.dashboard-qa-header .dashboard-section-add-btn {
-	opacity: 0.5;
+.dashboard-qa-add-btn {
+	background: none !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--db-text-faint);
+	cursor: pointer;
+	padding: 2px 4px;
+	font-size: 0.65em;
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	transition: opacity 0.2s ease, color 0.15s ease;
+	line-height: 1;
+	opacity: 0;
+	outline: none;
 }
 
-.dashboard-qa-header:hover .dashboard-section-add-btn {
+.dashboard-qa-header:hover .dashboard-qa-add-btn {
 	opacity: 1;
+}
+
+.dashboard-qa-add-btn:hover {
+	color: var(--db-text) !important;
+}
+
+.dashboard-sidebar--collapsed .dashboard-qa-add-btn {
+	display: none;
 }
 
 /* Quick Links: fixed height with internal scroll */
@@ -1294,7 +1314,7 @@
 	padding-bottom: 0;
 }
 
-.dashboard-section-add-btn {
+.dashboard-qa-add-btn {
 	background: none !important;
 	border: none !important;
 	box-shadow: none !important;
@@ -1311,11 +1331,11 @@
 	outline: none;
 }
 
-.dashboard-section-header:hover .dashboard-section-add-btn {
+.dashboard-section-header:hover .dashboard-qa-add-btn {
 	opacity: 1;
 }
 
-.dashboard-section-add-btn:hover {
+.dashboard-qa-add-btn:hover {
 	color: var(--db-text) !important;
 }
 
@@ -3591,7 +3611,7 @@
 			display: none;
 		}
 
-		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn {
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-add-btn {
 			opacity: 1;
 			width: 100%;
 			padding: 10px 0;
@@ -3602,17 +3622,17 @@
 			color: var(--db-text-faint);
 		}
 
-		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn::after {
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-add-btn::after {
 			content: 'Add action';
 			margin-left: 6px;
 		}
 
-		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn:lang(zh)::after {
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-add-btn:lang(zh)::after {
 			content: '添加操作';
 		}
 
-		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn:hover,
-		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-section-add-btn:active {
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-add-btn:hover,
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-add-btn:active {
 			background: var(--db-bg-secondary) !important;
 			color: var(--db-text) !important;
 		}
@@ -3763,7 +3783,7 @@
 	}
 
 	/* Section add button: always visible */
-	.dashboard-section-add-btn {
+	.dashboard-qa-add-btn {
 		opacity: 1;
 	}
 
@@ -4116,4 +4136,170 @@
 	color: var(--db-text-faint);
 	text-align: center;
 	padding: 12px 0;
+}
+
+/* ===== Chart Config Modal ===== */
+.chart-config-field {
+	margin-bottom: 16px;
+}
+
+.chart-config-field > label {
+	display: block;
+	font-size: 0.85em;
+	font-weight: 600;
+	margin-bottom: 6px;
+	color: var(--db-text-muted);
+}
+
+.chart-config-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.chart-config-row > label {
+	flex-shrink: 0;
+	min-width: 60px;
+}
+
+.chart-config-row > input[type="color"] {
+	flex-shrink: 0;
+}
+
+.chart-config-type-row {
+	display: flex;
+	gap: 8px;
+}
+
+.chart-config-type-btn {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 10px 8px;
+	border: 2px solid var(--db-border);
+	border-radius: var(--db-radius-md);
+	background: var(--db-bg-card);
+	color: var(--db-text);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	font-size: 0.9em;
+	font-weight: 600;
+}
+
+.chart-config-type-btn:hover {
+	border-color: var(--db-accent);
+	background: var(--db-bg-card-hover);
+}
+
+.chart-config-type-btn.active {
+	border-color: var(--db-accent);
+	background: var(--db-accent-light, rgba(99, 102, 241, 0.12));
+	color: var(--db-accent);
+}
+
+.chart-config-type-desc {
+	font-size: 0.75em;
+	font-weight: 400;
+	color: var(--db-text-faint);
+	margin-top: 4px;
+}
+
+.chart-config-source-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.chart-config-source-btn {
+	padding: 5px 12px;
+	border: 1px solid var(--db-border);
+	border-radius: var(--db-radius-sm);
+	background: var(--db-bg-card);
+	color: var(--db-text-muted);
+	cursor: pointer;
+	font-size: 0.82em;
+	transition: all 0.15s ease;
+}
+
+.chart-config-source-btn:hover {
+	border-color: var(--db-accent);
+	color: var(--db-text);
+}
+
+.chart-config-source-btn.active {
+	border-color: var(--db-accent);
+	background: var(--db-accent-light, rgba(99, 102, 241, 0.12));
+	color: var(--db-accent);
+	font-weight: 600;
+}
+
+.chart-config-dynamic {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--db-border);
+}
+
+.chart-config-bars-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.chart-config-bar-entry {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.chart-config-bar-label-input {
+	flex: 2;
+	min-width: 0;
+}
+
+.chart-config-bar-val-input {
+	flex: 1;
+	min-width: 60px;
+}
+
+.chart-config-bar-color {
+	width: 32px;
+	height: 28px;
+	padding: 2px;
+	border: 1px solid var(--db-border);
+	border-radius: var(--db-radius-sm);
+	background: var(--db-bg-card);
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.chart-config-bar-del {
+	background: none;
+	border: none;
+	color: var(--db-text-faint);
+	cursor: pointer;
+	padding: 4px;
+	flex-shrink: 0;
+}
+
+.chart-config-bar-del:hover {
+	color: var(--db-danger);
+}
+
+.chart-config-bar-add {
+	padding: 6px 16px;
+	border: 1px dashed var(--db-border);
+	border-radius: var(--db-radius-sm);
+	background: transparent;
+	color: var(--db-text-muted);
+	cursor: pointer;
+	font-size: 0.85em;
+	width: 100%;
+	transition: all 0.15s ease;
+}
+
+.chart-config-bar-add:hover {
+	border-color: var(--db-accent);
+	color: var(--db-accent);
 }

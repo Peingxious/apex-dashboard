@@ -1,6 +1,6 @@
 import { ItemView, Notice, setIcon, WorkspaceLeaf, TFile, Events } from 'obsidian';
 import type DashboardPlugin from './main';
-import type { DashboardData, DashboardCard, QuickAction, BannerData } from './types';
+import type { DashboardData, DashboardCard, QuickAction, BannerData, ChartConfig } from './types';
 import { SyncEngine } from './sync';
 import { renderDashboard } from './renderer';
 import { renderBanner, BannerEditModal, resolveVaultImage } from './banner';
@@ -8,6 +8,7 @@ import { getRecentDocs, renderRecentDocs } from './recent';
 import { renderQuickActions, AddActionModal, DocSearchModal } from './quick-actions';
 import { setupDragAndDrop } from './dnd';
 import { CardEditModal } from './card-edit-modal';
+import { ChartConfigModal } from './chart-config-modal';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -131,7 +132,7 @@ export class DashboardView extends ItemView {
 		} else {
 			sidebar.addClass('dashboard-sidebar--collapsed');
 		}
-		this.renderSidebar(sidebar);
+		this.renderSidebar(sidebar, container);
 		this.setupSidebarBehavior(sidebar, container);
 
 		const kanban = mainLayout.createDiv({ cls: 'dashboard-kanban-wrapper' });
@@ -314,7 +315,7 @@ export class DashboardView extends ItemView {
 		if (existing) existing.remove();
 	}
 
-	private renderSidebar(sidebar: HTMLElement): void {
+	private renderSidebar(sidebar: HTMLElement, root: HTMLElement): void {
 		if (!this.data) return;
 
 		const scroll = sidebar.createDiv({ cls: 'dashboard-sidebar-scroll' });
@@ -325,6 +326,21 @@ export class DashboardView extends ItemView {
 			(action) => this.executeAction(action),
 			(index) => this.sync.removeQuickAction(index),
 			() => this.openAddActionModal(),
+			() => {
+				this.sidebarPinned = !this.sidebarPinned;
+				localStorage.setItem('apex-dashboard-sidebar-pinned', String(this.sidebarPinned));
+				if (this.sidebarPinned) {
+					sidebar.addClass('dashboard-sidebar--pinned');
+					sidebar.removeClass('dashboard-sidebar--expanded');
+					sidebar.removeClass('dashboard-sidebar--collapsed');
+					this.sidebarExpanded = false;
+				} else {
+					sidebar.removeClass('dashboard-sidebar--pinned');
+					sidebar.addClass('dashboard-sidebar--collapsed');
+					this.sidebarExpanded = false;
+				}
+				return { pinned: this.sidebarPinned };
+			},
 		);
 
 		const docs = getRecentDocs(this.app, this.plugin.settings.recentDocCount);
@@ -338,31 +354,6 @@ export class DashboardView extends ItemView {
 	private setupSidebarBehavior(sidebar: HTMLElement, root: HTMLElement): void {
 		// Create slim indicator (visible only when collapsed)
 		sidebar.createDiv({ cls: 'dashboard-sidebar-slim-indicator' });
-
-		// Pin button — always present, toggles between pin/pin-off
-		const pinBtn = sidebar.createDiv({ cls: 'dashboard-sidebar-pin' });
-		const updatePinIcon = () => {
-			setIcon(pinBtn, this.sidebarPinned ? 'pin' : 'pin-off');
-			pinBtn.toggleClass('dashboard-sidebar-pin--active', this.sidebarPinned);
-		};
-		updatePinIcon();
-
-		pinBtn.addEventListener('click', (e) => {
-			e.stopPropagation();
-			this.sidebarPinned = !this.sidebarPinned;
-			localStorage.setItem('apex-dashboard-sidebar-pinned', String(this.sidebarPinned));
-			if (this.sidebarPinned) {
-				sidebar.addClass('dashboard-sidebar--pinned');
-				sidebar.removeClass('dashboard-sidebar--expanded');
-				sidebar.removeClass('dashboard-sidebar--collapsed');
-				this.sidebarExpanded = false;
-			} else {
-				sidebar.removeClass('dashboard-sidebar--pinned');
-				sidebar.addClass('dashboard-sidebar--collapsed');
-				this.sidebarExpanded = false;
-			}
-			updatePinIcon();
-		});
 
 		// Use capture phase so child handlers can't stopPropagation before we see it
 		sidebar.addEventListener('mousedown', (e: MouseEvent) => {
@@ -406,7 +397,9 @@ export class DashboardView extends ItemView {
 			onCardAdd: (colName: string) => {
 				const column = this.data?.columns.find(col => col.name === colName);
 				const effectiveType = column?.sectionType ?? colName.toLowerCase();
-				if (effectiveType === 'memo' || effectiveType === 'todo' || effectiveType === 'dashboard') {
+				if (effectiveType === 'dashboard') {
+					this.openChartConfigModal(colName);
+				} else if (effectiveType === 'memo' || effectiveType === 'todo') {
 					this.sync.addCard(colName);
 				} else {
 					this.openProjectSearchModal(colName);
@@ -462,6 +455,17 @@ export class DashboardView extends ItemView {
 		const modal = new CardEditModal(this.app, card, (updates) => {
 			this.sync.updateCard(card.id, updates);
 		}, this.plugin.settings.stylePreset);
+		modal.open();
+	}
+
+	private openChartConfigModal(colName: string): void {
+		const modal = new ChartConfigModal(this.app, colName, (title, config) => {
+			this.sync.addCard(colName, {
+				title,
+				type: 'chart',
+				chartConfig: config,
+			});
+		}, undefined, this.plugin.settings.stylePreset);
 		modal.open();
 	}
 
