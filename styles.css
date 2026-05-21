@@ -833,10 +833,109 @@
 	overflow-y: auto;
 	scrollbar-width: none;
 	padding-top: 0;
+	position: relative;
+	transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
 }
 
 .dashboard-sidebar::-webkit-scrollbar {
 	width: 0;
+}
+
+/* --- Collapsed: clean slim bar --- */
+.dashboard-sidebar--collapsed {
+	width: 15px;
+	cursor: pointer;
+	overflow: hidden;
+}
+
+.dashboard-sidebar--collapsed > *:not(.dashboard-sidebar-slim-indicator) {
+	opacity: 0;
+	pointer-events: none;
+	visibility: hidden;
+}
+
+.dashboard-sidebar--collapsed:hover {
+	background: var(--db-bg-hover);
+}
+
+/* Slim indicator: a subtle vertical line that hints the bar is interactive */
+.dashboard-sidebar-slim-indicator {
+	display: none;
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar-slim-indicator {
+	display: block;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 4px;
+	height: 40px;
+	border-radius: 2px;
+	background: var(--db-border-sidebar);
+	opacity: 0.4;
+	transition: opacity 0.2s ease, background 0.2s ease;
+	pointer-events: none;
+}
+
+.dashboard-sidebar--collapsed:hover .dashboard-sidebar-slim-indicator {
+	opacity: 0.7;
+	background: var(--db-text-faint);
+}
+
+/* --- Expanded --- */
+.dashboard-sidebar--expanded {
+	width: 220px;
+	opacity: 1;
+	cursor: default;
+	overflow-y: auto;
+}
+
+/* --- Pinned: permanent sidebar --- */
+.dashboard-sidebar--pinned {
+	width: 220px;
+	opacity: 1;
+}
+
+/* --- Pin button: flex child at bottom --- */
+.dashboard-sidebar-pin {
+	flex-shrink: 0;
+	margin-top: auto;
+	width: 100%;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	padding-right: 8px;
+	gap: 6px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.2s ease, color 0.15s ease, background 0.15s ease;
+	color: var(--db-text-faint);
+	border-radius: var(--db-radius-sm);
+}
+
+.dashboard-sidebar-pin svg {
+	width: 14px;
+	height: 14px;
+}
+
+.dashboard-sidebar:hover .dashboard-sidebar-pin {
+	opacity: 0.5;
+}
+
+.dashboard-sidebar-pin:hover {
+	opacity: 1 !important;
+	color: var(--db-accent);
+}
+
+.dashboard-sidebar-pin--active {
+	opacity: 0.4;
+	color: var(--db-accent);
+}
+
+.dashboard-sidebar--collapsed .dashboard-sidebar-pin {
+	display: none;
 }
 
 .dashboard-section {
@@ -1312,8 +1411,8 @@
 
 .dashboard-section-row[data-section-type="projects"] .dashboard-section-cards > .dashboard-card {
 	flex: 0 0 280px;
-	min-width: 280px;
-	max-width: 360px;
+	min-width: 200px;
+	max-width: 500px;
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-section-cards > .dashboard-card {
@@ -1324,8 +1423,8 @@
 
 .dashboard-section-row[data-section-type="todo"] .dashboard-section-cards > .dashboard-card {
 	flex: 0 0 260px;
-	min-width: 260px;
-	max-width: 300px;
+	min-width: 200px;
+	max-width: 500px;
 }
 
 /* Memo section: fixed height to align with Quick Links */
@@ -1394,7 +1493,11 @@
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover .dashboard-card-resize-handle,
-.dashboard-section-row[data-section-type="memo"] .dashboard-card--resizing .dashboard-card-resize-handle {
+.dashboard-section-row[data-section-type="memo"] .dashboard-card--resizing .dashboard-card-resize-handle,
+.dashboard-section-row[data-section-type="todo"] .dashboard-card:hover .dashboard-card-resize-handle,
+.dashboard-section-row[data-section-type="todo"] .dashboard-card--resizing .dashboard-card-resize-handle,
+.dashboard-section-row[data-section-type="projects"] .dashboard-card:hover .dashboard-card-resize-handle,
+.dashboard-section-row[data-section-type="projects"] .dashboard-card--resizing .dashboard-card-resize-handle {
 	border-right-color: var(--db-border-card);
 	box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15);
 }
@@ -3682,3 +3785,191 @@
 		overflow: hidden;
 	}
 }
+
+/* ===== Task Reminder ===== */
+.dashboard-task-reminder-btn {
+	background: none !important;
+	border: none !important;
+	box-shadow: none !important;
+	color: var(--db-text-muted);
+	cursor: pointer;
+	padding: 0 2px;
+	min-height: 0;
+	line-height: 1;
+	opacity: 0;
+	transition: opacity 0.15s ease, color 0.15s ease;
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+}
+
+.dashboard-task-reminder-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.dashboard-task-item:hover .dashboard-task-reminder-btn {
+	opacity: 1;
+}
+
+.dashboard-task-reminder-btn:hover {
+	color: var(--db-text) !important;
+}
+
+.dashboard-task-reminder-btn--active {
+	opacity: 0.6;
+	color: var(--db-accent) !important;
+}
+
+.dashboard-task-item:hover .dashboard-task-reminder-btn--active {
+	opacity: 0.8;
+}
+
+.dashboard-task-reminder-btn--overdue {
+	opacity: 1 !important;
+	color: #ef4444 !important;
+	animation: reminder-pulse 2s ease-in-out infinite;
+}
+
+@keyframes reminder-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: 0.5; }
+}
+
+.dashboard-task-reminder-popup {
+	background: var(--db-bg);
+	border: 1px solid var(--db-border-card);
+	border-radius: var(--db-radius-md);
+	padding: 12px;
+	z-index: 10000;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-width: 240px;
+	font-size: 13px;
+	color: var(--db-text);
+}
+
+.dashboard-task-reminder-calendar-nav {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 4px;
+}
+
+.dashboard-task-reminder-calendar-nav span {
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.dashboard-task-reminder-calendar-nav button {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--db-text-muted);
+	padding: 2px 6px;
+	border-radius: 4px;
+	font-size: 14px;
+}
+
+.dashboard-task-reminder-calendar-nav button:hover {
+	color: var(--db-text);
+	background: var(--db-bg-card-hover);
+}
+
+.dashboard-task-reminder-calendar {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+	text-align: center;
+}
+
+.dashboard-task-reminder-calendar-header {
+	font-size: 11px;
+	color: var(--db-text-muted);
+	padding: 4px 0;
+	font-weight: 500;
+}
+
+.dashboard-task-reminder-calendar-day {
+	font-size: 12px;
+	padding: 5px 2px;
+	border-radius: 4px;
+	cursor: pointer;
+	border: none;
+	background: none;
+	color: var(--db-text);
+	transition: background 0.1s;
+}
+
+.dashboard-task-reminder-calendar-day:hover {
+	background: var(--db-bg-card-hover);
+}
+
+.dashboard-task-reminder-calendar-day--today {
+	font-weight: 700;
+	color: var(--db-accent);
+}
+
+.dashboard-task-reminder-calendar-day--selected {
+	background: var(--db-accent) !important;
+	color: white !important;
+}
+
+.dashboard-task-reminder-calendar-day--other-month {
+	opacity: 0.3;
+}
+
+.dashboard-task-reminder-time {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+.dashboard-task-reminder-time select {
+	padding: 4px 6px;
+	border: 1px solid var(--db-border-card);
+	border-radius: 4px;
+	background: var(--db-bg-card);
+	color: var(--db-text);
+	font-size: 12px;
+}
+
+.dashboard-task-reminder-popup-btns {
+	display: flex;
+	gap: 6px;
+	margin-top: 4px;
+}
+
+.dashboard-task-reminder-popup-btns button {
+	padding: 5px 12px;
+	border-radius: var(--db-radius-sm);
+	border: 1px solid var(--db-border-card);
+	background: var(--db-bg-card);
+	color: var(--db-text);
+	cursor: pointer;
+	font-size: 12px;
+	transition: background 0.1s;
+}
+
+.dashboard-task-reminder-popup-btns button:hover {
+	background: var(--db-bg-card-hover);
+}
+
+.dashboard-task-reminder-popup-btns button.mod-cta {
+	background: var(--db-accent);
+	color: white;
+	border-color: var(--db-accent);
+}
+
+.dashboard-task-reminder-popup-btns button.mod-cta:hover {
+	opacity: 0.9;
+}
+
+.dashboard-task-reminder-popup-btns .dashboard-task-reminder-clear {
+	color: var(--db-text-muted);
+}
+

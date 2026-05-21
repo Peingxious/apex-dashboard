@@ -138,7 +138,9 @@ export function serialize(data: DashboardData): string {
 
 			if (card.tasks.length > 0) {
 				for (const task of card.tasks) {
-					lines.push(`- [${task.checked ? 'x' : ' '}] ${task.text}`);
+					let taskLine = `- [${task.checked ? 'x' : ' '}] ${task.text}`;
+					if (task.reminder) taskLine += ` ⏰ ${task.reminder}`;
+					lines.push(taskLine);
 				}
 			}
 
