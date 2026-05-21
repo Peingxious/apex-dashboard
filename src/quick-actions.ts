@@ -9,7 +9,8 @@ export function renderQuickActions(
 	onExecute: (action: QuickAction) => void,
 	onRemove: (index: number) => void,
 	onAdd: () => void,
-	onTogglePin?: () => { pinned: boolean },
+	initialPinned?: boolean,
+	onTogglePin?: () => void,
 ): void {
 	const section = container.createDiv({ cls: 'dashboard-section dashboard-quick-actions' });
 
@@ -20,19 +21,20 @@ export function renderQuickActions(
 
 	// Pin button (left of add button)
 	if (onTogglePin) {
+		let pinned = initialPinned ?? false;
 		const pinBtn = btnGroup.createEl('button', {
 			cls: 'dashboard-qa-pin-btn',
 			attr: { 'aria-label': 'Toggle pin' },
 		});
 		const updatePinIcon = () => {
-			const state = onTogglePin();
-			setIcon(pinBtn, state.pinned ? 'pin' : 'pin-off');
-			pinBtn.toggleClass('dashboard-qa-pin-btn--active', state.pinned);
+			setIcon(pinBtn, pinned ? 'pin' : 'pin-off');
+			pinBtn.toggleClass('dashboard-qa-pin-btn--active', pinned);
 		};
 		updatePinIcon();
 		pinBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			onTogglePin();
+			pinned = !pinned;
 			updatePinIcon();
 		});
 	}

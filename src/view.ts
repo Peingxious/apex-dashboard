@@ -326,6 +326,7 @@ export class DashboardView extends ItemView {
 			(action) => this.executeAction(action),
 			(index) => this.sync.removeQuickAction(index),
 			() => this.openAddActionModal(),
+			this.sidebarPinned,
 			() => {
 				this.sidebarPinned = !this.sidebarPinned;
 				localStorage.setItem('apex-dashboard-sidebar-pinned', String(this.sidebarPinned));
@@ -339,7 +340,6 @@ export class DashboardView extends ItemView {
 					sidebar.addClass('dashboard-sidebar--collapsed');
 					this.sidebarExpanded = false;
 				}
-				return { pinned: this.sidebarPinned };
 			},
 		);
 
