@@ -999,36 +999,52 @@
 	white-space: nowrap;
 }
 
-/* ===== Quick Links ===== */
+/* ===== Quick Links (Glass Buttons) ===== */
 .dashboard-qa-list {
 	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	margin-bottom: 12px;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-bottom: 8px;
 }
 
 .dashboard-qa-item {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 5px;
 	padding: 4px 10px;
-	border-radius: var(--db-radius-sm);
+	border-radius: 50px;
+	background: var(--db-bg-btn);
+	border: 1px solid var(--db-border-btn);
+	backdrop-filter: var(--db-backdrop-blur);
+	-webkit-backdrop-filter: var(--db-backdrop-blur);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 	cursor: pointer;
-	transition: background 0.15s ease;
-	height: 18px;
+	transition: all 0.2s ease;
+	position: relative;
+	overflow: hidden;
 }
 
 .dashboard-qa-item:hover {
-	background: var(--db-bg-hover);
+	background: var(--db-bg-btn-hover);
+	border-color: var(--db-accent);
+	transform: translateY(-1px);
+	box-shadow: 0 3px 10px rgba(0, 0, 0, 0.10);
+}
+
+.dashboard-qa-item:active {
+	transform: scale(0.95);
+	box-shadow: 0 0 10px color-mix(in srgb, var(--db-accent) 25%, transparent);
+	border-color: var(--db-accent);
 }
 
 .dashboard-qa-name {
-	font-size: 0.9em;
-	flex: 1;
+	font-size: 0.82em;
+	flex-shrink: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
-	line-height: 1.0;
+	line-height: 1.2;
 }
 
 .dashboard-qa-remove {
@@ -1037,22 +1053,23 @@
 	box-shadow: none !important;
 	color: var(--db-text-muted);
 	cursor: pointer;
-	padding: 0 4px;
+	padding: 0 2px;
 	min-height: 0;
 	line-height: 1;
 	opacity: 0;
 	transition: opacity 0.15s ease, color 0.15s ease;
 	display: flex;
 	align-items: center;
+	flex-shrink: 0;
 }
 
 .dashboard-qa-remove:hover {
-	color: var(--db-text);
+	color: var(--db-danger);
 }
 
 .dashboard-qa-remove svg {
-	width: 8px;
-	height: 8px;
+	width: 10px;
+	height: 10px;
 }
 
 .dashboard-qa-item:hover .dashboard-qa-remove {
@@ -1137,8 +1154,9 @@
 .dashboard-qa-icon {
 	display: flex;
 	align-items: center;
-	color: var(--db-text-muted);
+	color: var(--db-accent);
 	flex-shrink: 0;
+	opacity: 0.7;
 }
 
 .dashboard-qa-icon svg {
@@ -1147,17 +1165,19 @@
 }
 
 .dashboard-qa-badge {
-	font-size: 0.65em;
+	font-size: 0.55em;
 	padding: 1px 5px;
 	border-radius: 3px;
-	background: var(--db-bg-btn);
-	color: var(--db-text-muted);
+	background: color-mix(in srgb, var(--db-accent) 12%, transparent);
+	color: var(--db-accent);
 	flex-shrink: 0;
 	line-height: 1.2;
+	font-weight: 600;
+	letter-spacing: 0.03em;
 }
 
 .dashboard-qa-item--preset {
-	opacity: 0.75;
+	opacity: 0.85;
 }
 
 .dashboard-qa-item--preset:hover {
@@ -3806,6 +3826,11 @@
 	/* Quick link remove: always visible */
 	.dashboard-qa-remove {
 		opacity: 1;
+	}
+
+	/* Quick action buttons: compact but touch-friendly */
+	.dashboard-qa-item {
+		padding: 6px 12px;
 	}
 
 	/* Hide memo resize handle on mobile */
