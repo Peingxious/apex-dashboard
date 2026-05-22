@@ -41,22 +41,28 @@ The sidebar shows recently edited files with relative timestamps, so you can jum
 ![Themes Preview](screenshot3.png)
 ![Themes Preview](screenshot4.png)
 
-5 handcrafted themes, each with distinct visual identity:
+11 handcrafted themes, each with distinct visual identity:
 
 | Theme | Style |
 |-------|-------|
 | **Earth** | Warm organic tones, parchment textures |
 | **Nordic** | Clean minimal with blue accents |
-| **Cyan** (Neon) | Cyberpunk sharp, cyan-on-dark |
 | **Aurora** | Frosted glass with animated aurora gradient |
-| **Spring** (Prism) | Rose glass with warm glow |
+| **Spring** | Rose glass with warm glow |
+| **Island** | Animal Crossing pastels, forest green and ocean blue |
+| **Tundra** | Cold gray + avocado green aurora, sage glass cards |
+| **Blossom** | Rose glass glow, transparent sections |
+| **Haze** | Smoky white-to-blue mist, extreme glass transparency |
+| **Ember** | Warm campfire smoke gradient, amber glow |
+| **Dusk** | Purple twilight mist, cloud-soft rounded |
+| **Jade** | Green bamboo mist, crisp jade-cut edges |
 
-All themes support both Obsidian light and dark modes. Lime and Apex enforce a dark aesthetic regardless of system preference.
+All themes support both Obsidian light and dark modes.
 
 ## Settings
 
 - **Dashboard file** — customize the file path for your dashboard data
-- **Style** — choose from 5 visual themes
+- **Style** — choose from 11 visual themes
 - **Language** — English or Chinese interface
 - **Recent documents count** — control how many recent files appear
 
@@ -92,6 +98,10 @@ All themes support both Obsidian light and dark modes. Lime and Apex enforce a d
 - **i18n** — Reminder UI supports both English and Chinese
 - **Resizable section cards** — Drag to resize any card within a section, with min/max width constraints and persistent sizing
 - **Collapsible sidebar** — Left sidebar is now resizable; click the pin button to fix it in place
+- **6 new themes** — Tundra (sage green aurora), Blossom (rose glass, transparent sections), Haze (smoky blue mist, glass transparency), Ember (warm campfire smoke), Dusk (purple twilight mist), Jade (green bamboo mist)
+- **Transparent sections** — Tundra, Blossom, Haze, Ember, Dusk, and Jade feature borderless transparent sections with floating cards
+- **Banner overlay removed** — Banner images no longer covered by a dark overlay filter
+- **Faster banner rotation** — Quotes rotate every 1 hour, images every 30 minutes
 
 ### v1.0.6
 - **Multi-quote banner** — Store multiple quotes in the banner, each with its own author. Add, edit, and delete quotes in the edit modal

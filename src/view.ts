@@ -23,8 +23,8 @@ export class DashboardView extends ItemView {
 	private readonly RECENT_DOCS_DEBOUNCE = 500;
 	private bannerQuoteIndex = 0;
 	private bannerImageIndex = 0;
-	private static readonly BANNER_QUOTE_ROTATION_MS = 2 * 60 * 60 * 1000; // 2 hours
-	private static readonly BANNER_IMAGE_ROTATION_MS = 2 * 60 * 60 * 1000; // 2 hours
+	private static readonly BANNER_QUOTE_ROTATION_MS = 60 * 60 * 1000; // 1 hour (on the hour)
+	private static readonly BANNER_IMAGE_ROTATION_MS = 30 * 60 * 1000; // 30 min (on the half)
 	private static readonly REMINDER_CHECK_MS = 60 * 1000; // 1 minute
 	private static readonly BANNER_QUOTE_OFFSET_MS = 60 * 60 * 1000; // offset by 1 hour from image
 	private reminderTimer: ReturnType<typeof setInterval> | null = null;
