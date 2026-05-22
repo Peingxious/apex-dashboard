@@ -31,6 +31,8 @@ export class DashboardView extends ItemView {
 	private firedReminders = new Set<string>();
 	private sidebarPinned = localStorage.getItem('apex-dashboard-sidebar-pinned') === 'true';
 	private sidebarExpanded = false;
+	private pendingScrollCardId: string | null = null;
+	private pendingScrollToLastCardOfColumn: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: DashboardPlugin) {
 		super(leaf);
@@ -158,6 +160,31 @@ export class DashboardView extends ItemView {
 			const saved = cardId ? savedTaskListScrolls.get(cardId) : undefined;
 			if (saved !== undefined) (el as HTMLElement).scrollTop = saved;
 		});
+
+		// Scroll to newly added card
+		if (this.pendingScrollCardId) {
+			const cardEl = container.querySelector(`[data-card-id="${this.pendingScrollCardId}"]`);
+			if (cardEl) {
+				requestAnimationFrame(() => {
+					cardEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+				});
+			}
+			this.pendingScrollCardId = null;
+		}
+		if (this.pendingScrollToLastCardOfColumn) {
+			const colName = this.pendingScrollToLastCardOfColumn;
+			const sectionRow = container.querySelector(`[data-column="${colName}"]`);
+			if (sectionRow) {
+				const cards = sectionRow.querySelectorAll('.dashboard-card');
+				const lastCard = cards[cards.length - 1];
+				if (lastCard) {
+					requestAnimationFrame(() => {
+						lastCard.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+					});
+				}
+			}
+			this.pendingScrollToLastCardOfColumn = null;
+		}
 
 	}
 
@@ -383,7 +410,10 @@ export class DashboardView extends ItemView {
 	private createCallbacks() {
 		return {
 			onCardEdit: (card: DashboardCard) => this.openCardEditModal(card),
-			onCardDelete: (cardId: string) => this.sync.deleteCard(cardId),
+			onCardDelete: (cardId: string) => {
+				this.sync.deleteCard(cardId);
+				new Notice(t('card.deleted'));
+			},
 			onCheckboxToggle: (cardId: string, idx: number, checked: boolean) => this.sync.toggleTask(cardId, idx, checked),
 			onTaskAdd: (cardId: string, text: string) => this.sync.addTask(cardId, text),
 			onTaskDelete: (cardId: string, idx: number) => this.sync.deleteTask(cardId, idx),
@@ -400,6 +430,7 @@ export class DashboardView extends ItemView {
 				if (effectiveType === 'dashboard') {
 					this.openChartConfigModal(colName);
 				} else if (effectiveType === 'memo' || effectiveType === 'todo') {
+					this.pendingScrollToLastCardOfColumn = colName;
 					this.sync.addCard(colName);
 				} else {
 					this.openProjectSearchModal(colName);

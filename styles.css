@@ -3618,6 +3618,10 @@
 			display: none;
 		}
 
+		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-btn-group {
+			width: 100%;
+		}
+
 		.dashboard-mobile-drawer-content .dashboard-qa-header .dashboard-qa-add-btn {
 			opacity: 1;
 			width: 100%;
@@ -4146,112 +4150,232 @@
 }
 
 /* ===== Chart Config Modal ===== */
+
+/* --- Form fields --- */
 .chart-config-field {
-	margin-bottom: 16px;
+	margin-bottom: 20px;
 }
 
 .chart-config-field > label {
 	display: block;
-	font-size: 0.85em;
+	font-size: 0.82em;
 	font-weight: 600;
-	margin-bottom: 6px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	margin-bottom: 8px;
 	color: var(--db-text-muted);
 }
 
+/* Inline row for label + input (value, max, unit, color) */
 .chart-config-row {
 	display: flex;
 	align-items: center;
-	gap: 12px;
+	gap: 10px;
+	margin-bottom: 14px;
 }
 
 .chart-config-row > label {
 	flex-shrink: 0;
-	min-width: 60px;
+	font-size: 0.82em;
+	font-weight: 600;
+	color: var(--db-text-muted);
+	min-width: 56px;
 }
 
 .chart-config-row > input[type="color"] {
 	flex-shrink: 0;
+	width: 40px;
+	height: 30px;
+	padding: 2px;
+	border: 1px solid var(--db-border);
+	border-radius: var(--db-radius-sm);
+	cursor: pointer;
 }
 
+/* --- Chart type picker (3 cards with preview) --- */
 .chart-config-type-row {
-	display: flex;
-	gap: 8px;
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 10px;
 }
 
-.chart-config-type-btn {
-	flex: 1;
+.dashboard-modal .chart-config-type-btn {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	padding: 10px 8px;
+	justify-content: flex-start;
+	padding: 14px 6px 10px;
 	border: 2px solid var(--db-border);
 	border-radius: var(--db-radius-md);
 	background: var(--db-bg-card);
 	color: var(--db-text);
 	cursor: pointer;
 	transition: all 0.15s ease;
-	font-size: 0.9em;
-	font-weight: 600;
+	min-height: 100px;
 }
 
-.chart-config-type-btn:hover {
+.dashboard-modal .chart-config-type-btn:hover {
 	border-color: var(--db-accent);
 	background: var(--db-bg-card-hover);
 }
 
-.chart-config-type-btn.active {
+.dashboard-modal .chart-config-type-btn.active {
 	border-color: var(--db-accent);
-	background: var(--db-accent-light, rgba(99, 102, 241, 0.12));
+	background: var(--db-accent-light, rgba(99, 102, 241, 0.1));
+}
+
+/* Preview area inside type button */
+.chart-config-type-preview {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 56px;
+	width: 100%;
+	margin-bottom: 8px;
+}
+
+.chart-config-type-name {
+	font-size: 0.88em;
+	font-weight: 700;
+	margin-bottom: 2px;
+}
+
+.dashboard-modal .chart-config-type-btn.active .chart-config-type-name {
 	color: var(--db-accent);
 }
 
 .chart-config-type-desc {
-	font-size: 0.75em;
+	font-size: 0.7em;
 	font-weight: 400;
 	color: var(--db-text-faint);
-	margin-top: 4px;
+	text-align: center;
+	line-height: 1.3;
 }
 
-.chart-config-source-row {
+/* --- Type previews: stat, ring, bars --- */
+.chart-preview-stat-num {
+	font-size: 1.8em;
+	font-weight: 700;
+	line-height: 1;
+	color: var(--db-accent);
+	font-family: var(--db-font);
+}
+
+.chart-preview-stat-label {
+	font-size: 0.7em;
+	color: var(--db-text-faint);
+	margin-top: 3px;
+	text-align: center;
+}
+
+.chart-preview-ring {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.chart-preview-ring-inner {
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.chart-preview-ring-text {
+	font-size: 0.6em;
+	font-weight: 700;
+	color: var(--db-text);
+	font-family: var(--db-font);
+}
+
+.chart-preview-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	width: 60px;
+}
+
+.chart-preview-bar-row {
+	height: 6px;
+	background: var(--db-bg-hover);
+	border-radius: 3px;
+	overflow: hidden;
+}
+
+.chart-preview-bar-fill {
+	height: 100%;
+	border-radius: 3px;
+	background: linear-gradient(90deg, var(--db-progress-from), var(--db-progress-to));
+}
+
+/* --- Dynamic fields section --- */
+.chart-config-dynamic {
+	margin-top: 16px;
+	padding-top: 16px;
+	border-top: 1px solid var(--db-border);
+}
+
+/* --- Data source section headers --- */
+.chart-config-source-section {
+	width: 100%;
+	font-size: 0.72em;
+	font-weight: 600;
+	color: var(--db-text-faint);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	margin-top: 12px;
+	margin-bottom: 6px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--db-border);
+}
+
+.chart-config-source-section:first-child {
+	margin-top: 0;
+}
+
+/* --- Data source buttons (pill tags, wrap) --- */
+.chart-config-source-wrap {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 6px;
 }
 
-.chart-config-source-btn {
-	padding: 5px 12px;
+.dashboard-modal .chart-config-source-btn {
+	display: inline-block;
+	padding: 4px 12px;
 	border: 1px solid var(--db-border);
-	border-radius: var(--db-radius-sm);
+	border-radius: 14px;
 	background: var(--db-bg-card);
 	color: var(--db-text-muted);
 	cursor: pointer;
-	font-size: 0.82em;
+	font-size: 0.8em;
 	transition: all 0.15s ease;
+	line-height: 1.4;
 }
 
-.chart-config-source-btn:hover {
+.dashboard-modal .chart-config-source-btn:hover {
 	border-color: var(--db-accent);
 	color: var(--db-text);
 }
 
-.chart-config-source-btn.active {
+.dashboard-modal .chart-config-source-btn.active {
 	border-color: var(--db-accent);
-	background: var(--db-accent-light, rgba(99, 102, 241, 0.12));
+	background: var(--db-accent-light, rgba(99, 102, 241, 0.1));
 	color: var(--db-accent);
 	font-weight: 600;
 }
 
-.chart-config-dynamic {
-	margin-top: 12px;
-	padding-top: 12px;
-	border-top: 1px solid var(--db-border);
-}
-
+/* --- Bar editor --- */
 .chart-config-bars-list {
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
-	margin-bottom: 8px;
+	margin-bottom: 10px;
 }
 
 .chart-config-bar-entry {
@@ -4281,7 +4405,7 @@
 	flex-shrink: 0;
 }
 
-.chart-config-bar-del {
+.dashboard-modal .chart-config-bar-del {
 	background: none;
 	border: none;
 	color: var(--db-text-faint);
@@ -4290,11 +4414,11 @@
 	flex-shrink: 0;
 }
 
-.chart-config-bar-del:hover {
+.dashboard-modal .chart-config-bar-del:hover {
 	color: var(--db-danger);
 }
 
-.chart-config-bar-add {
+.dashboard-modal .chart-config-bar-add {
 	padding: 6px 16px;
 	border: 1px dashed var(--db-border);
 	border-radius: var(--db-radius-sm);
@@ -4306,100 +4430,25 @@
 	transition: all 0.15s ease;
 }
 
-.chart-config-bar-add:hover {
+.dashboard-modal .chart-config-bar-add:hover {
 	border-color: var(--db-accent);
 	color: var(--db-accent);
 }
 
-/* ===== Chart Type Preview Icons ===== */
-.chart-config-type-preview {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 48px;
-	margin-bottom: 6px;
-}
-
-/* Stat preview */
-.chart-preview-stat-num {
-	font-size: 1.6em;
-	font-weight: 700;
-	line-height: 1;
-	font-family: var(--db-font);
-}
-
-.chart-preview-stat-label {
-	font-size: 0.65em;
-	color: var(--db-text-faint);
-	margin-top: 2px;
+/* Reset Obsidian default modal button styles for chart config buttons */
+.dashboard-modal .chart-config-type-btn,
+.dashboard-modal .chart-config-source-btn,
+.dashboard-modal .chart-config-bar-add,
+.dashboard-modal .chart-config-bar-del {
+	box-shadow: none;
+	text-shadow: none;
+	font-family: inherit;
+	line-height: normal;
+	white-space: normal;
 	text-align: center;
 }
 
-/* Ring preview */
-.chart-preview-ring {
-	width: 40px;
-	height: 40px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.chart-preview-ring-inner {
-	width: 26px;
-	height: 26px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.chart-preview-ring-text {
-	font-size: 0.6em;
-	font-weight: 700;
-	color: var(--db-text);
-	font-family: var(--db-font);
-}
-
-/* Bars preview */
-.chart-preview-bars {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-	width: 56px;
-}
-
-.chart-preview-bar-row {
-	height: 5px;
-	background: var(--db-bg-hover);
-	border-radius: 2px;
-	overflow: hidden;
-}
-
-.chart-preview-bar-fill {
-	height: 100%;
-	border-radius: 2px;
-	background: linear-gradient(90deg, var(--db-progress-from), var(--db-progress-to));
-}
-
-.chart-config-type-name {
-	font-size: 0.88em;
-	font-weight: 600;
-}
-
-/* Source section divider */
-.chart-config-source-section {
-	font-size: 0.75em;
-	font-weight: 600;
-	color: var(--db-text-faint);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	margin-top: 10px;
-	margin-bottom: 4px;
-	padding-bottom: 4px;
-	border-bottom: 1px solid var(--db-border);
-}
-
-.chart-config-source-section:first-child {
-	margin-top: 0;
+.dashboard-modal .chart-config-type-btn:hover,
+.dashboard-modal .chart-config-source-btn:hover {
+	box-shadow: none;
 }

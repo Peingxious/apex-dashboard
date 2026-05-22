@@ -1,6 +1,9 @@
 import type {
 	BannerData,
 	CardType,
+	ChartBarEntry,
+	ChartConfig,
+	ChartType,
 	DashboardCard,
 	DashboardColumn,
 	DashboardData,
@@ -8,7 +11,7 @@ import type {
 	TaskItem,
 } from './types';
 
-const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width']);
+const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'chart', 'source', 'value', 'max', 'unit', 'label']);
 
 const REMINDER_REGEX = /\s*⏰\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*$/;
 
@@ -131,6 +134,23 @@ export function serialize(data: DashboardData): string {
 			if (card.width > 0) {
 				lines.push(`width: ${card.width}`);
 			}
+		if (card.chartConfig) {
+			const cc = card.chartConfig;
+			lines.push(`chart: ${cc.chartType}`);
+			if (cc.source) lines.push(`source: ${cc.source}`);
+			if (cc.value > 0 && !cc.source) lines.push(`value: ${cc.value}`);
+			if (cc.max !== 100) lines.push(`max: ${cc.max}`);
+			if (cc.unit) lines.push(`unit: ${cc.unit}`);
+			if (cc.label) lines.push(`label: ${cc.label}`);
+			if (cc.color) lines.push(`color: ${cc.color}`);
+			if (cc.chartType === 'bars' && cc.bars.length > 0) {
+				lines.push('');
+				for (const bar of cc.bars) {
+					const colorSuffix = bar.color ? ` ${bar.color}` : '';
+					lines.push(`${bar.label}: ${bar.value}${colorSuffix}`);
+				}
+			}
+		}
 
 			if (card.blockquote) {
 				lines.push(`> ${card.blockquote}`);
@@ -423,9 +443,11 @@ function resolveSectionType(
 	if (lower === 'todo') return 'todo';
 	if (lower === 'projects') return 'projects';
 	if (lower === 'notes') return 'notes';
+	if (lower === 'dashboard') return 'dashboard';
 
 	if (cards.length > 0) {
 		const types = new Set(cards.map(c => c.type));
+		if (types.has('chart') && types.size === 1) return 'dashboard';
 		if (types.has('task') && types.size === 1) return 'todo';
 		if (types.has('task') && !types.has('project')) return 'todo';
 		if (types.has('project') && types.size === 1) return 'projects';
@@ -489,6 +511,7 @@ function splitByH3(content: string): Array<{ title: string; body: string }> {
 function parseCard(block: { title: string; body: string }, columnName: string): DashboardCard {
 	const { metadata, tasks, blockquote, cleanBody } = extractCardParts(block.body);
 	const cardType = detectCardType(tasks, blockquote, metadata);
+	const chartConfig = cardType === 'chart' ? parseChartConfig(metadata, cleanBody) : undefined;
 
 	return {
 		id: metadata.id ?? generateId(block.title, columnName),
@@ -506,6 +529,7 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 		color: metadata.color ?? '',
 		coverImage: metadata.cover ?? '',
 		width: parseInt(metadata.width ?? '0', 10) || 0,
+			chartConfig,
 	};
 }
 
@@ -563,6 +587,7 @@ function detectCardType(
 ): CardType {
 	if (metadata.type === 'task') return 'task';
 	if (metadata.type === 'project') return 'project';
+	if (metadata.chart) return 'chart';
 
 	const link = metadata.link ?? '';
 
@@ -802,4 +827,35 @@ function parseYamlStringValue(value: string): string {
 		return value.slice(1, -1);
 	}
 	return value;
+}
+
+function parseChartConfig(metadata: Record<string, string>, body: string): ChartConfig {
+	const validTypes: ChartType[] = ['stat', 'ring', 'bars'];
+	const chartType = validTypes.includes(metadata.chart as ChartType) ? metadata.chart as ChartType : 'stat';
+
+	let bars: ChartBarEntry[] = [];
+	if (chartType === 'bars') {
+		bars = body.split('\n')
+			.map(line => {
+				const match = line.trim().match(/^(.+?):\s*(\d+(?:\.\d+)?)(?:\s+(#[a-fA-F0-9]{3,8}))?$/);
+				if (!match) return null;
+				return {
+					label: match[1]!.trim(),
+					value: parseFloat(match[2]!),
+					color: match[3] ?? '',
+				};
+			})
+			.filter((b): b is NonNullable<typeof b> => b !== null) as ChartBarEntry[];
+	}
+
+	return {
+		chartType,
+		source: metadata.source ?? '',
+		value: metadata.value ? parseFloat(metadata.value) : 0,
+		max: metadata.max ? parseFloat(metadata.max) : 100,
+		unit: metadata.unit ?? '',
+		label: metadata.label ?? '',
+		color: metadata.color ?? '',
+		bars,
+	};
 }
