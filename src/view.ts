@@ -131,6 +131,8 @@ export class DashboardView extends ItemView {
 		const sidebar = mainLayout.createDiv({ cls: 'dashboard-sidebar' });
 		if (this.sidebarPinned) {
 			sidebar.addClass('dashboard-sidebar--pinned');
+		} else if (this.sidebarExpanded) {
+			sidebar.addClass('dashboard-sidebar--expanded');
 		} else {
 			sidebar.addClass('dashboard-sidebar--collapsed');
 		}
@@ -319,6 +321,11 @@ export class DashboardView extends ItemView {
 					(action) => { this.executeAction(action); this.closeMobileDrawer(); },
 					(index) => this.sync.removeQuickAction(index),
 					() => this.openAddActionModal(),
+					undefined,
+					undefined,
+					this.data.quickActionOrder,
+					(order) => this.sync.reorderQuickActions(order),
+					(key) => this.sync.removeQuickActionByKey(key),
 				);
 			}
 		} else {
@@ -368,6 +375,9 @@ export class DashboardView extends ItemView {
 					this.sidebarExpanded = false;
 				}
 			},
+			this.data.quickActionOrder,
+			(order) => this.sync.reorderQuickActions(order),
+			(key) => this.sync.removeQuickActionByKey(key),
 		);
 
 		const docs = getRecentDocs(this.app, this.plugin.settings.recentDocCount);

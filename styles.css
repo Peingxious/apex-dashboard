@@ -1004,15 +1004,15 @@
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 4px;
+	gap: 3px;
 	margin-bottom: 8px;
 }
 
 .dashboard-qa-item {
 	display: flex;
 	align-items: center;
-	gap: 5px;
-	padding: 4px 10px;
+	gap: 3px;
+	padding: 3px 7px;
 	border-radius: 50px;
 	background: var(--db-bg-btn);
 	border: 1px solid var(--db-border-btn);
@@ -1022,7 +1022,6 @@
 	cursor: pointer;
 	transition: all 0.2s ease;
 	position: relative;
-	overflow: hidden;
 }
 
 .dashboard-qa-item:hover {
@@ -1039,28 +1038,35 @@
 }
 
 .dashboard-qa-name {
-	font-size: 0.82em;
+	font-size: 0.75em;
 	flex-shrink: 0;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	line-height: 1.2;
+	max-width: 70px;
 }
 
 .dashboard-qa-remove {
-	background: none !important;
+	background: var(--db-bg-btn) !important;
 	border: none !important;
-	box-shadow: none !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
 	color: var(--db-text-muted);
 	cursor: pointer;
-	padding: 0 2px;
+	padding: 2px;
 	min-height: 0;
 	line-height: 1;
 	opacity: 0;
 	transition: opacity 0.15s ease, color 0.15s ease;
 	display: flex;
 	align-items: center;
-	flex-shrink: 0;
+	justify-content: center;
+	position: absolute;
+	top: -3px;
+	right: -3px;
+	border-radius: 50%;
+	width: 14px;
+	height: 14px;
 }
 
 .dashboard-qa-remove:hover {
@@ -1068,8 +1074,8 @@
 }
 
 .dashboard-qa-remove svg {
-	width: 10px;
-	height: 10px;
+	width: 8px;
+	height: 8px;
 }
 
 .dashboard-qa-item:hover .dashboard-qa-remove {
@@ -1141,6 +1147,7 @@
 }
 
 .dashboard-quick-actions .dashboard-qa-list {
+	overflow-x: clip;
 	overflow-y: auto;
 	margin-bottom: 0;
 }
@@ -1165,8 +1172,8 @@
 }
 
 .dashboard-qa-badge {
-	font-size: 0.55em;
-	padding: 1px 5px;
+	font-size: 0.5em;
+	padding: 1px 3px;
 	border-radius: 3px;
 	background: color-mix(in srgb, var(--db-accent) 12%, transparent);
 	color: var(--db-accent);
@@ -1182,6 +1189,17 @@
 
 .dashboard-qa-item--preset:hover {
 	opacity: 1;
+}
+
+.dashboard-qa-item--dragging {
+	opacity: 0.35;
+	transform: scale(0.9);
+}
+
+.dashboard-qa-item--drag-over {
+	border-color: var(--db-accent) !important;
+	box-shadow: 0 0 8px color-mix(in srgb, var(--db-accent) 30%, transparent) !important;
+	transform: scale(1.05);
 }
 
 .dashboard-preset-actions {

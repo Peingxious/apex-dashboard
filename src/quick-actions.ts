@@ -3,14 +3,47 @@ import type { QuickAction } from './types';
 import { PRESET_ACTIONS } from './types';
 import { t } from './i18n';
 
+function actionKey(action: QuickAction, isPreset: boolean): string {
+	return isPreset ? `p:${action.target}` : `c:${action.target}`;
+}
+
+interface OrderedAction {
+	action: QuickAction;
+	isPreset: boolean;
+	key: string;
+}
+
+function buildOrderedActions(actions: QuickAction[], order?: string[]): OrderedAction[] {
+	const all: OrderedAction[] = [
+		...PRESET_ACTIONS.map((a, i) => ({ action: a, isPreset: true, key: actionKey(a, true) })),
+		...actions.map(a => ({ action: a, isPreset: false, key: actionKey(a, false) })),
+	];
+
+	if (!order || order.length === 0) return all;
+
+	const keySet = new Set(order);
+	const ordered: OrderedAction[] = [];
+	for (const k of order) {
+		const found = all.find(a => a.key === k);
+		if (found) ordered.push(found);
+	}
+	for (const a of all) {
+		if (!keySet.has(a.key)) ordered.push(a);
+	}
+	return ordered;
+}
+
 export function renderQuickActions(
 	container: HTMLElement,
 	actions: QuickAction[],
 	onExecute: (action: QuickAction) => void,
-	onRemove: (index: number) => void,
+	_onRemove: (index: number) => void,
 	onAdd: () => void,
 	initialPinned?: boolean,
 	onTogglePin?: () => void,
+	order?: string[],
+	onReorder?: (order: string[]) => void,
+	onRemoveByKey?: (key: string) => void,
 ): void {
 	const section = container.createDiv({ cls: 'dashboard-section dashboard-quick-actions' });
 
@@ -48,33 +81,92 @@ export function renderQuickActions(
 
 	const list = section.createDiv({ cls: 'dashboard-qa-list' });
 
-	// Preset actions (no remove button)
-	for (const preset of PRESET_ACTIONS) {
-		const item = list.createDiv({ cls: 'dashboard-qa-item dashboard-qa-item--preset' });
-		const iconEl = item.createSpan({ cls: 'dashboard-qa-icon' });
-		setIcon(iconEl, preset.icon);
-		item.createSpan({ text: preset.name, cls: 'dashboard-qa-name' });
-		item.addEventListener('click', () => onExecute(preset));
-		item.setAttribute('role', 'button');
-	}
+	const ordered = buildOrderedActions(actions, order);
 
-	// Custom actions (with remove button)
-	if (actions.length === 0 && PRESET_ACTIONS.length === 0) {
+	if (ordered.length === 0) {
 		section.createSpan({ text: t('quickActions.empty'), cls: 'dashboard-empty' });
+		return;
 	}
 
-	actions.forEach((action, index) => {
-		const item = list.createDiv({ cls: 'dashboard-qa-item' });
+	// DnD state
+	let draggedKey: string | null = null;
+
+	const onDragStart = (e: DragEvent, key: string) => {
+		draggedKey = key;
+		const target = e.currentTarget as HTMLElement;
+		target.addClass('dashboard-qa-item--dragging');
+		if (e.dataTransfer) {
+			e.dataTransfer.effectAllowed = 'move';
+			e.dataTransfer.setData('text/plain', key);
+		}
+	};
+
+	const onDragEnd = (e: Event) => {
+		(e.currentTarget as HTMLElement).removeClass('dashboard-qa-item--dragging');
+		list.querySelectorAll('.dashboard-qa-item--drag-over').forEach(el => el.removeClass('dashboard-qa-item--drag-over'));
+		draggedKey = null;
+	};
+
+	const onDragOver = (e: DragEvent) => {
+		e.preventDefault();
+		if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+		const item = (e.target as HTMLElement).closest('.dashboard-qa-item') as HTMLElement;
+		if (item && !item.hasClass('dashboard-qa-item--dragging')) {
+			list.querySelectorAll('.dashboard-qa-item--drag-over').forEach(el => el.removeClass('dashboard-qa-item--drag-over'));
+			item.addClass('dashboard-qa-item--drag-over');
+		}
+	};
+
+	const onDragLeave = (e: DragEvent) => {
+		const item = (e.target as HTMLElement).closest('.dashboard-qa-item') as HTMLElement;
+		if (item) item.removeClass('dashboard-qa-item--drag-over');
+	};
+
+	const onDrop = (e: DragEvent) => {
+		e.preventDefault();
+		list.querySelectorAll('.dashboard-qa-item--drag-over').forEach(el => el.removeClass('dashboard-qa-item--drag-over'));
+		if (!draggedKey || !onReorder) return;
+
+		const targetItem = (e.target as HTMLElement).closest('.dashboard-qa-item') as HTMLElement;
+		if (!targetItem) return;
+
+		const targetKey = targetItem.dataset.qaKey;
+		if (!targetKey || targetKey === draggedKey) return;
+
+		// Build new order from current DOM order with the swap
+		const items = Array.from(list.querySelectorAll('.dashboard-qa-item')) as HTMLElement[];
+		const currentKeys = items.map(el => el.dataset.qaKey ?? '');
+		const fromIdx = currentKeys.indexOf(draggedKey);
+		const toIdx = currentKeys.indexOf(targetKey);
+		if (fromIdx === -1 || toIdx === -1) return;
+
+		const newKeys = currentKeys.filter(k => k !== draggedKey);
+		newKeys.splice(toIdx, 0, draggedKey);
+		onReorder(newKeys);
+	};
+
+	for (const { action, isPreset, key } of ordered) {
+		const item = list.createDiv({
+			cls: 'dashboard-qa-item' + (isPreset ? ' dashboard-qa-item--preset' : ''),
+			attr: { draggable: 'true', 'data-qa-key': key },
+		});
 
 		const iconEl = item.createSpan({ cls: 'dashboard-qa-icon' });
 		setIcon(iconEl, action.icon);
-
 		item.createSpan({ text: action.name, cls: 'dashboard-qa-name' });
+		item.setAttribute('title', action.name);
 
 		if (action.type === 'command') {
 			item.createSpan({ cls: 'dashboard-qa-badge', text: 'CMD' });
 		}
 
+		// Remove button (on all items)
+		const removeHandler = onRemoveByKey ?? ((k: string) => {
+			if (k.startsWith('c:')) {
+				const idx = actions.findIndex(a => `c:${a.target}` === k);
+				if (idx !== -1) _onRemove(idx);
+			}
+		});
 		const removeBtn = item.createEl('button', {
 			cls: 'dashboard-qa-remove',
 			attr: { 'aria-label': t('common.remove', { name: action.name }) },
@@ -82,12 +174,19 @@ export function renderQuickActions(
 		setIcon(removeBtn, 'x');
 		removeBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			onRemove(index);
+			removeHandler(key);
 		});
 
 		item.addEventListener('click', () => onExecute(action));
 		item.setAttribute('role', 'button');
-	});
+
+		// DnD events
+		item.addEventListener('dragstart', (e) => onDragStart(e as DragEvent, key));
+		item.addEventListener('dragend', onDragEnd);
+		item.addEventListener('dragover', onDragOver);
+		item.addEventListener('dragleave', onDragLeave);
+		item.addEventListener('drop', onDrop);
+	}
 
 }
 

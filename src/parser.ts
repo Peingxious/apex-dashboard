@@ -32,10 +32,13 @@ export function parse(markdown: string): DashboardData {
 	const { frontmatter, body } = splitFrontmatter(markdown);
 	const banner = parseBanner(frontmatter);
 	const quickActions = parseQuickActions(frontmatter);
+	const quickActionOrder = parseQuickActionOrder(frontmatter);
 	const columnDefs = parseColumnDefs(frontmatter);
 	const columns = parseColumns(body, columnDefs);
 
-	return { banner, quickActions, columns };
+	const data: DashboardData = { banner, quickActions, columns };
+	if (quickActionOrder) data.quickActionOrder = quickActionOrder;
+	return data;
 }
 
 export function serialize(data: DashboardData): string {
@@ -71,6 +74,13 @@ export function serialize(data: DashboardData): string {
 			lines.push(`    icon: "${escapeYamlString(action.icon)}"`);
 			lines.push(`    type: ${action.type}`);
 			lines.push(`    target: "${escapeYamlString(action.target)}"`);
+		}
+	}
+
+	if (data.quickActionOrder && data.quickActionOrder.length > 0) {
+		lines.push('quickActionOrder:');
+		for (const key of data.quickActionOrder) {
+			lines.push(`  - "${escapeYamlString(key)}"`);
 		}
 	}
 
@@ -394,6 +404,14 @@ function parseQuickActions(fm: Record<string, unknown>): QuickAction[] {
 	}
 
 	return [];
+}
+
+function parseQuickActionOrder(fm: Record<string, unknown>): string[] | undefined {
+	const raw = fm.quickActionOrder;
+	if (Array.isArray(raw) && raw.length > 0) {
+		return raw.map((v: unknown) => String(v));
+	}
+	return undefined;
 }
 
 function parseColumnDefs(fm: Record<string, unknown>): Array<{ name: string; color: string; sectionType?: string }> {
