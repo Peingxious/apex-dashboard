@@ -728,7 +728,7 @@
 
 	--db-shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
 		--db-shadow-card-hover: 0 6px 24px rgba(244, 63, 94, 0.12), 0 0 16px rgba(168, 85, 247, 0.06);
-	--db-backdrop-blur: blur(24px);
+	--db-backdrop-blur: none;
 
 	--db-radius-sm: 8px;
 	--db-radius-md: 14px;
@@ -784,7 +784,7 @@
 
 	--db-shadow-card: 0 2px 12px rgba(244, 63, 94, 0.05);
 	--db-shadow-card-hover: 0 8px 32px rgba(244, 63, 94, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
-	--db-backdrop-blur: blur(20px);
+	--db-backdrop-blur: none;
 
 	--db-progress-from: #e11d48;
 	--db-progress-to: #7c3aed;
