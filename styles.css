@@ -1845,12 +1845,12 @@
 
 .dashboard-banner-quote-decor {
 	font-size: 3em;
-	color: rgba(255, 255, 255, 0.2);
+	color: #000000;
 	position: absolute;
 	top: -20px;
 	left: -24px;
 	line-height: 1;
-	font-family: Georgia, serif;
+	font-family: 'Times New Roman', 'Noto Serif SC', serif;
 }
 
 .dashboard-banner-quote {
@@ -1861,12 +1861,16 @@
 	line-height: 1.4;
 	border: none;
 	padding: 0;
+	text-shadow:
+		0 1px 3px rgba(0, 0, 0, 0.4),
+		0 0 12px rgba(0, 0, 0, 0.15);
 }
 
 .dashboard-banner-author {
 	font-size: 0.8em;
 	color: var(--db-text-inverse-muted);
 	font-style: normal;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .dashboard-banner-quote--fading,
@@ -2194,7 +2198,7 @@
 	display: flex;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 3px;
+	gap: 5px;
 	margin-bottom: 8px;
 }
 
@@ -6441,4 +6445,61 @@
 .dashboard-modal .chart-config-type-btn:hover,
 .dashboard-modal .chart-config-source-btn:hover {
 	box-shadow: none;
+}
+
+/* ===== Confirm Dialog ===== */
+.dashboard-confirm-dialog {
+	max-width: 340px;
+	padding: 24px 28px 20px;
+	text-align: center;
+}
+
+.dashboard-confirm-title {
+	margin: 0 0 8px;
+	font-size: 1.1em;
+	color: var(--db-text, var(--text-normal));
+	border-bottom: none;
+}
+
+.dashboard-confirm-message {
+	margin: 0 0 20px;
+	font-size: 0.9em;
+	color: var(--db-text-muted, var(--text-muted));
+	line-height: 1.5;
+}
+
+.dashboard-confirm-actions {
+	display: flex;
+	gap: 10px;
+	justify-content: center;
+}
+
+.dashboard-confirm-cancel,
+.dashboard-confirm-delete {
+	padding: 7px 20px;
+	border-radius: var(--db-radius-sm, 8px);
+	font-size: 0.9em;
+	font-family: var(--db-font, var(--font-interface));
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.dashboard-confirm-cancel {
+	background: var(--db-bg-btn, rgba(255, 255, 255, 0.06));
+	border: 1px solid var(--db-border-btn, rgba(255, 255, 255, 0.10));
+	color: var(--db-text, var(--text-normal));
+}
+
+.dashboard-confirm-cancel:hover {
+	background: var(--db-bg-btn-hover, rgba(255, 255, 255, 0.10));
+}
+
+.dashboard-confirm-delete {
+	background: var(--db-danger, #f43f5e);
+	border: 1px solid transparent;
+	color: #fff;
+}
+
+.dashboard-confirm-delete:hover {
+	opacity: 0.85;
 }

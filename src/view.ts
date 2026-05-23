@@ -9,6 +9,7 @@ import { renderQuickActions, AddActionModal, DocSearchModal } from './quick-acti
 import { setupDragAndDrop } from './dnd';
 import { CardEditModal } from './card-edit-modal';
 import { ChartConfigModal } from './chart-config-modal';
+import { showConfirmDialog } from './confirm-dialog';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -319,13 +320,27 @@ export class DashboardView extends ItemView {
 					content,
 					this.data.quickActions,
 					(action) => { this.executeAction(action); this.closeMobileDrawer(); },
-					(index) => this.sync.removeQuickAction(index),
+					async (index) => {
+						const confirmed = await showConfirmDialog(this.app, {
+							title: t('common.confirmDelete'),
+							message: t('common.confirmDeleteMessage'),
+						});
+						if (!confirmed) return;
+						this.sync.removeQuickAction(index);
+					},
 					() => this.openAddActionModal(),
 					undefined,
 					undefined,
 					this.data.quickActionOrder,
 					(order) => this.sync.reorderQuickActions(order),
-					(key) => this.sync.removeQuickActionByKey(key),
+					async (key) => {
+						const confirmed = await showConfirmDialog(this.app, {
+							title: t('common.confirmDelete'),
+							message: t('common.confirmDeleteMessage'),
+						});
+						if (!confirmed) return;
+						this.sync.removeQuickActionByKey(key);
+					},
 				);
 			}
 		} else {
@@ -358,7 +373,14 @@ export class DashboardView extends ItemView {
 			scroll,
 			this.data.quickActions,
 			(action) => this.executeAction(action),
-			(index) => this.sync.removeQuickAction(index),
+			(index) => {
+				showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				}).then(confirmed => {
+					if (confirmed) this.sync.removeQuickAction(index);
+				});
+			},
 			() => this.openAddActionModal(),
 			this.sidebarPinned,
 			() => {
@@ -377,7 +399,14 @@ export class DashboardView extends ItemView {
 			},
 			this.data.quickActionOrder,
 			(order) => this.sync.reorderQuickActions(order),
-			(key) => this.sync.removeQuickActionByKey(key),
+			(key) => {
+				showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				}).then(confirmed => {
+					if (confirmed) this.sync.removeQuickActionByKey(key);
+				});
+			},
 		);
 
 		const docs = getRecentDocs(this.app, this.plugin.settings.recentDocCount);
@@ -420,13 +449,25 @@ export class DashboardView extends ItemView {
 	private createCallbacks() {
 		return {
 			onCardEdit: (card: DashboardCard) => this.openCardEditModal(card),
-			onCardDelete: (cardId: string) => {
+			onCardDelete: async (cardId: string) => {
+				const confirmed = await showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				});
+				if (!confirmed) return;
 				this.sync.deleteCard(cardId);
 				new Notice(t('card.deleted'));
 			},
 			onCheckboxToggle: (cardId: string, idx: number, checked: boolean) => this.sync.toggleTask(cardId, idx, checked),
 			onTaskAdd: (cardId: string, text: string) => this.sync.addTask(cardId, text),
-			onTaskDelete: (cardId: string, idx: number) => this.sync.deleteTask(cardId, idx),
+			onTaskDelete: async (cardId: string, idx: number) => {
+				const confirmed = await showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				});
+				if (!confirmed) return;
+				this.sync.deleteTask(cardId, idx);
+			},
 			onTaskReorder: (cardId: string, from: number, to: number) => this.sync.reorderTask(cardId, from, to),
 			onTaskMoveToCard: (srcCardId: string, taskIndex: number, destCardId: string, destIndex: number) => this.sync.moveTaskToCard(srcCardId, taskIndex, destCardId, destIndex),
 			onTaskEdit: (cardId: string, idx: number, text: string) => this.sync.editTask(cardId, idx, text),
@@ -451,7 +492,14 @@ export class DashboardView extends ItemView {
 				if (this.data) this.openBannerEditModal(this.data);
 			},
 			onQuickActionAdd: () => this.openAddActionModal(),
-			onQuickActionRemove: (index: number) => this.sync.removeQuickAction(index),
+			onQuickActionRemove: (index: number) => {
+				showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				}).then(confirmed => {
+					if (confirmed) this.sync.removeQuickAction(index);
+				});
+			},
 			onMoveCard: (cardId: string, targetCol: string, targetIdx: number) => this.sync.moveCard(cardId, targetCol, targetIdx),
 			onMemoColorChange: (card: DashboardCard, color: string) => this.sync.updateMemoColor(card.id, color),
 			onProjectCoverChange: (card: DashboardCard, imagePath: string) => this.sync.updateProjectCover(card.id, imagePath),

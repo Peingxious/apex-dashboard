@@ -17,6 +17,9 @@ const translations: Record<Language, Record<string, string>> = {
 		'common.cancel': 'Cancel',
 		'common.open': 'Open {name}',
 		'common.remove': 'Remove {name}',
+		'common.confirmDelete': 'Confirm Delete',
+		'common.confirmDeleteMessage': 'Are you sure you want to delete this? This action cannot be undone.',
+		'common.delete': 'Delete',
 			'card.deleted': 'Card deleted',
 
 		// Settings
@@ -206,6 +209,9 @@ const translations: Record<Language, Record<string, string>> = {
 		'common.cancel': '取消',
 		'common.open': '打开 {name}',
 		'common.remove': '移除 {name}',
+		'common.confirmDelete': '确认删除',
+		'common.confirmDeleteMessage': '确定要删除吗？此操作无法撤销。',
+		'common.delete': '删除',
 			'card.deleted': '卡片已删除',
 
 		// Settings
