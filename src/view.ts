@@ -1,15 +1,18 @@
 import { ItemView, Notice, setIcon, WorkspaceLeaf, TFile, Events } from 'obsidian';
 import type DashboardPlugin from './main';
-import type { DashboardData, DashboardCard, QuickAction, BannerData, ChartConfig } from './types';
+import type { DashboardData, DashboardCard, QuickAction, BannerData, WeatherConfig, TrackerConfig } from './types';
 import { SyncEngine } from './sync';
-import { renderDashboard } from './renderer';
+import { renderDashboard, destroyAllCharts, renderSidebarWidgets, renderSidebarWeekCalendar } from './renderer';
 import { renderBanner, BannerEditModal, resolveVaultImage } from './banner';
 import { getRecentDocs, renderRecentDocs } from './recent';
 import { renderQuickActions, AddActionModal, DocSearchModal } from './quick-actions';
 import { setupDragAndDrop } from './dnd';
 import { CardEditModal } from './card-edit-modal';
-import { ChartConfigModal } from './chart-config-modal';
 import { showConfirmDialog } from './confirm-dialog';
+import { clearWeatherCache } from './weather-service';
+import { WidgetTypeModal, type WidgetType } from './widget-type-modal';
+import { WeatherConfigModal } from './weather-config-modal';
+import { TrackerConfigModal } from './tracker-config-modal';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -34,6 +37,8 @@ export class DashboardView extends ItemView {
 	private sidebarExpanded = false;
 	private pendingScrollCardId: string | null = null;
 	private pendingScrollToLastCardOfColumn: string | null = null;
+	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
+	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: DashboardPlugin) {
 		super(leaf);
@@ -60,12 +65,14 @@ export class DashboardView extends ItemView {
 		await this.sync.init();
 		this.registerVaultListeners();
 		this.startReminderChecker();
+		this.startWeatherRefresh();
 	}
 
 	async onClose(): Promise<void> {
 		this.runCleanup();
 		this.unregisterVaultListeners();
 		this.stopReminderChecker();
+		this.stopWeatherRefresh();
 		this.sync.destroy();
 	}
 
@@ -141,7 +148,7 @@ export class DashboardView extends ItemView {
 		this.setupSidebarBehavior(sidebar, container);
 
 		const kanban = mainLayout.createDiv({ cls: 'dashboard-kanban-wrapper' });
-		renderDashboard(kanban, data, this.createCallbacks(), this.app);
+		renderDashboard(kanban, data, this.createCallbacks(), this.app, this.plugin.settings);
 		setupDragAndDrop(kanban, this.createCallbacks(), this.cleanupFns);
 
 		// Restore scroll positions
@@ -341,6 +348,7 @@ export class DashboardView extends ItemView {
 						if (!confirmed) return;
 						this.sync.removeQuickActionByKey(key);
 					},
+					this.data.hiddenPresets,
 				);
 			}
 		} else {
@@ -368,6 +376,10 @@ export class DashboardView extends ItemView {
 		if (!this.data) return;
 
 		const scroll = sidebar.createDiv({ cls: 'dashboard-sidebar-scroll' });
+
+		renderSidebarWeekCalendar(scroll);
+
+		renderSidebarWidgets(scroll, this.plugin.settings, this.app);
 
 		renderQuickActions(
 			scroll,
@@ -407,6 +419,7 @@ export class DashboardView extends ItemView {
 					if (confirmed) this.sync.removeQuickActionByKey(key);
 				});
 			},
+			this.data.hiddenPresets,
 		);
 
 		const docs = getRecentDocs(this.app, this.plugin.settings.recentDocCount);
@@ -479,7 +492,7 @@ export class DashboardView extends ItemView {
 				const column = this.data?.columns.find(col => col.name === colName);
 				const effectiveType = column?.sectionType ?? colName.toLowerCase();
 				if (effectiveType === 'dashboard') {
-					this.openChartConfigModal(colName);
+					this.openWidgetTypeModal(colName);
 				} else if (effectiveType === 'memo' || effectiveType === 'todo') {
 					this.pendingScrollToLastCardOfColumn = colName;
 					this.sync.addCard(colName);
@@ -505,6 +518,9 @@ export class DashboardView extends ItemView {
 			onProjectCoverChange: (card: DashboardCard, imagePath: string) => this.sync.updateProjectCover(card.id, imagePath),
 				onCardTitleEdit: (cardId: string, newTitle: string) => this.sync.updateCard(cardId, { title: newTitle }),
 				onCardWidthChange: (cardId: string, width: number) => this.sync.updateCardWidth(cardId, width),
+					onCardSizeChange: (cardId: string, size: string) => this.sync.updateCardSize(cardId, size as import('./types').CardSize),
+				onCardGridChange: (cardId: string, gridCols: number, gridRows: number) => this.sync.updateCardGrid(cardId, gridCols, gridRows),
+				onCardGridMove: (cardId: string, gridCol: number, gridRow: number) => this.sync.updateCardGridMove(cardId, gridCol, gridRow),
 				onFileDrop: (cardId: string, filePath: string) => this.handleFileDrop(cardId, filePath),
 				onColumnRename: (oldName: string, newName: string) => this.sync.renameColumn(oldName, newName),
 			onTaskReminderEdit: (cardId: string, taskIndex: number, reminder: string | undefined) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
@@ -523,7 +539,7 @@ export class DashboardView extends ItemView {
 				break;
 			}
 		}
-		if (cardType === 'chart') return;
+		if (cardType === 'weather' || cardType === 'tracker') return;
 			if (cardType === 'task' || sectionType === 'todo') {
 			this.sync.addTask(cardId, `[[${filePath}]]`);
 		} else if (sectionType === 'memo') {
@@ -547,14 +563,36 @@ export class DashboardView extends ItemView {
 		modal.open();
 	}
 
-	private openChartConfigModal(colName: string): void {
-		const modal = new ChartConfigModal(this.app, colName, (title, config) => {
+	private openWidgetTypeModal(colName: string): void {
+		const modal = new WidgetTypeModal(this.app, (type: WidgetType) => {
+			if (type === 'weather') {
+				this.openWeatherConfigModal(colName);
+			} else if (type === 'tracker') {
+				this.openTrackerConfigModal(colName);
+			}
+		}, this.plugin.settings.stylePreset);
+		modal.open();
+	}
+
+	private openWeatherConfigModal(colName: string): void {
+		const modal = new WeatherConfigModal(this.app, (title, config) => {
 			this.sync.addCard(colName, {
 				title,
-				type: 'chart',
-				chartConfig: config,
+				type: 'weather',
+				weatherConfig: config,
 			});
-		}, undefined, this.plugin.settings.stylePreset);
+		}, this.plugin.settings.stylePreset);
+		modal.open();
+	}
+
+	private openTrackerConfigModal(colName: string): void {
+		const modal = new TrackerConfigModal(this.app, this.plugin.settings.journalPath, (title, config) => {
+			this.sync.addCard(colName, {
+				title,
+				type: 'tracker',
+				trackerConfig: config,
+			});
+		}, this.plugin.settings.stylePreset);
 		modal.open();
 	}
 
@@ -700,6 +738,7 @@ export class DashboardView extends ItemView {
 	}
 
 	private runCleanup(): void {
+		destroyAllCharts();
 		for (const fn of this.cleanupFns) fn();
 		this.cleanupFns = [];
 	}
@@ -714,6 +753,26 @@ export class DashboardView extends ItemView {
 			clearInterval(this.reminderTimer);
 			this.reminderTimer = null;
 		}
+	}
+
+	private startWeatherRefresh(): void {
+		this.weatherRefreshTimer = setInterval(() => {
+			if (!this.data) return;
+			const hasWeather = this.data.columns.some(col =>
+				col.cards.some(c => c.type === 'weather')
+			);
+			if (hasWeather) {
+				this.render(this.data);
+			}
+		}, DashboardView.WEATHER_REFRESH_MS);
+	}
+
+	private stopWeatherRefresh(): void {
+		if (this.weatherRefreshTimer) {
+			clearInterval(this.weatherRefreshTimer);
+			this.weatherRefreshTimer = null;
+		}
+		clearWeatherCache();
 	}
 
 	private checkReminders(): void {

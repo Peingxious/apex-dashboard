@@ -1,0 +1,177 @@
+import type { Language } from './i18n';
+
+export type WidgetTheme = 'weather' | 'weather-heatmap' | 'off';
+
+export interface DashboardSettings {
+	dashboardFile: string;
+	recentDocCount: number;
+	language: Language;
+	stylePreset: string;
+	journalPath: string;
+	widgetTheme: WidgetTheme;
+	widgetTrackerKey: string;
+	widgetTrackerDays: number;
+	widgetTrackerSummary: 'streak' | 'rate' | 'both' | 'off';
+	widgetWeatherCity: string;
+	widgetWeatherLat: number;
+	widgetWeatherLon: number;
+}
+
+export const DEFAULT_SETTINGS: DashboardSettings = {
+	dashboardFile: 'dashboard',
+	recentDocCount: 5,
+	language: 'en',
+	stylePreset: 'earth',
+	journalPath: '',
+	widgetTheme: 'weather',
+	widgetTrackerKey: '',
+	widgetTrackerDays: 30,
+	widgetTrackerSummary: 'streak',
+	widgetWeatherCity: 'Shanghai',
+	widgetWeatherLat: 31.23,
+	widgetWeatherLon: 121.47,
+};
+
+export interface QuoteItem {
+	quote: string;
+	author: string;
+}
+
+export interface BannerData {
+	quote: string;
+	author: string;
+	image: string;
+	quotes?: QuoteItem[];
+	images?: string[];
+}
+
+export interface QuickAction {
+	name: string;
+	icon: string;
+	type: 'file' | 'command';
+	target: string;
+}
+
+export const PRESET_ACTIONS: QuickAction[] = [
+	{ name: 'New Journal', icon: 'calendar-plus', type: 'command', target: 'daily-notes' },
+	{ name: 'New Note', icon: 'plus-circle', type: 'command', target: 'file-explorer:new-file' },
+];
+
+export interface ColumnDef {
+	name: string;
+	color: string;
+}
+
+export type CardType = 'task' | 'note' | 'link' | 'project' | 'habit' | 'generic' | 'weather' | 'tracker';
+
+export interface WeatherConfig {
+	latitude: number;
+	longitude: number;
+	cityName: string;
+}
+
+export interface WeatherData {
+	temperature: number;
+	weatherCode: number;
+	windSpeed: number;
+	humidity: number;
+	feelsLike: number;
+	dailyMax: number[];
+	dailyMin: number[];
+	dailyCodes: number[];
+	dailyDates: string[];
+	fetchedAt: number;
+}
+
+export type TrackerStyle = 'line' | 'heatmap' | 'bar';
+
+export interface TrackerConfig {
+	key: string;
+	days: number;
+	style: TrackerStyle;
+}
+
+export interface TrackerDataPoint {
+	date: string;
+	value: number | null;
+}
+
+export interface TaskItem {
+	text: string;
+	checked: boolean;
+	reminder?: string;
+}
+
+export type CardSize = 'S' | 'M' | 'L';
+
+export interface DashboardCard {
+	id: string;
+	title: string;
+	type: CardType;
+	column: string;
+	body: string;
+	tasks: TaskItem[];
+	url: string;
+	wikiLink: string;
+	progress: number;
+	streak: number;
+	dueDate: string;
+	blockquote: string;
+	color: string;
+	coverImage: string;
+	width: number;
+	size: CardSize;
+	gridCols: number;
+	gridRows: number;
+	gridCol: number;
+	gridRow: number;
+	chartConfig?: never;
+	weatherConfig?: WeatherConfig;
+	trackerConfig?: TrackerConfig;
+}
+
+export interface DashboardColumn {
+	name: string;
+	color: string;
+	sectionType?: string;
+	cards: DashboardCard[];
+}
+
+export interface DashboardData {
+	banner: BannerData;
+	quickActions: QuickAction[];
+	quickActionOrder?: string[];
+	hiddenPresets?: string[];
+	columns: DashboardColumn[];
+}
+
+export interface RenderCallbacks {
+	onCardEdit(card: DashboardCard): void;
+	onCardDelete(cardId: string): void;
+	onCheckboxToggle(cardId: string, taskIndex: number, checked: boolean): void;
+	onTaskAdd(cardId: string, text: string): void;
+	onTaskDelete(cardId: string, taskIndex: number): void;
+	onTaskReorder(cardId: string, fromIndex: number, toIndex: number): void;
+	onTaskMoveToCard(srcCardId: string, taskIndex: number, destCardId: string, destIndex: number): void;
+	onTaskEdit(cardId: string, taskIndex: number, newText: string): void;
+	onCardAdd(columnName: string): void;
+	onColumnAdd(name: string, sectionType?: string): void;
+	onBannerEdit(): void;
+	onQuickActionAdd(): void;
+	onQuickActionRemove(index: number): void;
+	onMoveCard(cardId: string, targetColumn: string, targetIndex: number): void;
+	onMemoUpdate(card: DashboardCard, updates: { body: string; blockquote: string }): void;
+	onProjectDocsUpdate(card: DashboardCard, docPaths: string[]): void;
+	onProjectDocsReorder(cardId: string, fromIndex: number, toIndex: number): void;
+	onDocMoveToCard(srcCardId: string, docIndex: number, destCardId: string, destIndex: number): void;
+	onMemoColorChange(card: DashboardCard, color: string): void;
+	onProjectCoverChange(card: DashboardCard, imagePath: string): void;
+	onCardTitleEdit(cardId: string, newTitle: string): void;
+	onCardWidthChange(cardId: string, width: number): void;
+	onCardSizeChange(cardId: string, size: CardSize): void;
+	onCardGridChange(cardId: string, gridCols: number, gridRows: number): void;
+	onCardGridMove(cardId: string, gridCol: number, gridRow: number): void;
+	onFileDrop(cardId: string, filePath: string): void;
+	onColumnRename(oldName: string, newName: string): void;
+	onTaskReminderEdit(cardId: string, taskIndex: number, reminder: string | undefined): void;
+}

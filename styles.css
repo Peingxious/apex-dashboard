@@ -2023,12 +2023,232 @@
 	scrollbar-width: none;
 	display: flex;
 	flex-direction: column;
-	gap: 16px;
+	gap: 10px;
 	padding-top: 0;
 }
 
 .dashboard-sidebar-scroll::-webkit-scrollbar {
 	width: 0;
+}
+
+/* ===== Sidebar Widgets ===== */
+.dashboard-sidebar-widgets {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 0 4px;
+}
+
+.dashboard-sidebar-widget {
+	background: var(--db-bg-card);
+	border: 1px solid var(--db-border-card);
+	border-radius: var(--db-radius-md);
+	padding: 12px;
+	backdrop-filter: var(--db-backdrop-blur);
+	-webkit-backdrop-filter: var(--db-backdrop-blur);
+}
+
+/* Weather Widget */
+.dashboard-sidebar-weather-top {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.dashboard-sidebar-weather-icon {
+	font-size: 2em;
+	line-height: 1;
+}
+
+.dashboard-sidebar-weather-temp {
+	font-size: 1.8em;
+	font-weight: 700;
+	color: var(--db-text);
+	line-height: 1;
+}
+
+.dashboard-sidebar-weather-info {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 4px;
+}
+
+.dashboard-sidebar-weather-city {
+	font-size: 0.85em;
+	font-weight: 600;
+	color: var(--db-text);
+}
+
+.dashboard-sidebar-weather-desc {
+	font-size: 0.75em;
+	color: var(--db-text-faint);
+}
+
+.dashboard-sidebar-weather-details {
+	display: flex;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.dashboard-sidebar-weather-detail {
+	font-size: 0.7em;
+	color: var(--db-text-muted);
+	flex: 1;
+	text-align: center;
+	padding: 3px 0;
+	background: var(--db-bg-hover);
+	border-radius: var(--db-radius-sm);
+}
+
+.dashboard-sidebar-weather-forecast {
+	display: flex;
+	gap: 4px;
+	border-top: 1px solid var(--db-border);
+	margin-top: 8px;
+	padding-top: 8px;
+}
+
+.dashboard-sidebar-weather-fday {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	padding: 4px 2px;
+	border-radius: var(--db-radius-sm);
+	transition: background 0.15s;
+}
+
+.dashboard-sidebar-weather-fday:hover {
+	background: var(--db-bg-hover);
+}
+
+.dashboard-sidebar-weather-fday-name {
+	font-size: 0.65em;
+	color: var(--db-text-faint);
+	font-weight: 500;
+}
+
+.dashboard-sidebar-weather-fday-icon {
+	font-size: 14px;
+	line-height: 1;
+}
+
+.dashboard-sidebar-weather-fday-temps {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1px;
+}
+
+.dashboard-sidebar-weather-fday-high {
+	font-size: 0.7em;
+	font-weight: 600;
+	color: var(--db-text);
+}
+
+.dashboard-sidebar-weather-fday-low {
+	font-size: 0.65em;
+	color: var(--db-text-faint);
+}
+
+.dashboard-sidebar-weather-loading,
+.dashboard-sidebar-weather-error {
+	text-align: center;
+	color: var(--db-text-faint);
+	font-size: 0.9em;
+	padding: 8px 0;
+}
+
+/* Heatmap Widget */
+.dashboard-sidebar-heatmap {
+	overflow: hidden;
+}
+
+.dashboard-sidebar-heatmap-grid {
+	display: grid;
+	overflow: hidden;
+}
+
+.dashboard-sidebar-heatmap-cell--empty {
+	background-color: var(--db-bg-hover) !important;
+	opacity: 0.3 !important;
+}
+
+.dashboard-sidebar-heatmap-stats {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+}
+
+.dashboard-sidebar-heatmap-summary {
+	font-size: 0.7em;
+	color: var(--db-text-muted);
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+}
+
+.dashboard-sidebar-heatmap-icon {
+	font-size: 0.9em;
+	line-height: 1;
+}
+
+/* Week Calendar Strip */
+.dashboard-sidebar-week-calendar {
+	display: flex;
+	gap: 2px;
+	padding: 0 4px;
+}
+
+.dashboard-sidebar-week-cell {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 6px 2px 6px;
+	border-radius: var(--db-radius-sm);
+	transition: background 0.15s ease;
+}
+
+.dashboard-sidebar-week-cell--today {
+	background: var(--db-accent);
+	border-radius: var(--db-radius-sm);
+}
+
+.dashboard-sidebar-week-day {
+	font-size: 0.65em;
+	color: var(--db-text-faint);
+	line-height: 1;
+	margin-bottom: 4px;
+	letter-spacing: 0.02em;
+}
+
+.dashboard-sidebar-week-cell--today .dashboard-sidebar-week-day {
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.dashboard-sidebar-week-date {
+	font-size: 0.9em;
+	font-weight: 600;
+	color: var(--db-text);
+	line-height: 1;
+}
+
+.dashboard-sidebar-week-cell--today .dashboard-sidebar-week-date {
+	color: #fff;
+}
+
+/* Settings section title */
+.dashboard-settings-section-title {
+	font-size: 0.9em;
+	color: var(--db-text-faint);
+	margin-top: 20px;
+	margin-bottom: 4px;
+	padding-bottom: 4px;
+	border-bottom: 1px solid var(--db-border-card);
 }
 
 /* --- Collapsed: clean slim bar --- */
@@ -2196,7 +2416,7 @@
 	display: flex;
 	align-items: center;
 	gap: 3px;
-	padding: 3px 7px;
+	padding: 6px 7px;
 	border-radius: 50px;
 	background: var(--db-bg-btn);
 	border: 1px solid var(--db-border-btn);
@@ -2728,6 +2948,17 @@
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card-header {
 	flex-shrink: 0;
+}
+
+/* Card size button (dashboard widgets only) */
+.dashboard-card-btn--size {
+	font-size: 0.7em;
+	font-weight: 600;
+	min-width: 22px;
+	padding: 2px 5px;
+	text-align: center;
+	line-height: 1;
+	letter-spacing: 0.02em;
 }
 
 /* Memo card resize handle (desktop only) */
@@ -5457,6 +5688,11 @@
 }
 
 @media (max-width: 640px) {
+	/* Hide sidebar widgets on mobile */
+	.dashboard-sidebar-widgets {
+		display: none !important;
+	}
+
 	/* Root: allow vertical scrolling */
 	.dashboard-root {
 		overflow-y: auto;
@@ -6014,429 +6250,6 @@
 	box-shadow: var(--db-shadow-card);
 }
 
-/* ===== Stat Chart ===== */
-.dashboard-chart-stat {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	padding: 16px 0;
-	text-align: center;
-}
-
-.dashboard-chart-stat-value {
-	font-size: 2.2em;
-	font-weight: 700;
-	line-height: 1.2;
-	color: var(--db-accent);
-	font-family: var(--db-font);
-}
-
-.dashboard-chart-stat-label {
-	font-size: 0.85em;
-	color: var(--db-text-muted);
-	margin-top: 6px;
-}
-
-/* ===== Ring Chart ===== */
-.dashboard-chart-ring {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	padding: 12px 0;
-}
-
-.dashboard-chart-ring-circle {
-	width: 88px;
-	height: 88px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.dashboard-chart-ring-inner {
-	width: 60px;
-	height: 60px;
-	border-radius: 50%;
-	background: var(--db-bg-card);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.dashboard-chart-ring-value {
-	font-size: 1.05em;
-	font-weight: 700;
-	color: var(--db-text);
-	font-family: var(--db-font);
-}
-
-.dashboard-chart-ring-label {
-	font-size: 0.82em;
-	color: var(--db-text-muted);
-	margin-top: 8px;
-	text-align: center;
-}
-
-/* ===== Bars Chart ===== */
-.dashboard-chart-bars {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	padding: 4px 0;
-}
-
-.dashboard-chart-bar-row {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-.dashboard-chart-bar-label {
-	font-size: 0.82em;
-	color: var(--db-text-muted);
-	min-width: 48px;
-	max-width: 64px;
-	text-align: right;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-
-.dashboard-chart-bar-wrap {
-	flex: 1;
-	height: 8px;
-	background: var(--db-bg-hover);
-	border-radius: 4px;
-	overflow: hidden;
-}
-
-.dashboard-chart-bar-fill {
-	height: 100%;
-	border-radius: 4px;
-	transition: width 0.3s ease;
-	background: linear-gradient(90deg, var(--db-progress-from), var(--db-progress-to));
-}
-
-.dashboard-chart-bar-value {
-	font-size: 0.78em;
-	color: var(--db-text-faint);
-	min-width: 24px;
-	text-align: left;
-}
-
-.dashboard-chart-bars-empty {
-	font-size: 0.82em;
-	color: var(--db-text-faint);
-	text-align: center;
-	padding: 12px 0;
-}
-
-/* ===== Chart Config Modal ===== */
-
-/* --- Form fields --- */
-.chart-config-field {
-	margin-bottom: 20px;
-}
-
-.chart-config-field > label {
-	display: block;
-	font-size: 0.82em;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	margin-bottom: 8px;
-	color: var(--db-text-muted);
-}
-
-/* Inline row for label + input (value, max, unit, color) */
-.chart-config-row {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	margin-bottom: 14px;
-}
-
-.chart-config-row > label {
-	flex-shrink: 0;
-	font-size: 0.82em;
-	font-weight: 600;
-	color: var(--db-text-muted);
-	min-width: 56px;
-}
-
-.chart-config-row > input[type="color"] {
-	flex-shrink: 0;
-	width: 40px;
-	height: 30px;
-	padding: 2px;
-	border: 1px solid var(--db-border);
-	border-radius: var(--db-radius-sm);
-	cursor: pointer;
-}
-
-/* --- Chart type picker (3 cards with preview) --- */
-.chart-config-type-row {
-	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
-	gap: 10px;
-}
-
-.dashboard-modal .chart-config-type-btn {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: flex-start;
-	padding: 14px 6px 10px;
-	border: 2px solid var(--db-border);
-	border-radius: var(--db-radius-md);
-	background: var(--db-bg-card);
-	color: var(--db-text);
-	cursor: pointer;
-	transition: all 0.15s ease;
-	min-height: 100px;
-}
-
-.dashboard-modal .chart-config-type-btn:hover {
-	border-color: var(--db-accent);
-	background: var(--db-bg-card-hover);
-}
-
-.dashboard-modal .chart-config-type-btn.active {
-	border-color: var(--db-accent);
-	background: var(--db-accent-light, rgba(99, 102, 241, 0.1));
-}
-
-/* Preview area inside type button */
-.chart-config-type-preview {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	height: 56px;
-	width: 100%;
-	margin-bottom: 8px;
-}
-
-.chart-config-type-name {
-	font-size: 0.88em;
-	font-weight: 700;
-	margin-bottom: 2px;
-}
-
-.dashboard-modal .chart-config-type-btn.active .chart-config-type-name {
-	color: var(--db-accent);
-}
-
-.chart-config-type-desc {
-	font-size: 0.7em;
-	font-weight: 400;
-	color: var(--db-text-faint);
-	text-align: center;
-	line-height: 1.3;
-}
-
-/* --- Type previews: stat, ring, bars --- */
-.chart-preview-stat-num {
-	font-size: 1.8em;
-	font-weight: 700;
-	line-height: 1;
-	color: var(--db-accent);
-	font-family: var(--db-font);
-}
-
-.chart-preview-stat-label {
-	font-size: 0.7em;
-	color: var(--db-text-faint);
-	margin-top: 3px;
-	text-align: center;
-}
-
-.chart-preview-ring {
-	width: 44px;
-	height: 44px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.chart-preview-ring-inner {
-	width: 28px;
-	height: 28px;
-	border-radius: 50%;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.chart-preview-ring-text {
-	font-size: 0.6em;
-	font-weight: 700;
-	color: var(--db-text);
-	font-family: var(--db-font);
-}
-
-.chart-preview-bars {
-	display: flex;
-	flex-direction: column;
-	gap: 5px;
-	width: 60px;
-}
-
-.chart-preview-bar-row {
-	height: 6px;
-	background: var(--db-bg-hover);
-	border-radius: 3px;
-	overflow: hidden;
-}
-
-.chart-preview-bar-fill {
-	height: 100%;
-	border-radius: 3px;
-	background: linear-gradient(90deg, var(--db-progress-from), var(--db-progress-to));
-}
-
-/* --- Dynamic fields section --- */
-.chart-config-dynamic {
-	margin-top: 16px;
-	padding-top: 16px;
-	border-top: 1px solid var(--db-border);
-}
-
-/* --- Data source section headers --- */
-.chart-config-source-section {
-	width: 100%;
-	font-size: 0.72em;
-	font-weight: 600;
-	color: var(--db-text-faint);
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	margin-top: 12px;
-	margin-bottom: 6px;
-	padding-bottom: 4px;
-	border-bottom: 1px solid var(--db-border);
-}
-
-.chart-config-source-section:first-child {
-	margin-top: 0;
-}
-
-/* --- Data source buttons (pill tags, wrap) --- */
-.chart-config-source-wrap {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-}
-
-.dashboard-modal .chart-config-source-btn {
-	display: inline-block;
-	padding: 4px 12px;
-	border: 1px solid var(--db-border);
-	border-radius: 14px;
-	background: var(--db-bg-card);
-	color: var(--db-text-muted);
-	cursor: pointer;
-	font-size: 0.8em;
-	transition: all 0.15s ease;
-	line-height: 1.4;
-}
-
-.dashboard-modal .chart-config-source-btn:hover {
-	border-color: var(--db-accent);
-	color: var(--db-text);
-}
-
-.dashboard-modal .chart-config-source-btn.active {
-	border-color: var(--db-accent);
-	background: var(--db-accent-light, rgba(99, 102, 241, 0.1));
-	color: var(--db-accent);
-	font-weight: 600;
-}
-
-/* --- Bar editor --- */
-.chart-config-bars-list {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-	margin-bottom: 10px;
-}
-
-.chart-config-bar-entry {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-}
-
-.chart-config-bar-label-input {
-	flex: 2;
-	min-width: 0;
-}
-
-.chart-config-bar-val-input {
-	flex: 1;
-	min-width: 60px;
-}
-
-.chart-config-bar-color {
-	width: 32px;
-	height: 28px;
-	padding: 2px;
-	border: 1px solid var(--db-border);
-	border-radius: var(--db-radius-sm);
-	background: var(--db-bg-card);
-	cursor: pointer;
-	flex-shrink: 0;
-}
-
-.dashboard-modal .chart-config-bar-del {
-	background: none;
-	border: none;
-	color: var(--db-text-faint);
-	cursor: pointer;
-	padding: 4px;
-	flex-shrink: 0;
-}
-
-.dashboard-modal .chart-config-bar-del:hover {
-	color: var(--db-danger);
-}
-
-.dashboard-modal .chart-config-bar-add {
-	padding: 6px 16px;
-	border: 1px dashed var(--db-border);
-	border-radius: var(--db-radius-sm);
-	background: transparent;
-	color: var(--db-text-muted);
-	cursor: pointer;
-	font-size: 0.85em;
-	width: 100%;
-	transition: all 0.15s ease;
-}
-
-.dashboard-modal .chart-config-bar-add:hover {
-	border-color: var(--db-accent);
-	color: var(--db-accent);
-}
-
-/* Reset Obsidian default modal button styles for chart config buttons */
-.dashboard-modal .chart-config-type-btn,
-.dashboard-modal .chart-config-source-btn,
-.dashboard-modal .chart-config-bar-add,
-.dashboard-modal .chart-config-bar-del {
-	box-shadow: none;
-	text-shadow: none;
-	font-family: inherit;
-	line-height: normal;
-	white-space: normal;
-	text-align: center;
-}
-
-.dashboard-modal .chart-config-type-btn:hover,
-.dashboard-modal .chart-config-source-btn:hover {
-	box-shadow: none;
-}
-
 /* ===== Confirm Dialog ===== */
 .dashboard-confirm-dialog {
 	max-width: 340px;
@@ -6492,4 +6305,352 @@
 
 .dashboard-confirm-delete:hover {
 	opacity: 0.85;
+}
+
+/* Widget Type Selector Modal */
+.widget-type-row {
+	display: flex;
+	gap: 12px;
+	padding: 16px 0;
+}
+
+.widget-type-btn {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 20px 12px;
+	border-radius: 12px;
+	background: var(--db-bg-hover);
+	border: 2px solid transparent;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.widget-type-btn:hover {
+	border-color: var(--db-accent);
+	transform: translateY(-2px);
+}
+
+.widget-type-btn-icon {
+	color: var(--db-accent);
+	width: 28px;
+	height: 28px;
+}
+
+.widget-type-btn-name {
+	font-weight: 600;
+	font-size: 14px;
+	color: var(--db-text);
+}
+
+.widget-type-btn-desc {
+	font-size: 11px;
+	color: var(--db-text-faint);
+	text-align: center;
+	line-height: 1.4;
+}
+
+/* Weather Card */
+.dashboard-weather {
+	padding: 4px 0;
+}
+
+.dashboard-weather-current {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 12px;
+}
+
+.dashboard-weather-temp-wrap {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.dashboard-weather-temp {
+	font-size: 32px;
+	font-weight: 700;
+	color: var(--db-accent);
+	line-height: 1;
+}
+
+.dashboard-weather-icon {
+	font-size: 28px;
+	line-height: 1;
+}
+
+.dashboard-weather-details {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.dashboard-weather-city {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--db-text);
+}
+
+.dashboard-weather-desc {
+	font-size: 12px;
+	color: var(--db-text-muted);
+}
+
+.dashboard-weather-wind {
+	font-size: 11px;
+	color: var(--db-text-faint);
+}
+
+.dashboard-weather-forecast {
+	display: flex;
+	gap: 4px;
+	border-top: 1px solid var(--db-border);
+	padding-top: 10px;
+}
+
+.dashboard-weather-day {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 2px;
+	border-radius: 6px;
+	transition: background 0.15s;
+}
+
+.dashboard-weather-day:hover {
+	background: var(--db-bg-hover);
+}
+
+.dashboard-weather-day-name {
+	font-size: 10px;
+	color: var(--db-text-faint);
+	font-weight: 500;
+}
+
+.dashboard-weather-day-icon {
+	font-size: 16px;
+	line-height: 1;
+}
+
+.dashboard-weather-day-temps {
+	font-size: 10px;
+	color: var(--db-text-muted);
+	white-space: nowrap;
+}
+
+.dashboard-weather-loading {
+	text-align: center;
+	padding: 24px;
+	color: var(--db-text-faint);
+	font-size: 13px;
+}
+
+.dashboard-weather-error {
+	text-align: center;
+	padding: 16px;
+	color: var(--db-text-faint);
+	font-size: 12px;
+}
+
+/* Weather Config Modal */
+.weather-city-results {
+	margin-top: 4px;
+	max-height: 160px;
+	overflow-y: auto;
+	border-radius: 6px;
+}
+
+.weather-city-result-item {
+	padding: 8px 10px;
+	cursor: pointer;
+	font-size: 13px;
+	color: var(--db-text);
+	border-radius: 4px;
+	transition: background 0.15s;
+}
+
+.weather-city-result-item:hover {
+	background: var(--db-bg-hover);
+}
+
+.weather-coords-wrap {
+	margin-top: 8px;
+}
+
+/* Tracker Card */
+.dashboard-tracker {
+	padding: 4px 0;
+}
+
+.dashboard-tracker-sparkline {
+	display: flex;
+	justify-content: center;
+	margin-bottom: 8px;
+}
+
+.dashboard-tracker-stats {
+	display: flex;
+	gap: 8px;
+	justify-content: space-between;
+}
+
+.dashboard-tracker-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2px;
+}
+
+.dashboard-tracker-stat-label {
+	font-size: 10px;
+	color: var(--db-text-faint);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.dashboard-tracker-stat-value {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--db-accent);
+}
+
+.dashboard-tracker-empty {
+	text-align: center;
+	padding: 20px;
+	color: var(--db-text-faint);
+	font-size: 12px;
+}
+
+/* ===== Chart.js Canvas Base ===== */
+.dashboard-chart-canvas {
+	display: block;
+	width: 100% !important;
+	max-width: 100%;
+}
+
+/* ===== Tracker Widget Size Variants ===== */
+.dashboard-tracker--S .dashboard-tracker-compact {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+}
+.dashboard-tracker--S .dashboard-tracker-compact-value {
+	font-size: 1.8em;
+	font-weight: 700;
+	color: var(--db-accent);
+}
+.dashboard-tracker--S .dashboard-tracker-compact-label {
+	font-size: 0.65em;
+	color: var(--db-text-faint);
+}
+.dashboard-tracker-trend {
+	font-size: 1.2em;
+	font-weight: 700;
+}
+.dashboard-tracker-trend--up { color: #22c55e; }
+.dashboard-tracker-trend--down { color: #ef4444; }
+.dashboard-tracker-trend--flat { color: var(--db-text-muted); }
+
+.dashboard-tracker-chart {
+	position: relative;
+}
+.dashboard-tracker--M .dashboard-tracker-chart { height: 50px; }
+.dashboard-tracker--L .dashboard-tracker-chart { height: 80px; }
+
+/* ===== Tracker Heatmap ===== */
+.dashboard-tracker-heatmap {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.dashboard-tracker-heatmap-grid {
+	display: grid;
+	overflow: hidden;
+}
+
+.dashboard-tracker-heatmap-cell {
+	transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-tracker-heatmap-cell:hover {
+	transform: scale(1.3);
+	z-index: 1;
+	position: relative;
+}
+
+.dashboard-tracker-heatmap-cell--empty {
+	background-color: var(--db-bg-hover) !important;
+	opacity: 0.3 !important;
+}
+
+.dashboard-tracker-heatmap-labels {
+	display: grid;
+	grid-template-rows: repeat(7, 14px);
+	gap: 2px;
+	margin-right: 4px;
+}
+
+.dashboard-tracker-heatmap-day-label {
+	font-size: 8px;
+	color: var(--db-text-faint);
+	display: flex;
+	align-items: center;
+	line-height: 1;
+}
+
+
+/* Tracker Config Modal */
+.tracker-key-suggestions {
+	margin-top: 8px;
+}
+
+.tracker-key-suggestions-label {
+	font-size: 11px;
+	color: var(--db-text-faint);
+	margin-bottom: 6px;
+}
+
+.tracker-key-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.tracker-key-tag {
+	padding: 3px 10px;
+	border-radius: 12px;
+	background: var(--db-bg-hover);
+	color: var(--db-text-muted);
+	font-size: 12px;
+	cursor: pointer;
+	border: none;
+	transition: all 0.15s;
+}
+
+.tracker-key-tag:hover {
+	background: var(--db-accent);
+	color: #fff;
+}
+
+/* Dashboard Section: CSS Grid Layout */
+.dashboard-section-row[data-section-type="dashboard"] .dashboard-section-cards {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	grid-auto-rows: auto;
+	gap: 12px;
+	overflow: visible;
+}
+
+.dashboard-section-row[data-section-type="dashboard"] .dashboard-section-cards > .dashboard-card {
+	min-width: 0;
+	min-height: 0;
+	flex: none;
 }

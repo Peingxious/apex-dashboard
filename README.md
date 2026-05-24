@@ -23,6 +23,13 @@ A compact, list-style section for organizing reference documents and quick-acces
 ### ⚡ Quick Actions
 Pin your most-used shortcuts to the sidebar. Supports two action types: **File** links to open any document, and **Command** shortcuts to trigger any Obsidian command. Includes built-in presets for New Journal and New Note.
 
+### 🌤️ Sidebar Widgets
+The left sidebar features decorative widgets for at-a-glance information:
+
+- **Week Calendar** — A compact 7-day strip highlighting today's date
+- **Weather Widget** — Real-time weather with current temperature, feels-like, humidity, wind speed, and a 5-day forecast with daily high/low temperatures. Powered by Open-Meteo (no API key needed). City search with geocoding autocomplete for precise location
+- **Heatmap Widget** — Track daily frontmatter data (mood, sleep, etc.) as a GitHub-style contribution heatmap. Configurable summary: streak days (⚡), completion rate (✅), or both
+
 ### 🎨 Banner
 A customizable banner with an inspirational quote and optional background image. Supports both local vault images and web URLs. Double-click to edit.
 
@@ -65,6 +72,7 @@ All themes support both Obsidian light and dark modes.
 - **Style** — choose from 11 visual themes
 - **Language** — English or Chinese interface
 - **Recent documents count** — control how many recent files appear
+- **Sidebar widgets** — Weather, Weather + Heatmap, or Off. Configure city, tracker key, time range, and summary display
 
 ## Installation
 
@@ -87,6 +95,16 @@ All themes support both Obsidian light and dark modes.
 > **Note:** Deleting, renaming, or reordering sections must be done by editing the `dashboard.md` file directly. Any changes made to the note will take effect in the dashboard view immediately.
 
 ## What's New
+
+### v1.0.8
+- **Sidebar weather widget** — Real-time weather with current temperature, feels-like temperature, humidity, wind speed, and a 5-day forecast (daily icons + high/low). Powered by Open-Meteo, no API key required
+- **Sidebar heatmap widget** — GitHub-style contribution heatmap for tracking daily frontmatter data (mood, sleep, weight, etc.)
+- **Heatmap summary** — Configurable stats below the heatmap: streak days (⚡), completion rate (✅), both, or off
+- **Week calendar strip** — Compact 7-day strip in the sidebar highlighting today
+- **City search** — Geocoding autocomplete when configuring the weather city in settings
+- **Dashboard weather cards** — Weather card widgets in the main dashboard also show feels-like, humidity, and wind
+- **i18n** — All sidebar widget settings now support both English and Chinese
+- **5 new themes** — Matcha (green tea warmth), Lilac (soft purple), Sakura (cherry blossom pink), Eclipse (dark mode), Moonlight (silver blue)
 
 ### v1.0.7
 - **Task reminders** — Set per-task reminders with a calendar popup. Click the bell icon on any task to pick a date and time

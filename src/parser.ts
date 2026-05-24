@@ -1,17 +1,17 @@
 import type {
 	BannerData,
 	CardType,
-	ChartBarEntry,
-	ChartConfig,
-	ChartType,
+	CardSize,
 	DashboardCard,
 	DashboardColumn,
 	DashboardData,
 	QuickAction,
 	TaskItem,
+	WeatherConfig,
+	TrackerConfig,
 } from './types';
 
-const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'chart', 'source', 'value', 'max', 'unit', 'label']);
+const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'cols', 'rows', 'gcol', 'grow']);
 
 const REMINDER_REGEX = /\s*⏰\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*$/;
 
@@ -38,6 +38,8 @@ export function parse(markdown: string): DashboardData {
 
 	const data: DashboardData = { banner, quickActions, columns };
 	if (quickActionOrder) data.quickActionOrder = quickActionOrder;
+	const hiddenPresets = parseHiddenPresets(frontmatter);
+	if (hiddenPresets) data.hiddenPresets = hiddenPresets;
 	return data;
 }
 
@@ -80,6 +82,13 @@ export function serialize(data: DashboardData): string {
 	if (data.quickActionOrder && data.quickActionOrder.length > 0) {
 		lines.push('quickActionOrder:');
 		for (const key of data.quickActionOrder) {
+			lines.push(`  - "${escapeYamlString(key)}"`);
+		}
+	}
+
+	if (data.hiddenPresets && data.hiddenPresets.length > 0) {
+		lines.push('hiddenPresets:');
+		for (const key of data.hiddenPresets) {
 			lines.push(`  - "${escapeYamlString(key)}"`);
 		}
 	}
@@ -144,22 +153,32 @@ export function serialize(data: DashboardData): string {
 			if (card.width > 0) {
 				lines.push(`width: ${card.width}`);
 			}
-		if (card.chartConfig) {
-			const cc = card.chartConfig;
-			lines.push(`chart: ${cc.chartType}`);
-			if (cc.source) lines.push(`source: ${cc.source}`);
-			if (cc.value > 0 && !cc.source) lines.push(`value: ${cc.value}`);
-			if (cc.max !== 100) lines.push(`max: ${cc.max}`);
-			if (cc.unit) lines.push(`unit: ${cc.unit}`);
-			if (cc.label) lines.push(`label: ${cc.label}`);
-			if (cc.color) lines.push(`color: ${cc.color}`);
-			if (cc.chartType === 'bars' && cc.bars.length > 0) {
-				lines.push('');
-				for (const bar of cc.bars) {
-					const colorSuffix = bar.color ? ` ${bar.color}` : '';
-					lines.push(`${bar.label}: ${bar.value}${colorSuffix}`);
-				}
+			if (card.size && card.size !== 'M') {
+				lines.push(`size: ${card.size}`);
 			}
+			if (card.gridCols > 0) {
+				lines.push(`cols: ${card.gridCols}`);
+			}
+			if (card.gridRows > 0) {
+				lines.push(`rows: ${card.gridRows}`);
+			}
+			if (card.gridCol > 0) {
+				lines.push();
+			}
+			if (card.gridRow > 0) {
+				lines.push();
+			}
+		if (card.weatherConfig) {
+			const wc = card.weatherConfig;
+			lines.push(`lat: ${wc.latitude}`);
+			lines.push(`lon: ${wc.longitude}`);
+			lines.push(`city: "${escapeYamlString(wc.cityName)}"`);
+		}
+
+		if (card.trackerConfig) {
+			const tc = card.trackerConfig;
+			lines.push(`track: ${tc.key}`);
+			lines.push(`days: ${tc.days}`);
 		}
 
 			if (card.blockquote) {
@@ -218,6 +237,11 @@ export function generateDefaultMarkdown(): string {
 						color: '',
 						coverImage: '',
 						width: 0,
+					size: 'M' as CardSize,
+					gridCols: 0,
+					gridRows: 0,
+					gridCol: 0,
+					gridRow: 0,
 					},
 				],
 			},
@@ -247,6 +271,11 @@ export function generateDefaultMarkdown(): string {
 						color: '',
 						coverImage: '',
 						width: 0,
+					size: 'M' as CardSize,
+					gridCols: 0,
+					gridRows: 0,
+					gridCol: 0,
+					gridRow: 0,
 					},
 				],
 			},
@@ -271,6 +300,11 @@ export function generateDefaultMarkdown(): string {
 						color: '',
 						coverImage: '',
 						width: 0,
+					size: 'M' as CardSize,
+					gridCols: 0,
+					gridRows: 0,
+					gridCol: 0,
+					gridRow: 0,
 					},
 				],
 			},
@@ -295,6 +329,11 @@ export function generateDefaultMarkdown(): string {
 						color: '',
 						coverImage: '',
 						width: 0,
+					size: 'M' as CardSize,
+					gridCols: 0,
+					gridRows: 0,
+					gridCol: 0,
+					gridRow: 0,
 					},
 					{
 						id: 'demo-lib-toread',
@@ -312,6 +351,11 @@ export function generateDefaultMarkdown(): string {
 						color: '',
 						coverImage: '',
 						width: 0,
+					size: 'M' as CardSize,
+					gridCols: 0,
+					gridRows: 0,
+					gridCol: 0,
+					gridRow: 0,
 					},
 					{
 						id: 'demo-lib-done',
@@ -329,6 +373,11 @@ export function generateDefaultMarkdown(): string {
 						color: '',
 						coverImage: '',
 						width: 0,
+					size: 'M' as CardSize,
+					gridCols: 0,
+					gridRows: 0,
+					gridCol: 0,
+					gridRow: 0,
 					},
 				],
 			},
@@ -414,6 +463,14 @@ function parseQuickActionOrder(fm: Record<string, unknown>): string[] | undefine
 	return undefined;
 }
 
+function parseHiddenPresets(fm: Record<string, unknown>): string[] | undefined {
+	const raw = fm.hiddenPresets;
+	if (Array.isArray(raw) && raw.length > 0) {
+		return raw.map((v: unknown) => String(v));
+	}
+	return undefined;
+}
+
 function parseColumnDefs(fm: Record<string, unknown>): Array<{ name: string; color: string; sectionType?: string }> {
 	const raw = fm.columns;
 	if (!Array.isArray(raw)) return DEFAULT_COLUMNS;
@@ -465,7 +522,8 @@ function resolveSectionType(
 
 	if (cards.length > 0) {
 		const types = new Set(cards.map(c => c.type));
-		if (types.has('chart') && types.size === 1) return 'dashboard';
+		const dashboardTypes = new Set(['weather', 'tracker']);
+		if ([...types].every(t => dashboardTypes.has(t)) && types.size > 0) return 'dashboard';
 		if (types.has('task') && types.size === 1) return 'todo';
 		if (types.has('task') && !types.has('project')) return 'todo';
 		if (types.has('project') && types.size === 1) return 'projects';
@@ -529,7 +587,8 @@ function splitByH3(content: string): Array<{ title: string; body: string }> {
 function parseCard(block: { title: string; body: string }, columnName: string): DashboardCard {
 	const { metadata, tasks, blockquote, cleanBody } = extractCardParts(block.body);
 	const cardType = detectCardType(tasks, blockquote, metadata);
-	const chartConfig = cardType === 'chart' ? parseChartConfig(metadata, cleanBody) : undefined;
+	const weatherConfig = cardType === 'weather' ? parseWeatherConfig(metadata) : undefined;
+	const trackerConfig = cardType === 'tracker' ? parseTrackerConfig(metadata) : undefined;
 
 	return {
 		id: metadata.id ?? generateId(block.title, columnName),
@@ -547,7 +606,13 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 		color: metadata.color ?? '',
 		coverImage: metadata.cover ?? '',
 		width: parseInt(metadata.width ?? '0', 10) || 0,
-			chartConfig,
+			size: parseCardSize(metadata.size),
+		gridCols: parseInt(metadata.cols ?? '0', 10) || 0,
+		gridRows: parseInt(metadata.rows ?? '0', 10) || 0,
+		gridCol: parseInt(metadata.gcol ?? '0', 10) || 0,
+		gridRow: parseInt(metadata.grow ?? '0', 10) || 0,
+			weatherConfig,
+			trackerConfig,
 	};
 }
 
@@ -605,7 +670,8 @@ function detectCardType(
 ): CardType {
 	if (metadata.type === 'task') return 'task';
 	if (metadata.type === 'project') return 'project';
-	if (metadata.chart) return 'chart';
+	if (metadata.type === 'weather') return 'weather';
+	if (metadata.type === 'tracker') return 'tracker';
 
 	const link = metadata.link ?? '';
 
@@ -616,6 +682,12 @@ function detectCardType(
 	if (link.startsWith('http')) return 'link';
 	if (metadata.progress) return 'project';
 	return 'generic';
+}
+
+function parseCardSize(raw: string | undefined): CardSize {
+	const v = (raw ?? '').toUpperCase().trim();
+	if (v === 'S' || v === 'L') return v;
+	return 'M';
 }
 
 function extractUrl(metadata: Record<string, string>): string {
@@ -847,33 +919,21 @@ function parseYamlStringValue(value: string): string {
 	return value;
 }
 
-function parseChartConfig(metadata: Record<string, string>, body: string): ChartConfig {
-	const validTypes: ChartType[] = ['stat', 'ring', 'bars'];
-	const chartType = validTypes.includes(metadata.chart as ChartType) ? metadata.chart as ChartType : 'stat';
 
-	let bars: ChartBarEntry[] = [];
-	if (chartType === 'bars') {
-		bars = body.split('\n')
-			.map(line => {
-				const match = line.trim().match(/^(.+?):\s*(\d+(?:\.\d+)?)(?:\s+(#[a-fA-F0-9]{3,8}))?$/);
-				if (!match) return null;
-				return {
-					label: match[1]!.trim(),
-					value: parseFloat(match[2]!),
-					color: match[3] ?? '',
-				};
-			})
-			.filter((b): b is NonNullable<typeof b> => b !== null) as ChartBarEntry[];
-	}
 
+function parseWeatherConfig(metadata: Record<string, string>): WeatherConfig {
 	return {
-		chartType,
-		source: metadata.source ?? '',
-		value: metadata.value ? parseFloat(metadata.value) : 0,
-		max: metadata.max ? parseFloat(metadata.max) : 100,
-		unit: metadata.unit ?? '',
-		label: metadata.label ?? '',
-		color: metadata.color ?? '',
-		bars,
+		latitude: parseFloat(metadata.lat ?? '0') || 0,
+		longitude: parseFloat(metadata.lon ?? '0') || 0,
+		cityName: parseYamlStringValue(metadata.city ?? ''),
+	};
+}
+
+function parseTrackerConfig(metadata: Record<string, string>): TrackerConfig {
+	const style = metadata.style ?? 'line';
+	return {
+		key: metadata.track ?? '',
+		days: parseInt(metadata.days ?? '14', 10) || 14,
+		style: style === 'heatmap' || style === 'bar' ? style : 'line',
 	};
 }

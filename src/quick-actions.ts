@@ -13,9 +13,10 @@ interface OrderedAction {
 	key: string;
 }
 
-function buildOrderedActions(actions: QuickAction[], order?: string[]): OrderedAction[] {
+function buildOrderedActions(actions: QuickAction[], order?: string[], hiddenPresets?: string[]): OrderedAction[] {
+	const hidden = new Set(hiddenPresets ?? []);
 	const all: OrderedAction[] = [
-		...PRESET_ACTIONS.map((a, i) => ({ action: a, isPreset: true, key: actionKey(a, true) })),
+		...PRESET_ACTIONS.filter(a => !hidden.has(actionKey(a, true))).map((a) => ({ action: a, isPreset: true, key: actionKey(a, true) })),
 		...actions.map(a => ({ action: a, isPreset: false, key: actionKey(a, false) })),
 	];
 
@@ -44,6 +45,7 @@ export function renderQuickActions(
 	order?: string[],
 	onReorder?: (order: string[]) => void,
 	onRemoveByKey?: (key: string) => void,
+	hiddenPresets?: string[],
 ): void {
 	const section = container.createDiv({ cls: 'dashboard-section dashboard-quick-actions' });
 
@@ -81,7 +83,7 @@ export function renderQuickActions(
 
 	const list = section.createDiv({ cls: 'dashboard-qa-list' });
 
-	const ordered = buildOrderedActions(actions, order);
+	const ordered = buildOrderedActions(actions, order, hiddenPresets);
 
 	if (ordered.length === 0) {
 		section.createSpan({ text: t('quickActions.empty'), cls: 'dashboard-empty' });
