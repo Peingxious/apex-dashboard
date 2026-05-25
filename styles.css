@@ -1774,6 +1774,11 @@
    COMPONENT STYLES
    ================================================================= */
 
+/* Reset Obsidian view-content padding for dashboard */
+.workspace-leaf-content[data-type="apex-dashboard-view"] .view-content {
+	padding: 0 !important;
+}
+
 /* ===== Root ===== */
 .dashboard-root {
 	display: flex;
@@ -2004,7 +2009,7 @@
 	flex: 1;
 	overflow: hidden;
 	gap: 16px;
-	padding: 16px;
+	padding: 16px 16px 0 16px;
 }
 
 /* ===== Sidebar ===== */
@@ -3933,6 +3938,58 @@
 .dashboard-modal-image-add:hover {
 	background: var(--db-bg-btn-hover, rgba(255, 255, 255, 0.10)) !important;
 	border-color: var(--db-border-btn-hover, rgba(255, 255, 255, 0.2)) !important;
+	color: var(--db-text, rgba(255, 255, 255, 0.8));
+}
+
+/* Banner Quote Color */
+.dashboard-modal-quote-color {
+	margin-bottom: 12px;
+}
+
+.dashboard-modal-quote-color-label {
+	display: block;
+	margin-bottom: 6px;
+}
+
+.dashboard-modal-quote-color-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.dashboard-modal-color-input {
+	width: 40px;
+	height: 32px;
+	border: 1px solid var(--db-border-card, rgba(255, 255, 255, 0.10));
+	border-radius: var(--db-radius-sm, 6px);
+	background: none;
+	cursor: pointer;
+	padding: 2px;
+}
+
+.dashboard-modal-color-input::-webkit-color-swatch-wrapper {
+	padding: 0;
+}
+
+.dashboard-modal-color-input::-webkit-color-swatch {
+	border: none;
+	border-radius: 4px;
+}
+
+.dashboard-modal-color-reset {
+	background: var(--db-bg-btn, rgba(255, 255, 255, 0.06)) !important;
+	border: 1px solid var(--db-border-btn, rgba(255, 255, 255, 0.12)) !important;
+	border-radius: var(--db-radius-sm, 6px);
+	color: var(--db-text-muted, rgba(255, 255, 255, 0.5));
+	padding: 6px 14px;
+	cursor: pointer;
+	font-family: var(--db-font, var(--font-interface));
+	font-size: 0.85em;
+	transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.dashboard-modal-color-reset:hover {
+	background: var(--db-bg-btn-hover, rgba(255, 255, 255, 0.10)) !important;
 	color: var(--db-text, rgba(255, 255, 255, 0.8));
 }
 
