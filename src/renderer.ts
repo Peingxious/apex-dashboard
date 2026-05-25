@@ -435,7 +435,18 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 		saveCollapsedSections(collapsed);
 	});
 
-	const addCardBtn = header.createEl('button', {
+		const headerActions = header.createDiv({ cls: 'dashboard-section-header-actions' });
+
+	if (sectionType === 'todo') {
+		const templateBtn = headerActions.createEl('button', {
+			cls: 'dashboard-section-add-btn',
+			attr: { 'aria-label': t('template.addFromTemplate') },
+		});
+		setIcon(templateBtn, 'layout-template');
+		templateBtn.addEventListener('click', () => callbacks.onAddFromTemplate(column.name));
+	}
+
+	const addCardBtn = headerActions.createEl('button', {
 		cls: 'dashboard-section-add-btn',
 		attr: { 'aria-label': t('renderer.addCardTo', { column: column.name }) },
 	});
@@ -495,6 +506,18 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 
 	const header = el.createDiv({ cls: 'dashboard-card-header' });
 	header.setAttribute('draggable', 'true');
+
+	// Mobile: tap header to toggle card action buttons
+	header.addEventListener('touchstart', () => {
+		const wasActive = header.hasClass('dashboard-card-header--touched');
+		document.querySelectorAll('.dashboard-card-header--touched').forEach(el => {
+			el.removeClass('dashboard-card-header--touched');
+		});
+		if (!wasActive) {
+			header.addClass('dashboard-card-header--touched');
+		}
+	}, { passive: true });
+
 	const titleEl = header.createEl('h4', { text: card.title, cls: 'dashboard-card-title' });
 
 	const skipEditBtn = isMemo || isTask || (isWidget && isDashboardSection);
@@ -775,6 +798,17 @@ function renderTaskBody(container: HTMLElement, card: DashboardCard, callbacks: 
 		item.setAttribute('draggable', 'true');
 		item.dataset.taskIndex = String(index);
 		item.dataset.cardId = card.id;
+
+		// Mobile: tap to toggle action buttons visibility
+		item.addEventListener('touchstart', () => {
+			const wasActive = item.hasClass('dashboard-task-item--touched');
+			document.querySelectorAll('.dashboard-task-item--touched').forEach(el => {
+				el.removeClass('dashboard-task-item--touched');
+			});
+			if (!wasActive) {
+				item.addClass('dashboard-task-item--touched');
+			}
+		}, { passive: true });
 
 		const checkbox = item.createEl('input', {
 			cls: 'dashboard-task-checkbox',

@@ -2793,6 +2793,13 @@
 	color: var(--db-text) !important;
 }
 
+.dashboard-section-header-actions {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	flex-shrink: 0;
+}
+
 .dashboard-add-section-row {
 	display: flex;
 	align-items: center;
@@ -6016,9 +6023,16 @@
 		transform: none;
 	}
 
-	/* Card actions: always visible on mobile (no hover) */
+	/* Card actions: hidden by default on mobile, shown on tap */
 	.dashboard-card-actions {
+		opacity: 0;
+		pointer-events: none;
+		transition: opacity 0.15s ease;
+	}
+
+	.dashboard-card-header--touched .dashboard-card-actions {
 		opacity: 1;
+		pointer-events: auto;
 	}
 
 	/* Project cover: shorter */
@@ -6710,4 +6724,280 @@
 	min-width: 0;
 	min-height: 0;
 	flex: none;
+}
+
+/* ===== Template Modal ===== */
+.template-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.template-modal-header h2 {
+	border-bottom: none;
+	margin-bottom: 0;
+	padding-bottom: 0;
+	flex: 1;
+}
+
+.template-modal-manage-btn,
+.template-modal-back-btn {
+	background: transparent;
+	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+	border-radius: var(--db-radius-sm, 6px);
+	color: var(--db-text-muted);
+	font-size: 0.85em;
+	padding: 4px 12px;
+	cursor: pointer;
+	font-family: var(--db-font, var(--font-interface));
+}
+
+.template-modal-manage-btn:hover,
+.template-modal-back-btn:hover {
+	border-color: var(--db-accent, var(--interactive-accent));
+	color: var(--db-text, var(--text-normal));
+}
+
+.template-modal-empty {
+	text-align: center;
+	padding: 40px 0;
+	color: var(--db-text-muted);
+}
+
+.template-modal-empty button {
+	margin-top: 16px;
+}
+
+.template-modal-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	max-height: 400px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.template-modal-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.template-modal-list::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.12);
+	border-radius: 4px;
+}
+
+.template-modal-item {
+	padding: 12px 16px;
+	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+	border-radius: var(--db-radius-md, 8px);
+	cursor: pointer;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.template-modal-item:hover {
+	border-color: var(--db-accent, rgba(255, 255, 255, 0.2));
+	background: var(--db-bg-card-hover, rgba(255, 255, 255, 0.03));
+}
+
+.template-modal-item--selected {
+	border-color: var(--db-accent, var(--interactive-accent));
+	background: var(--db-bg-card-hover, rgba(255, 255, 255, 0.06));
+}
+
+.template-modal-item-name {
+	font-weight: 600;
+	font-size: 0.95em;
+	margin-bottom: 2px;
+}
+
+.template-modal-item-count {
+	font-size: 0.8em;
+	color: var(--db-text-muted);
+}
+
+.template-modal-item-preview {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.template-modal-item-preview-task {
+	font-size: 0.82em;
+	color: var(--db-text-muted);
+	padding-left: 12px;
+	position: relative;
+}
+
+.template-modal-item-preview-task::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	top: 50%;
+	width: 6px;
+	height: 1px;
+	background: var(--db-text-muted);
+}
+
+.template-modal-item-preview-more {
+	font-size: 0.8em;
+	color: var(--db-text-muted);
+	opacity: 0.6;
+	padding-left: 12px;
+}
+
+.template-modal-actions {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-top: 16px;
+}
+
+.template-modal-actions button {
+	border-radius: var(--db-radius-sm, 6px);
+	font-family: var(--db-font, var(--font-interface));
+}
+
+.template-modal-manage-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	margin-bottom: 16px;
+}
+
+.template-modal-manage-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 10px 14px;
+	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+	border-radius: var(--db-radius-sm, 6px);
+}
+
+.template-modal-manage-name {
+	flex: 1;
+	font-weight: 500;
+}
+
+.template-modal-manage-count {
+	font-size: 0.8em;
+	color: var(--db-text-muted);
+}
+
+.template-modal-manage-edit,
+.template-modal-manage-delete {
+	background: transparent;
+	border: none;
+	color: var(--db-text-muted);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+}
+
+.template-modal-manage-edit:hover {
+	color: var(--db-accent, var(--interactive-accent));
+}
+
+.template-modal-manage-delete:hover {
+	color: #ef4444;
+}
+
+.template-modal-create-btn {
+	width: 100%;
+	padding: 10px;
+	border-radius: var(--db-radius-md, 8px);
+}
+
+.template-modal-form {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.template-modal-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.template-modal-field label {
+	font-size: 0.9em;
+	font-weight: 500;
+	color: var(--db-text, var(--text-normal));
+}
+
+.template-modal-task-list {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.template-modal-task-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.template-modal-task-row .template-modal-input {
+	flex: 1;
+}
+
+.template-modal-task-remove {
+	background: transparent;
+	border: none;
+	color: var(--db-text-muted);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	flex-shrink: 0;
+}
+
+.template-modal-task-remove:hover {
+	color: #ef4444;
+}
+
+.template-modal-add-task {
+	background: transparent;
+	border: 1px dashed var(--db-border-input, rgba(255, 255, 255, 0.1));
+	border-radius: var(--db-radius-sm, 6px);
+	color: var(--db-text-muted);
+	padding: 6px 12px;
+	cursor: pointer;
+	font-size: 0.9em;
+	text-align: left;
+	font-family: var(--db-font, var(--font-interface));
+}
+
+.template-modal-add-task:hover {
+	border-color: var(--db-accent, var(--interactive-accent));
+	color: var(--db-text, var(--text-normal));
+}
+
+.template-modal-form-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.template-modal-form-actions button {
+	border-radius: var(--db-radius-sm, 6px);
+	font-family: var(--db-font, var(--font-interface));
+}
+
+/* Mobile: tap task item to reveal delete/reminder buttons */
+@media (max-width: 640px) {
+	.dashboard-task-item .dashboard-task-delete,
+	.dashboard-task-item .dashboard-task-reminder-btn {
+		opacity: 0;
+		pointer-events: none;
+	}
+
+	.dashboard-task-item.dashboard-task-item--touched .dashboard-task-delete,
+	.dashboard-task-item.dashboard-task-item--touched .dashboard-task-reminder-btn {
+		opacity: 1;
+		pointer-events: auto;
+	}
 }

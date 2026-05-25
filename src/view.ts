@@ -13,6 +13,7 @@ import { clearWeatherCache } from './weather-service';
 import { WidgetTypeModal, type WidgetType } from './widget-type-modal';
 import { WeatherConfigModal } from './weather-config-modal';
 import { TrackerConfigModal } from './tracker-config-modal';
+import { TemplatePickerModal } from './template-modal';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -524,6 +525,7 @@ export class DashboardView extends ItemView {
 				onFileDrop: (cardId: string, filePath: string) => this.handleFileDrop(cardId, filePath),
 				onColumnRename: (oldName: string, newName: string) => this.sync.renameColumn(oldName, newName),
 			onTaskReminderEdit: (cardId: string, taskIndex: number, reminder: string | undefined) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
+			onAddFromTemplate: (columnName: string) => this.openTemplatePicker(columnName),
 		};
 	}
 
@@ -593,6 +595,23 @@ export class DashboardView extends ItemView {
 				trackerConfig: config,
 			});
 		}, this.plugin.settings.stylePreset);
+		modal.open();
+	}
+
+	private openTemplatePicker(colName: string): void {
+		const modal = new TemplatePickerModal(
+			this.app,
+			this.plugin,
+			(template) => {
+				this.pendingScrollToLastCardOfColumn = colName;
+				this.sync.addCard(colName, {
+					title: template.name,
+					type: 'task',
+					tasks: template.tasks.map(text => ({ text, checked: false })),
+				});
+			},
+			this.plugin.settings.stylePreset,
+		);
 		modal.open();
 	}
 

@@ -125,6 +125,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'banner.imagesLabel': 'Background Images',
 		'banner.addImage': 'Add image',
 		'banner.deleteImage': 'Delete',
+			'banner.quoteColor': 'Quote Color',
+			'banner.resetColor': 'Reset',
 
 		// Quick Links
 		'quickLinks.title': 'Quick Links',
@@ -281,6 +283,25 @@ const translations: Record<Language, Record<string, string>> = {
 		'reminder.editReminder': 'Edit reminder',
 		'reminder.clearReminder': 'Clear reminder',
 		'reminder.dueNotice': '🔔 Task due: {task}',
+
+		// Template
+		'template.addFromTemplate': 'Add from template',
+		'template.selectTemplate': 'Select Template',
+		'template.manageTemplates': 'Manage Templates',
+		'template.empty': 'No templates yet.',
+		'template.createFirst': 'Create your first template',
+		'template.create': 'New Template',
+		'template.edit': 'Edit',
+		'template.delete': 'Delete',
+		'template.nameLabel': 'Template name',
+		'template.namePlaceholder': 'e.g. Morning Routine',
+		'template.tasksLabel': 'Tasks',
+		'template.taskPlaceholder': 'Task text...',
+		'template.addTask': '+ Add task',
+		'template.taskCount': '{count} tasks',
+		'template.save': 'Save',
+		'template.back': 'Back',
+		'template.confirm': 'Use Template',
 	},
 	zh: {
 		// Common
@@ -396,6 +417,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'banner.imagesLabel': '背景图片',
 		'banner.addImage': '添加图片',
 		'banner.deleteImage': '删除',
+			'banner.quoteColor': '名言颜色',
+			'banner.resetColor': '重置',
 
 		// Quick Links
 		'quickLinks.title': '快捷链接',
@@ -547,6 +570,25 @@ const translations: Record<Language, Record<string, string>> = {
 		'reminder.editReminder': '编辑提醒',
 		'reminder.clearReminder': '取消提醒',
 		'reminder.dueNotice': '🔔 任务到期：{task}',
+
+		// Template
+		'template.addFromTemplate': '从模板添加',
+		'template.selectTemplate': '选择模板',
+		'template.manageTemplates': '管理模板',
+		'template.empty': '暂无模板。',
+		'template.createFirst': '创建你的第一个模板',
+		'template.create': '新建模板',
+		'template.edit': '编辑',
+		'template.delete': '删除',
+		'template.nameLabel': '模板名称',
+		'template.namePlaceholder': '如：晨间惯例',
+		'template.tasksLabel': '任务列表',
+		'template.taskPlaceholder': '任务内容...',
+		'template.addTask': '+ 添加任务',
+		'template.taskCount': '{count} 个任务',
+		'template.save': '保存',
+		'template.back': '返回',
+		'template.confirm': '使用模板',
 	},
 };
 

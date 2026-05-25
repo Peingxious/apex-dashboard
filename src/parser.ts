@@ -55,6 +55,9 @@ export function serialize(data: DashboardData): string {
 	if (data.banner.image) {
 		lines.push(`  image: "${data.banner.image}"`);
 	}
+	if (data.banner.quoteColor) {
+		lines.push(`  quoteColor: "${data.banner.quoteColor}"`);
+	}
 	if (data.banner.quotes && data.banner.quotes.length > 0) {
 		lines.push('  quotes:');
 		for (const q of data.banner.quotes) {
@@ -425,6 +428,7 @@ function parseBanner(fm: Record<string, unknown>): BannerData {
 		quote: (raw.quote as string) ?? DEFAULT_BANNER.quote,
 		author: (raw.author as string) ?? DEFAULT_BANNER.author,
 		image: (raw.image as string) ?? '',
+		quoteColor: (raw.quoteColor as string) || undefined,
 		quotes,
 		images,
 	};

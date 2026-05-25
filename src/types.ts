@@ -15,6 +15,7 @@ export interface DashboardSettings {
 	widgetWeatherCity: string;
 	widgetWeatherLat: number;
 	widgetWeatherLon: number;
+	taskTemplates: TaskTemplate[];
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -30,6 +31,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	widgetWeatherCity: 'Shanghai',
 	widgetWeatherLat: 31.23,
 	widgetWeatherLon: 121.47,
+	taskTemplates: [],
 };
 
 export interface QuoteItem {
@@ -41,6 +43,7 @@ export interface BannerData {
 	quote: string;
 	author: string;
 	image: string;
+	quoteColor?: string;
 	quotes?: QuoteItem[];
 	images?: string[];
 }
@@ -100,6 +103,12 @@ export interface TaskItem {
 	text: string;
 	checked: boolean;
 	reminder?: string;
+}
+
+export interface TaskTemplate {
+	id: string;
+	name: string;
+	tasks: string[];
 }
 
 export type CardSize = 'S' | 'M' | 'L';
@@ -174,4 +183,5 @@ export interface RenderCallbacks {
 	onFileDrop(cardId: string, filePath: string): void;
 	onColumnRename(oldName: string, newName: string): void;
 	onTaskReminderEdit(cardId: string, taskIndex: number, reminder: string | undefined): void;
+	onAddFromTemplate(columnName: string): void;
 }
