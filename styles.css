@@ -2388,7 +2388,7 @@
 /* ===== Activity Selector (Pomodoro Widget) ===== */
 .dashboard-pomodoro-activity-selector {
 	position: relative;
-	width: 100%;
+	flex: 1;
 	display: flex;
 	justify-content: center;
 }
@@ -2424,7 +2424,7 @@
 
 .dashboard-pomodoro-activity-placeholder {
 	font-size: 0.65em;
-	color: var(--db-text-faint);
+	color: var(--db-accent);
 }
 
 .dashboard-pomodoro-activity-color-dot {
