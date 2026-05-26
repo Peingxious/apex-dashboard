@@ -34,24 +34,31 @@ export function getCachedWeather(config: WeatherConfig): WeatherData | null {
 	return entry.data;
 }
 
+// Priority: Open-Meteo → Open-Meteo Archive → Met.no (5-day) → wttr.in (3-day)
 export async function fetchWeather(config: WeatherConfig): Promise<WeatherData> {
 	const cached = getCachedWeather(config);
 	if (cached) return cached;
 
 	try {
 		return await fetchFromOpenMeteo(config);
-	} catch {
-		// primary API failed, try fallback
-	}
+	} catch { /* try next */ }
 
 	try {
 		return await fetchFromOpenMeteoArchive(config);
-	} catch {
-		// fallback also failed
-	}
+	} catch { /* try next */ }
+
+	try {
+		return await fetchFromMetNo(config);
+	} catch { /* try next */ }
+
+	try {
+		return await fetchFromWttr(config);
+	} catch { /* all failed */ }
 
 	throw new Error('All weather APIs failed');
 }
+
+// ---------- Open-Meteo (primary) ----------
 
 async function fetchFromOpenMeteo(config: WeatherConfig): Promise<WeatherData> {
 	return fetchFromOpenMeteoBase('https://api.open-meteo.com', config);
@@ -91,6 +98,199 @@ async function fetchFromOpenMeteoBase(base: string, config: WeatherConfig): Prom
 	return data;
 }
 
+// ---------- Met.no (fallback, 5+ day forecast) ----------
+
+async function fetchFromMetNo(config: WeatherConfig): Promise<WeatherData> {
+	const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${config.latitude}&lon=${config.longitude}`;
+
+	const resp = await requestUrl({ url, headers: { 'User-Agent': 'obsidian-dashboard' } });
+	const json = resp.json;
+
+	const timeseries = json.properties?.timeseries;
+	if (!Array.isArray(timeseries) || timeseries.length === 0) {
+		throw new Error('Invalid Met.no response');
+	}
+
+	const now = timeseries[0];
+	const nowDetails = now.data.instant.details;
+	const nowSymbol = now.data.next_1_hours?.summary?.symbol_code
+		?? now.data.next_6_hours?.summary?.symbol_code
+		?? 'clearsky';
+
+	// Group by date, compute daily max/min and representative weather code
+	const dayMap = new Map<string, { min: number; max: number; codes: string[] }>();
+	for (const entry of timeseries) {
+		const dateStr = (entry.time as string).slice(0, 10);
+		const temp = entry.data.instant.details.air_temperature as number;
+		const sym = entry.data.next_1_hours?.summary?.symbol_code
+			?? entry.data.next_6_hours?.summary?.symbol_code;
+
+		if (!dayMap.has(dateStr)) {
+			dayMap.set(dateStr, { min: temp, max: temp, codes: [] });
+		}
+		const d = dayMap.get(dateStr)!;
+		d.min = Math.min(d.min, temp);
+		d.max = Math.max(d.max, temp);
+		if (sym) d.codes.push(sym);
+	}
+
+	const dailyDates = [...dayMap.keys()].slice(0, 5);
+	const dailyMax = dailyDates.map(d => Math.round(dayMap.get(d)!.max));
+	const dailyMin = dailyDates.map(d => Math.round(dayMap.get(d)!.min));
+	const dailyCodes = dailyDates.map(d => {
+		const codes = dayMap.get(d)!.codes;
+		return codes.length > 0 ? mapMetNoCode(metNoDaytimeCode(codes)) : 0;
+	});
+
+	const data: WeatherData = {
+		temperature: Math.round(nowDetails.air_temperature as number),
+		weatherCode: mapMetNoCode(nowSymbol),
+		windSpeed: Math.round(nowDetails.wind_speed as number),
+		humidity: Math.round(nowDetails.relative_humidity as number),
+		feelsLike: Math.round(nowDetails.air_temperature as number),
+		dailyMax,
+		dailyMin,
+		dailyCodes,
+		dailyDates,
+		fetchedAt: Date.now(),
+	};
+
+	weatherCache.set(cacheKey(config), { data, fetchedAt: Date.now() });
+	return data;
+}
+
+const METNO_TO_WMO: Record<string, number> = {
+	clearsky: 0, clearsky_night: 0,
+	fair: 1, fair_night: 1,
+	partlycloudy: 2, partlycloudy_night: 2,
+	cloudy: 3,
+	fog: 45,
+	lightrain: 61, lightrain_night: 61,
+	rain: 63, rain_night: 63,
+	heavyrain: 65, heavyrain_night: 65,
+	lightrainshowers: 80, lightrainshowers_night: 80,
+	rainshowers: 81, rainshowers_night: 81,
+	heavyrainshowers: 82, heavyrainshowers_night: 82,
+	lightsleet: 66, lightsleet_night: 66,
+	sleet: 67, sleet_night: 67,
+	lightsnow: 71, lightsnow_night: 71,
+	snow: 73, snow_night: 73,
+	heavysnow: 75, heavysnow_night: 75,
+	lightssleetshowers: 85, lightssleetshowers_night: 85,
+	sleetshowers: 85, sleetshowers_night: 85,
+	lightssnowshowers: 85, lightssnowshowers_night: 85,
+	snowshowers: 86, snowshowers_night: 86,
+	thunderstorm: 95, thunderstorm_night: 95,
+};
+
+function mapMetNoCode(symbol: string): number {
+	return METNO_TO_WMO[symbol] ?? 3;
+}
+
+function metNoDaytimeCode(codes: string[]): string {
+	const daylight = codes.find(c => !c.includes('_night'));
+	return daylight ?? codes[0] ?? 'cloudy';
+}
+
+// ---------- wttr.in (last fallback, 3-day forecast) ----------
+
+async function fetchFromWttr(config: WeatherConfig): Promise<WeatherData> {
+	const url = `https://wttr.in/${config.latitude},${config.longitude}?format=j1`;
+
+	const resp = await requestUrl({ url });
+	const json = resp.json;
+
+	const current = json.current_condition?.[0];
+	if (!current) {
+		throw new Error('Invalid wttr.in response');
+	}
+
+	const dailyEntries = json.weather;
+	if (!Array.isArray(dailyEntries) || dailyEntries.length === 0) {
+		throw new Error('Invalid wttr.in forecast data');
+	}
+
+	const dailyMax: number[] = [];
+	const dailyMin: number[] = [];
+	const dailyCodes: number[] = [];
+	const dailyDates: string[] = [];
+
+	for (const day of dailyEntries.slice(0, 5)) {
+		dailyMax.push(parseInt(day.maxtempC, 10) || 0);
+		dailyMin.push(parseInt(day.mintempC, 10) || 0);
+		dailyDates.push(day.date || '');
+
+		const hourlyCodes = (day.hourly || [])
+			.map((h: Record<string, string>) => parseInt(h.weatherCode ?? '0', 10))
+			.filter((n: number) => !isNaN(n));
+		dailyCodes.push(hourlyCodes.length > 0 ? mostSevereWttrCode(hourlyCodes) : 0);
+	}
+
+	const data: WeatherData = {
+		temperature: parseInt(current.temp_C, 10) || 0,
+		weatherCode: mapWttrCode(parseInt(current.weatherCode, 10) || 0),
+		windSpeed: parseInt(current.windspeedKmph, 10) || 0,
+		humidity: parseInt(current.humidity, 10) || 0,
+		feelsLike: parseInt(current.FeelsLikeC, 10) || 0,
+		dailyMax,
+		dailyMin,
+		dailyCodes: dailyCodes.map(c => mapWttrCode(c)),
+		dailyDates,
+		fetchedAt: Date.now(),
+	};
+
+	weatherCache.set(cacheKey(config), { data, fetchedAt: Date.now() });
+	return data;
+}
+
+const WTTR_TO_WMO: Record<number, number> = {
+	113: 0, 116: 2, 119: 3, 122: 3,
+	143: 45, 248: 45, 260: 48,
+	176: 61, 263: 51, 266: 53,
+	281: 56, 285: 57,
+	293: 61, 296: 63, 299: 63, 302: 65, 305: 65, 308: 65,
+	311: 66, 314: 67, 317: 66, 320: 67,
+	323: 71, 326: 73, 329: 73, 332: 75, 335: 75, 338: 75,
+	350: 77, 374: 77, 377: 77,
+	353: 80, 356: 81, 359: 82,
+	362: 85, 365: 85, 368: 85, 371: 86,
+	200: 95, 386: 95, 389: 95, 392: 96, 395: 99,
+	179: 71, 182: 66, 185: 56, 227: 75, 230: 75,
+};
+
+function mapWttrCode(wttrCode: number): number {
+	return WTTR_TO_WMO[wttrCode] ?? 0;
+}
+
+const WTTR_SEVERITY: Record<number, number> = {
+	0: 0, 1: 1, 2: 2, 3: 3,
+	45: 4, 48: 5,
+	51: 6, 53: 7, 55: 8,
+	56: 9, 57: 10,
+	61: 11, 63: 12, 65: 13,
+	66: 14, 67: 15,
+	71: 16, 73: 17, 75: 18, 77: 19,
+	80: 11, 81: 12, 82: 13,
+	85: 16, 86: 18,
+	95: 20, 96: 21, 99: 22,
+};
+
+function mostSevereWttrCode(codes: number[]): number {
+	let worst = codes[0]!;
+	let worstRank = WTTR_SEVERITY[mapWttrCode(worst)] ?? 0;
+	for (let i = 1; i < codes.length; i++) {
+		const code = codes[i]!;
+		const rank = WTTR_SEVERITY[mapWttrCode(code)] ?? 0;
+		if (rank > worstRank) {
+			worst = code;
+			worstRank = rank;
+		}
+	}
+	return worst;
+}
+
+// ---------- Geocoding ----------
+
 export async function geocodeCity(query: string): Promise<GeocodeResult[]> {
 	if (!query.trim()) return [];
 
@@ -113,6 +313,8 @@ export async function geocodeCity(query: string): Promise<GeocodeResult[]> {
 		return [];
 	}
 }
+
+// ---------- Helpers ----------
 
 function cacheKey(config: WeatherConfig): string {
 	return `${config.latitude.toFixed(4)},${config.longitude.toFixed(4)}`;
