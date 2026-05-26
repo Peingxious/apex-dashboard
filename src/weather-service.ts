@@ -34,18 +34,10 @@ export function getCachedWeather(config: WeatherConfig): WeatherData | null {
 	return entry.data;
 }
 
-// Priority: Open-Meteo → Open-Meteo Archive → Met.no (5-day) → wttr.in (3-day)
+// Priority: Met.no (fast, 5+ day) → wttr.in (3-day) → Open-Meteo → Open-Meteo Archive
 export async function fetchWeather(config: WeatherConfig): Promise<WeatherData> {
 	const cached = getCachedWeather(config);
 	if (cached) return cached;
-
-	try {
-		return await fetchFromOpenMeteo(config);
-	} catch { /* try next */ }
-
-	try {
-		return await fetchFromOpenMeteoArchive(config);
-	} catch { /* try next */ }
 
 	try {
 		return await fetchFromMetNo(config);
@@ -53,6 +45,14 @@ export async function fetchWeather(config: WeatherConfig): Promise<WeatherData> 
 
 	try {
 		return await fetchFromWttr(config);
+	} catch { /* try next */ }
+
+	try {
+		return await fetchFromOpenMeteo(config);
+	} catch { /* try next */ }
+
+	try {
+		return await fetchFromOpenMeteoArchive(config);
 	} catch { /* all failed */ }
 
 	throw new Error('All weather APIs failed');
