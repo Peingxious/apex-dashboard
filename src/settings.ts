@@ -71,8 +71,8 @@ export class DashboardSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllDashboards();
 				}));
 
-		new Setting(containerEl)
-			.setName(t('settings.recentCount'))
+		const recentSetting = new Setting(containerEl)
+			.setName(t('settings.recentCount') + '  ' + this.plugin.settings.recentDocCount)
 			.setDesc(t('settings.recentCountDesc'))
 			.addSlider(slider => slider
 				.setLimits(3, 15, 1)
@@ -84,6 +84,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 						recentDocCount: value,
 					};
 					await this.plugin.saveSettings();
+					recentSetting.nameEl.setText(t('settings.recentCount') + '  ' + value);
 				}));
 
 		new Setting(containerEl)
@@ -270,8 +271,8 @@ export class DashboardSettingTab extends PluginSettingTab {
 				}));
 
 		if (this.plugin.settings.pomodoroEnabled) {
-			new Setting(pomodoroCard)
-				.setName(t('settings.pomodoroWork'))
+			const workSetting = new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroWork') + '  ' + this.plugin.settings.pomodoroWorkMinutes + ' min')
 				.addSlider(slider => slider
 					.setLimits(15, 60, 5)
 					.setValue(this.plugin.settings.pomodoroWorkMinutes)
@@ -282,10 +283,11 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroWorkMinutes: value,
 						};
 						await this.plugin.saveSettings();
+						workSetting.nameEl.setText(t('settings.pomodoroWork') + '  ' + value + ' min');
 					}));
 
-			new Setting(pomodoroCard)
-				.setName(t('settings.pomodoroShortBreak'))
+			const shortSetting = new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroShortBreak') + '  ' + this.plugin.settings.pomodoroShortBreakMinutes + ' min')
 				.addSlider(slider => slider
 					.setLimits(1, 15, 1)
 					.setValue(this.plugin.settings.pomodoroShortBreakMinutes)
@@ -296,10 +298,11 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroShortBreakMinutes: value,
 						};
 						await this.plugin.saveSettings();
+						shortSetting.nameEl.setText(t('settings.pomodoroShortBreak') + '  ' + value + ' min');
 					}));
 
-			new Setting(pomodoroCard)
-				.setName(t('settings.pomodoroLongBreak'))
+			const longSetting = new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroLongBreak') + '  ' + this.plugin.settings.pomodoroLongBreakMinutes + ' min')
 				.addSlider(slider => slider
 					.setLimits(5, 30, 5)
 					.setValue(this.plugin.settings.pomodoroLongBreakMinutes)
@@ -310,10 +313,11 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroLongBreakMinutes: value,
 						};
 						await this.plugin.saveSettings();
+						longSetting.nameEl.setText(t('settings.pomodoroLongBreak') + '  ' + value + ' min');
 					}));
 
-			new Setting(pomodoroCard)
-				.setName(t('settings.pomodoroInterval'))
+			const intervalSetting = new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroInterval') + '  ' + this.plugin.settings.pomodoroLongBreakInterval)
 				.addSlider(slider => slider
 					.setLimits(2, 6, 1)
 					.setValue(this.plugin.settings.pomodoroLongBreakInterval)
@@ -324,6 +328,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroLongBreakInterval: value,
 						};
 						await this.plugin.saveSettings();
+						intervalSetting.nameEl.setText(t('settings.pomodoroInterval') + '  ' + value);
 					}));
 
 			new Setting(pomodoroCard)

@@ -370,8 +370,16 @@ export function renderSidebarPomodoro(
 	const state = service.getState();
 	const isRunning = state.status === 'running';
 
-	// Top row: title centered + stats button on right
+	// Top row: spacer left + title centered + stats button right
 	const topRow = widget.createDiv({ cls: 'dashboard-sidebar-pomodoro-top' });
+
+	// Left: today/total hint (absolute positioned, doesn't affect centering)
+	const todayCount = service.getTodayCount();
+	const totalCount = service.getTotalCount();
+	const statsHint = topRow.createDiv({
+		cls: 'dashboard-sidebar-pomodoro-stats-hint',
+		text: t('pomodoro.today') + ' ' + todayCount,
+	});
 
 	// Left spacer to balance the stats button
 	topRow.createDiv({ cls: 'dashboard-sidebar-pomodoro-top-spacer' });
@@ -423,18 +431,10 @@ export function renderSidebarPomodoro(
 		text: currentActivity,
 	});
 
-	// Today/total hint
-	const todayCount = service.getTodayCount();
-	const totalCount = service.getTotalCount();
-	const statsHint = widget.createDiv({
-		cls: 'dashboard-sidebar-pomodoro-stats-hint',
-		text: todayCount > 0 ? t('pomodoro.today') + ' ' + todayCount + '  ' + t('pomodoro.total') + ' ' + totalCount : '',
-	});
-
 	// Ring
 	const ringWrap = widget.createDiv({ cls: 'dashboard-sidebar-pomodoro-ring-wrap' });
 	const svgSize = 72;
-	const strokeWidth = 3;
+	const strokeWidth = 6;
 	const radius = (svgSize - strokeWidth) / 2;
 	const circumference = 2 * Math.PI * radius;
 
@@ -459,8 +459,8 @@ export function renderSidebarPomodoro(
 		text: formatTime(state.remainingSeconds),
 	});
 
-	// Dots
-	const dotsWrap = widget.createDiv({ cls: 'dashboard-sidebar-pomodoro-dots' });
+	// Dots inside ring, below time
+	const dotsWrap = ringWrap.createDiv({ cls: 'dashboard-sidebar-pomodoro-dots' });
 	const interval = settings.pomodoroLongBreakInterval;
 	for (let i = 0; i < interval; i++) {
 		dotsWrap.createDiv({
@@ -494,8 +494,7 @@ export function renderSidebarPomodoro(
 		const dots = dotsWrap.querySelectorAll('.dashboard-sidebar-pomodoro-dot');
 		dots.forEach((dot, i) => dot.toggleClass('dashboard-sidebar-pomodoro-dot--filled', i < s.completedWorkSessions));
 		const tc = service.getTodayCount();
-		const ttc = service.getTotalCount();
-		statsHint.textContent = tc > 0 ? t('pomodoro.today') + ' ' + tc + '  ' + t('pomodoro.total') + ' ' + ttc : '';
+		statsHint.textContent = t('pomodoro.today') + ' ' + tc;
 	}
 
 	service.setOnTick(() => {

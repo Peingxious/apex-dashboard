@@ -38,8 +38,31 @@ export async function fetchWeather(config: WeatherConfig): Promise<WeatherData> 
 	const cached = getCachedWeather(config);
 	if (cached) return cached;
 
-	const lang = getLanguage();
-	const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5`;
+	try {
+		return await fetchFromOpenMeteo(config);
+	} catch {
+		// primary API failed, try fallback
+	}
+
+	try {
+		return await fetchFromOpenMeteoArchive(config);
+	} catch {
+		// fallback also failed
+	}
+
+	throw new Error('All weather APIs failed');
+}
+
+async function fetchFromOpenMeteo(config: WeatherConfig): Promise<WeatherData> {
+	return fetchFromOpenMeteoBase('https://api.open-meteo.com', config);
+}
+
+async function fetchFromOpenMeteoArchive(config: WeatherConfig): Promise<WeatherData> {
+	return fetchFromOpenMeteoBase('https://archive-api.open-meteo.com', config);
+}
+
+async function fetchFromOpenMeteoBase(base: string, config: WeatherConfig): Promise<WeatherData> {
+	const url = `${base}/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5`;
 
 	const resp = await requestUrl({ url });
 	const json = resp.json;
