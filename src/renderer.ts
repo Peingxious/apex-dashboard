@@ -6,6 +6,10 @@ import { attachFileSuggest } from './file-suggest';
 import { showConfirmDialog } from './confirm-dialog';
 import { fetchWeather, getCachedWeather, getWeatherEmoji, getWeatherDescription } from './weather-service';
 import { readTrackerData } from './tracker-service';
+import type { PomodoroService } from './pomodoro-service';
+import { renderSidebarLunarWidget } from './lunar-widget';
+import type { HolidayInfo } from './holiday-service';
+import { CountdownSettingsModal } from './countdown-modal';
 import { Chart, LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 
 Chart.register(LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip);
@@ -78,19 +82,134 @@ export function renderSidebarWidgets(
 	container: HTMLElement,
 	settings: import('./types').DashboardSettings,
 	app: App,
+	pomodoroService?: PomodoroService,
+	holidayData?: Record<string, HolidayInfo>,
+	onWidgetReorder?: (order: string[]) => void,
 ): void {
-	const theme = settings.widgetTheme;
-	if (theme === 'off') return;
+	const anyEnabled = settings.widgetWeatherEnabled || settings.widgetHeatmapEnabled || settings.pomodoroEnabled || settings.widgetLunarEnabled || settings.countdownEnabled;
+	if (!anyEnabled) return;
 
 	const widgetArea = container.createDiv({ cls: 'dashboard-sidebar-widgets' });
 
-	if (theme === 'weather' || theme === 'weather-heatmap') {
-		renderSidebarWeather(widgetArea, settings, app);
+	const DEFAULT_ORDER = ['lunar', 'weather', 'heatmap', 'pomodoro', 'countdown'];
+	const order = settings.widgetOrder?.length ? settings.widgetOrder : DEFAULT_ORDER;
+
+	type WidgetEntry = { key: string; render: () => void };
+	const enabled: WidgetEntry[] = [];
+	if (settings.widgetLunarEnabled) {
+		enabled.push({ key: 'lunar', render: () => renderSidebarLunarWidget(widgetArea, holidayData ?? {}) });
+	}
+	if (settings.widgetWeatherEnabled) {
+		enabled.push({ key: 'weather', render: () => renderSidebarWeather(widgetArea, settings, app) });
+	}
+	if (settings.widgetHeatmapEnabled) {
+		enabled.push({ key: 'heatmap', render: () => renderSidebarHeatmap(widgetArea, settings, app) });
+	}
+	if (settings.pomodoroEnabled && pomodoroService) {
+		enabled.push({ key: 'pomodoro', render: () => renderSidebarPomodoro(widgetArea, pomodoroService, settings) });
+	}
+	if (settings.countdownEnabled) {
+		enabled.push({ key: 'countdown', render: () => renderSidebarCountdown(widgetArea, settings, app) });
 	}
 
-	if (theme === 'weather-heatmap') {
-		renderSidebarHeatmap(widgetArea, settings, app);
+	const ordered = sortByOrder(enabled, order);
+
+	for (const { key, render } of ordered) {
+		const childCount = widgetArea.children.length;
+		render();
+		const el = widgetArea.children[childCount] as HTMLElement | undefined;
+		if (el) el.dataset.widgetKey = key;
 	}
+
+	if (onWidgetReorder) {
+		setupWidgetDnD(widgetArea, ordered.map(e => e.key), onWidgetReorder);
+	}
+}
+
+type WidgetEntry = { key: string; render: () => void };
+
+function sortByOrder(items: WidgetEntry[], order: string[]): WidgetEntry[] {
+	const orderMap = new Map(order.map((k, i) => [k, i]));
+	const sorted = [...items].sort((a, b) => {
+		const ai = orderMap.get(a.key) ?? order.length;
+		const bi = orderMap.get(b.key) ?? order.length;
+		return ai - bi;
+	});
+	return sorted;
+}
+
+function setupWidgetDnD(
+	widgetArea: HTMLElement,
+	currentKeys: string[],
+	onReorder: (order: string[]) => void,
+): void {
+	let draggedKey: string | null = null;
+
+	const widgets = () => widgetArea.querySelectorAll('.dashboard-sidebar-widget');
+
+	widgets().forEach(el => {
+		const wEl = el as HTMLElement;
+		wEl.setAttribute('draggable', 'true');
+		wEl.dataset.widgetKey ??= wEl.dataset.widgetKey ?? '';
+
+		wEl.addEventListener('dragstart', (e) => {
+			draggedKey = wEl.dataset.widgetKey ?? null;
+			wEl.addClass('dashboard-sidebar-widget--dragging');
+			if (e.dataTransfer) {
+				e.dataTransfer.effectAllowed = 'move';
+				e.dataTransfer.setData('text/plain', draggedKey ?? '');
+			}
+		});
+
+		wEl.addEventListener('dragend', () => {
+			wEl.removeClass('dashboard-sidebar-widget--dragging');
+			widgets().forEach(el2 => el2.removeClass('dashboard-sidebar-widget--drag-over'));
+			draggedKey = null;
+		});
+
+		wEl.addEventListener('dragover', (e) => {
+			e.preventDefault();
+			if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+			if (!draggedKey || wEl.dataset.widgetKey === draggedKey) return;
+			widgets().forEach(el2 => el2.removeClass('dashboard-sidebar-widget--drag-over'));
+			const rect = wEl.getBoundingClientRect();
+			const midY = rect.top + rect.height / 2;
+			if (e.clientY < midY) {
+				wEl.addClass('dashboard-sidebar-widget--drag-over-top');
+				wEl.removeClass('dashboard-sidebar-widget--drag-over-bottom');
+			} else {
+				wEl.addClass('dashboard-sidebar-widget--drag-over-bottom');
+				wEl.removeClass('dashboard-sidebar-widget--drag-over-top');
+			}
+		});
+
+		wEl.addEventListener('dragleave', () => {
+			wEl.removeClass('dashboard-sidebar-widget--drag-over-top');
+			wEl.removeClass('dashboard-sidebar-widget--drag-over-bottom');
+		});
+
+		wEl.addEventListener('drop', (e) => {
+			e.preventDefault();
+			wEl.removeClass('dashboard-sidebar-widget--drag-over-top');
+			wEl.removeClass('dashboard-sidebar-widget--drag-over-bottom');
+			if (!draggedKey || wEl.dataset.widgetKey === draggedKey) return;
+
+			const targetKey = wEl.dataset.widgetKey ?? '';
+			const rect = wEl.getBoundingClientRect();
+			const midY = rect.top + rect.height / 2;
+			const insertBefore = e.clientY < midY;
+
+			const keys = [...currentKeys];
+			const fromIdx = keys.indexOf(draggedKey);
+			if (fromIdx === -1) return;
+			keys.splice(fromIdx, 1);
+			let toIdx = keys.indexOf(targetKey);
+			if (toIdx === -1) return;
+			if (!insertBefore) toIdx += 1;
+			keys.splice(toIdx, 0, draggedKey);
+			onReorder(keys);
+		});
+	});
 }
 
 function renderSidebarWeather(container: HTMLElement, settings: import('./types').DashboardSettings, app: App): void {
@@ -241,6 +360,364 @@ function renderSidebarHeatmap(container: HTMLElement, settings: import('./types'
 	}
 }
 
+export function renderSidebarPomodoro(
+	container: HTMLElement,
+	service: PomodoroService,
+	settings: import('./types').DashboardSettings,
+): void {
+	const widget = container.createDiv({ cls: 'dashboard-sidebar-widget dashboard-sidebar-pomodoro' });
+
+	const state = service.getState();
+	const isRunning = state.status === 'running';
+
+	// Top row: title centered + stats button on right
+	const topRow = widget.createDiv({ cls: 'dashboard-sidebar-pomodoro-top' });
+
+	// Left spacer to balance the stats button
+	topRow.createDiv({ cls: 'dashboard-sidebar-pomodoro-top-spacer' });
+
+	// Centered title
+	const titleLabel = topRow.createDiv({
+		cls: 'dashboard-sidebar-pomodoro-title',
+		text: t('pomodoro.title'),
+	});
+
+		// Double-click title to set activity
+		titleLabel.addEventListener('dblclick', (e) => {
+			e.stopPropagation();
+			const prev = titleLabel.getText();
+			titleLabel.empty();
+			const input = titleLabel.createEl('input', {
+				cls: 'dashboard-pomodoro-activity-input',
+				attr: { type: 'text', placeholder: t('pomodoro.inputActivity'), value: service.getActivity() },
+			});
+			input.focus();
+			input.select();
+
+			const finish = (save: boolean) => {
+				const val = input.value.trim();
+				titleLabel.empty();
+				titleLabel.setText(t('pomodoro.title'));
+				if (save && val) {
+					service.setActivity(val);
+					activityLabel.textContent = val;
+					activityLabel.classList.toggle('dashboard-sidebar-pomodoro-activity--set', val.length > 0);
+				}
+			};
+
+			input.addEventListener('keydown', (ke: KeyboardEvent) => {
+				if (ke.key === 'Enter') { ke.preventDefault(); finish(true); }
+				else if (ke.key === 'Escape') { ke.preventDefault(); finish(false); }
+			});
+			input.addEventListener('blur', () => finish(true));
+		});
+
+	// Stats button (right side, subtle)
+	const statsBtn = topRow.createDiv({ cls: 'dashboard-sidebar-pomodoro-stats-btn' });
+	setIcon(statsBtn, 'bar-chart-2');
+
+	// Activity label (shows what user is focusing on)
+	const currentActivity = service.getActivity();
+	const activityLabel = widget.createDiv({
+		cls: 'dashboard-sidebar-pomodoro-activity' + (currentActivity ? ' dashboard-sidebar-pomodoro-activity--set' : ''),
+		text: currentActivity,
+	});
+
+	// Today/total hint
+	const todayCount = service.getTodayCount();
+	const totalCount = service.getTotalCount();
+	const statsHint = widget.createDiv({
+		cls: 'dashboard-sidebar-pomodoro-stats-hint',
+		text: todayCount > 0 ? t('pomodoro.today') + ' ' + todayCount + '  ' + t('pomodoro.total') + ' ' + totalCount : '',
+	});
+
+	// Ring
+	const ringWrap = widget.createDiv({ cls: 'dashboard-sidebar-pomodoro-ring-wrap' });
+	const svgSize = 72;
+	const strokeWidth = 3;
+	const radius = (svgSize - strokeWidth) / 2;
+	const circumference = 2 * Math.PI * radius;
+
+	const svg = ringWrap.createSvg('svg', {
+		cls: 'dashboard-sidebar-pomodoro-ring',
+		attr: { viewBox: `0 0 ${svgSize} ${svgSize}`, width: String(svgSize), height: String(svgSize) },
+	});
+	svg.createSvg('circle', {
+		cls: 'dashboard-sidebar-pomodoro-ring-bg',
+		attr: { cx: svgSize / 2, cy: svgSize / 2, r: radius, 'stroke-width': strokeWidth, fill: 'none' },
+	});
+	const progressCircle = svg.createSvg('circle', {
+		cls: 'dashboard-sidebar-pomodoro-ring-progress',
+		attr: {
+			cx: svgSize / 2, cy: svgSize / 2, r: radius, 'stroke-width': strokeWidth, fill: 'none',
+			'stroke-linecap': 'round', 'stroke-dasharray': circumference, 'stroke-dashoffset': '0',
+			transform: `rotate(-90 ${svgSize / 2} ${svgSize / 2})`,
+		},
+	});
+	const timeText = ringWrap.createDiv({
+		cls: 'dashboard-sidebar-pomodoro-time',
+		text: formatTime(state.remainingSeconds),
+	});
+
+	// Dots
+	const dotsWrap = widget.createDiv({ cls: 'dashboard-sidebar-pomodoro-dots' });
+	const interval = settings.pomodoroLongBreakInterval;
+	for (let i = 0; i < interval; i++) {
+		dotsWrap.createDiv({
+			cls: 'dashboard-sidebar-pomodoro-dot' + (i < state.completedWorkSessions ? ' dashboard-sidebar-pomodoro-dot--filled' : ''),
+		});
+	}
+
+	// Narrow start/stop button
+	const mainBtn = widget.createEl('button', {
+		cls: 'dashboard-sidebar-pomodoro-main-btn',
+		text: isRunning ? t('pomodoro.stop') : t('pomodoro.startFocus'),
+	});
+	if (isRunning) {
+		mainBtn.addClass('dashboard-sidebar-pomodoro-main-btn--running');
+	}
+
+	// --- Helpers ---
+	function updateRing(remaining: number, total: number): void {
+		const progress = total > 0 ? remaining / total : 1;
+		progressCircle.setAttribute('stroke-dashoffset', String(circumference * (1 - progress)));
+		timeText.textContent = formatTime(remaining);
+	}
+	updateRing(state.remainingSeconds, state.totalSeconds);
+
+	function updateUI(): void {
+		const s = service.getState();
+		updateRing(s.remainingSeconds, s.totalSeconds);
+		const running = s.status === 'running';
+		mainBtn.textContent = running ? t('pomodoro.stop') : t('pomodoro.startFocus');
+		mainBtn.toggleClass('dashboard-sidebar-pomodoro-main-btn--running', running);
+		const dots = dotsWrap.querySelectorAll('.dashboard-sidebar-pomodoro-dot');
+		dots.forEach((dot, i) => dot.toggleClass('dashboard-sidebar-pomodoro-dot--filled', i < s.completedWorkSessions));
+		const tc = service.getTodayCount();
+		const ttc = service.getTotalCount();
+		statsHint.textContent = tc > 0 ? t('pomodoro.today') + ' ' + tc + '  ' + t('pomodoro.total') + ' ' + ttc : '';
+	}
+
+	service.setOnTick(() => {
+		const s = service.getState();
+		updateRing(s.remainingSeconds, s.totalSeconds);
+	});
+
+	service.setOnComplete(() => updateUI());
+
+	mainBtn.addEventListener('click', () => {
+		if (service.getState().status === 'running') {
+			service.reset();
+			updateUI();
+		} else {
+			service.start();
+			updateUI();
+		}
+	});
+
+	// Stats button opens stats modal
+	statsBtn.addEventListener('click', () => {
+		showPomodoroStats(widget.ownerDocument, service);
+	});
+}
+
+export function renderSidebarCountdown(
+	container: HTMLElement,
+	settings: import('./types').DashboardSettings,
+	app: App,
+): void {
+	const widget = container.createDiv({ cls: 'dashboard-sidebar-widget dashboard-sidebar-countdown' });
+
+	// Settings button (absolute positioned)
+	const settingsBtn = widget.createEl('button', {
+		cls: 'dashboard-sidebar-countdown-settings-btn',
+		attr: { 'aria-label': t('countdown.settingsTitle') },
+	});
+	setIcon(settingsBtn, 'settings');
+
+	settingsBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		const modal = new CountdownSettingsModal(app, settings, async (updates) => {
+			Object.assign(settings, updates);
+			const plugin = (app as unknown as { plugins: { plugins: Record<string, { settings?: import('./types').DashboardSettings; saveSettings?: () => Promise<void>; refreshAllDashboards?: () => void }> } }).plugins?.plugins?.['apex-dashboard'];
+			if (plugin?.settings) {
+				Object.assign(plugin.settings!, updates);
+				await plugin.saveSettings?.();
+				plugin.refreshAllDashboards?.();
+			}
+		});
+		modal.open();
+	});
+
+	// Content
+	const content = widget.createDiv({ cls: 'dashboard-sidebar-countdown-content' });
+
+	const targetDate = settings.countdownTargetDate;
+	if (!targetDate) {
+		content.createDiv({ cls: 'dashboard-sidebar-countdown-placeholder', text: t('countdown.setTarget') });
+		return;
+	}
+
+	const target = new Date(targetDate + 'T00:00:00');
+	const now = new Date();
+
+	if (now >= target) {
+		if (settings.countdownLabel) {
+			content.createDiv({ cls: 'dashboard-sidebar-countdown-until', text: t('countdown.untilLabel', { label: settings.countdownLabel }) });
+		}
+		content.createDiv({ cls: 'dashboard-sidebar-countdown-expired', text: t('countdown.expired') });
+		return;
+	}
+
+	const diffMs = target.getTime() - now.getTime();
+	const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+	const remainHours = Math.ceil(diffMs / (1000 * 60 * 60));
+	const isHours = settings.countdownDisplayMode === 'hours';
+	const currentVal = isHours ? remainHours : remainDays;
+
+	// "距离xx还有" label above the number
+	if (settings.countdownLabel) {
+		content.createDiv({ cls: 'dashboard-sidebar-countdown-until', text: t('countdown.untilLabel', { label: settings.countdownLabel }) });
+	}
+
+	// Value display with flip
+	const flipWrap = content.createDiv({ cls: 'dashboard-sidebar-countdown-flip' });
+	const valueEl = flipWrap.createDiv({ cls: 'dashboard-sidebar-countdown-value', text: String(currentVal) });
+	flipWrap.createDiv({ cls: 'dashboard-sidebar-countdown-unit', text: isHours ? t('countdown.hours') : t('countdown.days') });
+
+	// Auto-refresh with flip animation
+	let prevVal = currentVal;
+	const timer = setInterval(() => {
+		const now2 = new Date();
+		if (now2 >= target) {
+			clearInterval(timer);
+			content.empty();
+			content.createDiv({ cls: 'dashboard-sidebar-countdown-expired', text: t('countdown.expired') });
+			return;
+		}
+		const diff = target.getTime() - now2.getTime();
+		const newVal = isHours ? Math.ceil(diff / (1000 * 60 * 60)) : Math.ceil(diff / (1000 * 60 * 60 * 24));
+		if (newVal !== prevVal) {
+			prevVal = newVal;
+			valueEl.textContent = String(newVal);
+			valueEl.addClass('dashboard-sidebar-countdown-value--flip');
+			setTimeout(() => valueEl.removeClass('dashboard-sidebar-countdown-value--flip'), 400);
+		}
+	}, 60000);
+}
+
+function showPomodoroStats(doc: Document, service: PomodoroService): void {
+	const overlay = doc.body.createDiv({ cls: 'dashboard-pomodoro-stats-overlay' });
+	const modal = overlay.createDiv({ cls: 'dashboard-pomodoro-stats-modal' });
+
+	function close() {
+		doc.removeEventListener('keydown', onKey);
+		overlay.remove();
+	}
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'Escape') close();
+	}
+	doc.addEventListener('keydown', onKey);
+
+	// Header
+	const header = modal.createDiv({ cls: 'dashboard-pomodoro-stats-header' });
+	header.createDiv({ cls: 'dashboard-pomodoro-stats-header-title', text: t('pomodoro.statsTitle') });
+	const closeBtn = header.createDiv({ cls: 'dashboard-pomodoro-stats-close' });
+	setIcon(closeBtn, 'x');
+	closeBtn.addEventListener('click', () => close());
+	overlay.addEventListener('click', (e) => {
+		if (e.target === overlay) close();
+	});
+
+	// Summary cards
+	const summary = modal.createDiv({ cls: 'dashboard-pomodoro-stats-summary' });
+
+	const totalMin = service.getTotalFocusMinutes();
+	const todayMin = service.getTodayFocusMinutes();
+	const streak = service.getStreak();
+
+	const totalCard = summary.createDiv({ cls: 'dashboard-pomodoro-stats-card' });
+	totalCard.createDiv({ cls: 'dashboard-pomodoro-stats-card-value', text: formatMinutes(totalMin) });
+	totalCard.createDiv({ cls: 'dashboard-pomodoro-stats-card-label', text: t('pomodoro.totalFocus') });
+
+	const todayCard = summary.createDiv({ cls: 'dashboard-pomodoro-stats-card' });
+	todayCard.createDiv({ cls: 'dashboard-pomodoro-stats-card-value', text: formatMinutes(todayMin) });
+	todayCard.createDiv({ cls: 'dashboard-pomodoro-stats-card-label', text: t('pomodoro.todayFocus') });
+
+	const streakCard = summary.createDiv({ cls: 'dashboard-pomodoro-stats-card' });
+	streakCard.createDiv({ cls: 'dashboard-pomodoro-stats-card-value', text: String(streak) });
+	streakCard.createDiv({ cls: 'dashboard-pomodoro-stats-card-label', text: t('pomodoro.streakDays') });
+
+	// Weekly bar chart
+	const dailyData = service.getDailyMinutes(7);
+	const chartSection = modal.createDiv({ cls: 'dashboard-pomodoro-stats-section' });
+	chartSection.createDiv({ cls: 'dashboard-pomodoro-stats-section-title', text: t('pomodoro.todayFocus') + ' (7d)' });
+	const chartWrap = chartSection.createDiv({ cls: 'dashboard-pomodoro-stats-chart' });
+	const maxMin = Math.max(...dailyData.map(d => d.minutes), 1);
+	for (const day of dailyData) {
+		const barCol = chartWrap.createDiv({ cls: 'dashboard-pomodoro-stats-bar-col' });
+		barCol.createDiv({ cls: 'dashboard-pomodoro-stats-bar-value', text: day.minutes > 0 ? day.minutes + 'm' : '' });
+		const bar = barCol.createDiv({ cls: 'dashboard-pomodoro-stats-bar' });
+		const heightPct = (day.minutes / maxMin) * 100;
+		bar.style.height = heightPct + '%';
+		if (day.minutes === 0) bar.addClass('dashboard-pomodoro-stats-bar--empty');
+		barCol.createDiv({ cls: 'dashboard-pomodoro-stats-bar-label', text: day.date.slice(5) });
+	}
+
+	// Activity breakdown
+	const breakdown = service.getActivityBreakdown();
+	const sortedActivities = [...breakdown.entries()]
+		.filter(([name]) => name.length > 0)
+		.sort((a, b) => b[1] - a[1]);
+
+	if (sortedActivities.length > 0) {
+		const actSection = modal.createDiv({ cls: 'dashboard-pomodoro-stats-section' });
+		actSection.createDiv({ cls: 'dashboard-pomodoro-stats-section-title', text: t('pomodoro.activityBreakdown') });
+		const maxActMin = sortedActivities[0]![1];
+		for (const [name, mins] of sortedActivities) {
+			const row = actSection.createDiv({ cls: 'dashboard-pomodoro-stats-activity-row' });
+			row.createDiv({ cls: 'dashboard-pomodoro-stats-activity-name', text: name });
+			const barOuter = row.createDiv({ cls: 'dashboard-pomodoro-stats-activity-bar-outer' });
+			const barInner = barOuter.createDiv({ cls: 'dashboard-pomodoro-stats-activity-bar-inner' });
+			barInner.style.width = (mins / maxActMin * 100) + '%';
+			row.createDiv({ cls: 'dashboard-pomodoro-stats-activity-value', text: formatMinutes(mins) });
+		}
+	}
+
+	// Recent sessions
+	const recentRecords = service.getRecentRecords(10);
+	if (recentRecords.length > 0) {
+		const recentSection = modal.createDiv({ cls: 'dashboard-pomodoro-stats-section' });
+		recentSection.createDiv({ cls: 'dashboard-pomodoro-stats-section-title', text: t('pomodoro.recentSessions') });
+		for (const rec of recentRecords) {
+			const row = recentSection.createDiv({ cls: 'dashboard-pomodoro-stats-record-row' });
+			const ts = new Date(rec.timestamp);
+			const dateStr = ts.getMonth() + 1 + '/' + ts.getDate() + ' ' +
+				String(ts.getHours()).padStart(2, '0') + ':' + String(ts.getMinutes()).padStart(2, '0');
+			row.createDiv({ cls: 'dashboard-pomodoro-stats-record-date', text: dateStr });
+			row.createDiv({ cls: 'dashboard-pomodoro-stats-record-activity', text: rec.activity });
+			row.createDiv({ cls: 'dashboard-pomodoro-stats-record-duration', text: rec.duration + ' min' });
+		}
+	}
+}
+
+function formatMinutes(minutes: number): string {
+	if (minutes < 60) {
+		return t('pomodoro.minutes', { count: minutes });
+	}
+	const hours = Math.floor(minutes / 60);
+	const mins = minutes % 60;
+	if (mins === 0) return t('pomodoro.hours', { count: hours });
+	return t('pomodoro.hours', { count: hours }) + ' ' + t('pomodoro.minutes', { count: mins });
+}
+
+
+function formatTime(seconds: number): string {
+	const m = Math.floor(seconds / 60);
+	const s = seconds % 60;
+	return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 
 export function renderDashboard(
 	container: HTMLElement,
@@ -334,7 +811,7 @@ export function renderDashboard(
 			});
 		});
 
-		input.addEventListener('keydown', (ke) => {
+		input.addEventListener('keydown', (ke: KeyboardEvent) => {
 			if (ke.key === 'Enter') {
 				ke.preventDefault();
 				finish();
@@ -406,7 +883,7 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 			}
 		};
 
-		input.addEventListener('keydown', (ke) => {
+		input.addEventListener('keydown', (ke: KeyboardEvent) => {
 			if (ke.key === 'Enter') {
 				ke.preventDefault();
 				finish(true);
@@ -543,7 +1020,7 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 			}
 		};
 
-		input.addEventListener('keydown', (ke) => {
+		input.addEventListener('keydown', (ke: KeyboardEvent) => {
 			if (ke.key === 'Enter') {
 				ke.preventDefault();
 				finish(true);

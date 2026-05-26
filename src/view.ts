@@ -10,10 +10,13 @@ import { setupDragAndDrop } from './dnd';
 import { CardEditModal } from './card-edit-modal';
 import { showConfirmDialog } from './confirm-dialog';
 import { clearWeatherCache } from './weather-service';
+import { loadHolidayData } from './lunar-widget';
+import type { HolidayInfo } from './holiday-service';
 import { WidgetTypeModal, type WidgetType } from './widget-type-modal';
 import { WeatherConfigModal } from './weather-config-modal';
 import { TrackerConfigModal } from './tracker-config-modal';
 import { TemplatePickerModal } from './template-modal';
+import { PomodoroService } from './pomodoro-service';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -38,6 +41,8 @@ export class DashboardView extends ItemView {
 	private sidebarExpanded = false;
 	private pendingScrollCardId: string | null = null;
 	private pendingScrollToLastCardOfColumn: string | null = null;
+	private pomodoroService: PomodoroService | null = null;
+	private holidayData: Record<string, HolidayInfo> = {};
 	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -67,6 +72,13 @@ export class DashboardView extends ItemView {
 		this.registerVaultListeners();
 		this.startReminderChecker();
 		this.startWeatherRefresh();
+		this.pomodoroService = new PomodoroService(this.plugin);
+		await this.pomodoroService.loadSessions();
+		loadHolidayData().then(data => {
+			this.holidayData = data;
+			const currentData = this.sync.getData();
+			if (currentData) this.render(currentData);
+		});
 	}
 
 	async onClose(): Promise<void> {
@@ -74,6 +86,8 @@ export class DashboardView extends ItemView {
 		this.unregisterVaultListeners();
 		this.stopReminderChecker();
 		this.stopWeatherRefresh();
+		this.pomodoroService?.destroy();
+		this.pomodoroService = null;
 		this.sync.destroy();
 	}
 
@@ -380,7 +394,14 @@ export class DashboardView extends ItemView {
 
 		renderSidebarWeekCalendar(scroll);
 
-		renderSidebarWidgets(scroll, this.plugin.settings, this.app);
+		renderSidebarWidgets(scroll, this.plugin.settings, this.app, this.pomodoroService ?? undefined, this.holidayData, async (order) => {
+			this.plugin.settings = {
+				...this.plugin.settings,
+				widgetOrder: order,
+			};
+			await this.plugin.saveSettings();
+			this.render(this.data!);
+		});
 
 		renderQuickActions(
 			scroll,
@@ -758,6 +779,10 @@ export class DashboardView extends ItemView {
 
 	private runCleanup(): void {
 		destroyAllCharts();
+		if (this.pomodoroService) {
+			this.pomodoroService.setOnTick(null);
+			this.pomodoroService.setOnComplete(null);
+		}
 		for (const fn of this.cleanupFns) fn();
 		this.cleanupFns = [];
 	}
@@ -822,6 +847,21 @@ export class DashboardView extends ItemView {
 							return inner.split('|').pop()?.split('/').pop()?.replace(/\.md$/, '') ?? inner;
 						});
 						new Notice(t('reminder.dueNotice', { task: cleanText }));
+					}
+				}
+			}
+
+			// Countdown reminder
+			if (this.plugin.settings.countdownEnabled && this.plugin.settings.countdownTargetDate && this.plugin.settings.countdownReminderDays > 0) {
+				const ckKey = 'countdown-remind';
+				if (!this.firedReminders.has(ckKey)) {
+					const target = new Date(this.plugin.settings.countdownTargetDate + 'T00:00:00');
+					const diffMs = target.getTime() - now.getTime();
+					const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+					if (daysLeft >= 0 && daysLeft <= this.plugin.settings.countdownReminderDays) {
+						this.firedReminders.add(ckKey);
+						const label = this.plugin.settings.countdownLabel || this.plugin.settings.countdownTargetDate;
+						new Notice(t('countdown.reminderNotice', { label, days: String(daysLeft) }));
 					}
 				}
 			}

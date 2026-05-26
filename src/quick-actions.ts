@@ -158,10 +158,6 @@ export function renderQuickActions(
 		item.createSpan({ text: action.name, cls: 'dashboard-qa-name' });
 		item.setAttribute('title', action.name);
 
-		if (action.type === 'command') {
-			item.createSpan({ cls: 'dashboard-qa-badge', text: 'CMD' });
-		}
-
 		// Remove button (on all items)
 		const removeHandler = onRemoveByKey ?? ((k: string) => {
 			if (k.startsWith('c:')) {

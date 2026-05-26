@@ -1,6 +1,6 @@
 import { App, PluginSettingTab, Platform, Setting } from 'obsidian';
 import type DashboardPlugin from './main';
-import { DEFAULT_SETTINGS, type DashboardSettings, type WidgetTheme } from './types';
+import { DEFAULT_SETTINGS, type DashboardSettings } from './types';
 import { t, setLanguage, type Language } from './i18n';
 import { suggestTrackerKeys } from './tracker-service';
 import { geocodeCity } from './weather-service';
@@ -18,21 +18,6 @@ export class DashboardSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-
-		new Setting(containerEl)
-			.setName(t('settings.dashboardFile'))
-			.setDesc(t('settings.dashboardFileDesc'))
-			.addText(text => text
-				.setPlaceholder('dashboard or path/to/dashboard')
-				.setValue(this.plugin.settings.dashboardFile)
-				.onChange(async (value) => {
-					this.plugin.settings = {
-						...this.plugin.settings,
-						dashboardFile: value.trim() || DEFAULT_SETTINGS.dashboardFile,
-					};
-					await this.plugin.saveSettings();
-				}));
-
 		new Setting(containerEl)
 			.setName(t('settings.language'))
 			.setDesc(t('settings.languageDesc'))
@@ -102,6 +87,21 @@ export class DashboardSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName(t('settings.dashboardFile'))
+			.setDesc(t('settings.dashboardFileDesc'))
+			.addText(text => text
+				.setPlaceholder('dashboard or path/to/dashboard')
+				.setValue(this.plugin.settings.dashboardFile)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						dashboardFile: value.trim() || DEFAULT_SETTINGS.dashboardFile,
+					};
+					await this.plugin.saveSettings();
+				}));
+
+
+		new Setting(containerEl)
 			.setName(t('settings.journalPath'))
 			.setDesc(t('settings.journalPathDesc'))
 			.addText(text => text
@@ -120,38 +120,33 @@ export class DashboardSettingTab extends PluginSettingTab {
 			this.renderWidgetSettings(containerEl);
 		}
 
+		this.renderLunarSettings(containerEl);
+
 		containerEl.createDiv({ cls: 'dashboard-settings-footer', text: "crafted by Pandora's Digital Garden" });
 	}
 
 	private renderWidgetSettings(containerEl: HTMLElement): void {
 		containerEl.createEl('h3', { text: t('settings.widgetTheme'), cls: 'dashboard-settings-section-title' });
 
-		new Setting(containerEl)
-			.setName(t('settings.widgetTheme'))
-			.setDesc(t('settings.widgetThemeDesc'))
-			.addDropdown(dropdown => dropdown
-				.addOptions({
-					'weather': t('settings.widgetThemeWeather'),
-					'weather-heatmap': t('settings.widgetThemeWeatherHeatmap'),
-					'off': t('settings.widgetThemeOff'),
-				})
-				.setValue(this.plugin.settings.widgetTheme)
+		// --- Weather card ---
+		const weatherCard = containerEl.createDiv({ cls: 'dashboard-widget-settings-card' });
+		new Setting(weatherCard)
+			.setName(t('settings.widgetWeatherEnabled'))
+			.setDesc(t('settings.widgetWeatherEnabledDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.widgetWeatherEnabled)
 				.onChange(async (value) => {
 					this.plugin.settings = {
 						...this.plugin.settings,
-						widgetTheme: value as WidgetTheme,
+						widgetWeatherEnabled: value,
 					};
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllDashboards();
 					this.display();
 				}));
 
-		const theme = this.plugin.settings.widgetTheme;
-		const hasWeather = theme !== 'off';
-		const hasHeatmap = theme === 'weather-heatmap';
-
-		if (hasWeather) {
-			new Setting(containerEl)
+		if (this.plugin.settings.widgetWeatherEnabled) {
+			new Setting(weatherCard)
 				.setName(t('settings.widgetWeatherCity'))
 				.setDesc(t('settings.widgetWeatherCityDesc'))
 				.addText(text => {
@@ -169,8 +164,25 @@ export class DashboardSettingTab extends PluginSettingTab {
 				});
 		}
 
-		if (hasHeatmap) {
-			new Setting(containerEl)
+		// --- Heatmap card ---
+		const heatmapCard = containerEl.createDiv({ cls: 'dashboard-widget-settings-card' });
+		new Setting(heatmapCard)
+			.setName(t('settings.widgetHeatmapEnabled'))
+			.setDesc(t('settings.widgetHeatmapEnabledDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.widgetHeatmapEnabled)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						widgetHeatmapEnabled: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+					this.display();
+				}));
+
+		if (this.plugin.settings.widgetHeatmapEnabled) {
+			const trackerKeySetting = new Setting(heatmapCard)
 				.setName(t('settings.widgetTrackerKey'))
 				.addText(text => text
 					.setPlaceholder(t('settings.widgetTrackerKeyPlaceholder'))
@@ -183,15 +195,14 @@ export class DashboardSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}));
 
-			// Show suggested keys
 			const journalPath = this.plugin.settings.journalPath;
 			const suggestions = suggestTrackerKeys(this.app, journalPath);
 			if (suggestions.length > 0) {
-				const sugWrap = containerEl.createDiv({ cls: 'tracker-key-suggestions' });
-				sugWrap.createDiv({ cls: 'tracker-key-suggestions-label', text: t('settings.widgetTrackerSuggested') });
-				const tagRow = sugWrap.createDiv({ cls: 'tracker-key-tags' });
+				trackerKeySetting.descEl.empty();
+				const hintLine = trackerKeySetting.descEl.createDiv({ cls: 'tracker-key-hint' });
+				hintLine.createSpan({ text: t('settings.widgetTrackerSuggested') + ' ' });
 				for (const k of suggestions.slice(0, 6)) {
-					const tag = tagRow.createEl('button', { cls: 'tracker-key-tag', text: k });
+					const tag = hintLine.createEl('button', { cls: 'tracker-key-tag', text: k });
 					tag.addEventListener('click', async () => {
 						this.plugin.settings = {
 							...this.plugin.settings,
@@ -203,7 +214,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 				}
 			}
 
-			new Setting(containerEl)
+			new Setting(heatmapCard)
 				.setName(t('settings.widgetTrackerDays'))
 				.addDropdown(dropdown => dropdown
 					.addOptions({
@@ -221,25 +232,161 @@ export class DashboardSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}));
 
-				new Setting(containerEl)
-					.setName(t('settings.widgetTrackerSummary'))
-					.addDropdown(dropdown => dropdown
-						.addOptions({
-							'streak': t('settings.summaryStreak'),
-							'rate': t('settings.summaryRate'),
-							'both': t('settings.summaryBoth'),
-							'off': t('settings.summaryOff'),
-						})
-						.setValue(this.plugin.settings.widgetTrackerSummary ?? 'streak')
-						.onChange(async (value) => {
-							this.plugin.settings = {
-								...this.plugin.settings,
-								widgetTrackerSummary: value as 'streak' | 'rate' | 'both' | 'off',
-							};
-							await this.plugin.saveSettings();
-							this.plugin.refreshAllDashboards();
-						}));
+			new Setting(heatmapCard)
+				.setName(t('settings.widgetTrackerSummary'))
+				.addDropdown(dropdown => dropdown
+					.addOptions({
+						'streak': t('settings.summaryStreak'),
+						'rate': t('settings.summaryRate'),
+						'both': t('settings.summaryBoth'),
+						'off': t('settings.summaryOff'),
+					})
+					.setValue(this.plugin.settings.widgetTrackerSummary ?? 'streak')
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							widgetTrackerSummary: value as 'streak' | 'rate' | 'both' | 'off',
+						};
+						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
+					}));
 		}
+
+		// --- Pomodoro card ---
+		const pomodoroCard = containerEl.createDiv({ cls: 'dashboard-widget-settings-card' });
+		new Setting(pomodoroCard)
+			.setName(t('settings.pomodoroEnabled'))
+			.setDesc(t('settings.pomodoroEnabledDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.pomodoroEnabled)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						pomodoroEnabled: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+					this.display();
+				}));
+
+		if (this.plugin.settings.pomodoroEnabled) {
+			new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroWork'))
+				.addSlider(slider => slider
+					.setLimits(15, 60, 5)
+					.setValue(this.plugin.settings.pomodoroWorkMinutes)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							pomodoroWorkMinutes: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+
+			new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroShortBreak'))
+				.addSlider(slider => slider
+					.setLimits(1, 15, 1)
+					.setValue(this.plugin.settings.pomodoroShortBreakMinutes)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							pomodoroShortBreakMinutes: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+
+			new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroLongBreak'))
+				.addSlider(slider => slider
+					.setLimits(5, 30, 5)
+					.setValue(this.plugin.settings.pomodoroLongBreakMinutes)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							pomodoroLongBreakMinutes: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+
+			new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroInterval'))
+				.addSlider(slider => slider
+					.setLimits(2, 6, 1)
+					.setValue(this.plugin.settings.pomodoroLongBreakInterval)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							pomodoroLongBreakInterval: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+
+			new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroAutoStart'))
+				.setDesc(t('settings.pomodoroAutoStartDesc'))
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.pomodoroAutoStartBreak)
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							pomodoroAutoStartBreak: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+
+			new Setting(pomodoroCard)
+				.setName(t('settings.pomodoroSound'))
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.pomodoroSoundEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							pomodoroSoundEnabled: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+		}
+
+		// --- Countdown card ---
+		const countdownCard = containerEl.createDiv({ cls: 'dashboard-widget-settings-card' });
+		new Setting(countdownCard)
+			.setName(t('settings.countdownEnabled'))
+			.setDesc(t('settings.countdownEnabledDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.countdownEnabled)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						countdownEnabled: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+				}));
+	}
+
+	private renderLunarSettings(containerEl: HTMLElement): void {
+		containerEl.createEl('h3', { text: t('settings.widgetLunar'), cls: 'dashboard-settings-section-title' });
+
+		const lunarCard = containerEl.createDiv({ cls: 'dashboard-widget-settings-card' });
+		new Setting(lunarCard)
+			.setName(t('settings.widgetLunarEnabled'))
+			.setDesc(t('settings.widgetLunarEnabledDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.widgetLunarEnabled)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						widgetLunarEnabled: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+					this.display();
+				}));
 	}
 
 	private attachCitySuggest(inputEl: HTMLInputElement): void {

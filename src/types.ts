@@ -1,20 +1,33 @@
 import type { Language } from './i18n';
 
-export type WidgetTheme = 'weather' | 'weather-heatmap' | 'off';
-
 export interface DashboardSettings {
 	dashboardFile: string;
 	recentDocCount: number;
 	language: Language;
 	stylePreset: string;
 	journalPath: string;
-	widgetTheme: WidgetTheme;
+	widgetWeatherEnabled: boolean;
+	widgetHeatmapEnabled: boolean;
 	widgetTrackerKey: string;
 	widgetTrackerDays: number;
 	widgetTrackerSummary: 'streak' | 'rate' | 'both' | 'off';
 	widgetWeatherCity: string;
 	widgetWeatherLat: number;
 	widgetWeatherLon: number;
+	pomodoroEnabled: boolean;
+	pomodoroWorkMinutes: number;
+	pomodoroShortBreakMinutes: number;
+	pomodoroLongBreakMinutes: number;
+	pomodoroLongBreakInterval: number;
+	pomodoroAutoStartBreak: boolean;
+	pomodoroSoundEnabled: boolean;
+	widgetLunarEnabled: boolean;
+	widgetOrder: string[];
+	countdownEnabled: boolean;
+	countdownTargetDate: string;
+	countdownDisplayMode: 'days' | 'hours';
+	countdownReminderDays: number;
+	countdownLabel: string;
 	taskTemplates: TaskTemplate[];
 }
 
@@ -24,13 +37,28 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	language: 'en',
 	stylePreset: 'earth',
 	journalPath: '',
-	widgetTheme: 'weather',
+	widgetWeatherEnabled: true,
+	widgetHeatmapEnabled: false,
 	widgetTrackerKey: '',
 	widgetTrackerDays: 30,
 	widgetTrackerSummary: 'streak',
 	widgetWeatherCity: 'Shanghai',
 	widgetWeatherLat: 31.23,
 	widgetWeatherLon: 121.47,
+	pomodoroEnabled: false,
+	pomodoroWorkMinutes: 25,
+	pomodoroShortBreakMinutes: 5,
+	pomodoroLongBreakMinutes: 15,
+	pomodoroLongBreakInterval: 4,
+	pomodoroAutoStartBreak: true,
+	pomodoroSoundEnabled: true,
+	widgetLunarEnabled: false,
+	widgetOrder: ['weather', 'lunar', 'heatmap', 'pomodoro', 'countdown'],
+	countdownEnabled: false,
+	countdownTargetDate: '',
+	countdownDisplayMode: 'days',
+	countdownReminderDays: 0,
+	countdownLabel: '',
 	taskTemplates: [],
 };
 
