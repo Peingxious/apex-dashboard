@@ -2443,13 +2443,13 @@
 
 .dashboard-sidebar-pomodoro-ring-wrap {
 	position: relative;
-	width: 72px;
-	height: 72px;
+	width: 80px;
+	height: 80px;
 }
 
 .dashboard-sidebar-pomodoro-ring {
-	width: 72px;
-	height: 72px;
+	width: 80px;
+	height: 80px;
 }
 
 .dashboard-sidebar-pomodoro-ring-bg {
@@ -2766,7 +2766,7 @@
 .dashboard-sidebar-lunar-date {
 	font-size: 1.3em;
 	font-weight: 700;
-	color: #000;
+	color: var(--db-accent);
 	letter-spacing: 0.04em;
 	text-align: center;
 	margin-top: 2px;
