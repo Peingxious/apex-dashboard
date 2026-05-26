@@ -2365,24 +2365,7 @@
 	color: var(--db-accent);
 	text-align: center;
 	flex: 1;
-	cursor: default;
 	user-select: none;
-}
-
-.dashboard-sidebar-pomodoro-title:hover {
-	opacity: 0.8;
-}
-
-.dashboard-pomodoro-activity-input {
-	background: var(--db-bg-card);
-	border: 1px solid var(--db-accent);
-	border-radius: 4px;
-	color: var(--db-text);
-	font-size: 0.7em;
-	padding: 2px 4px;
-	width: 100%;
-	text-align: center;
-	outline: none;
 }
 
 .dashboard-sidebar-pomodoro-stats-btn {
@@ -2402,20 +2385,115 @@
 	opacity: 0.7;
 }
 
-.dashboard-sidebar-pomodoro-activity {
-	font-size: 0.6em;
-	color: var(--db-text-faint);
-	text-align: center;
-	height: 0;
-	overflow: hidden;
-	transition: height 0.2s, opacity 0.2s;
-	opacity: 0;
+/* ===== Activity Selector (Pomodoro Widget) ===== */
+.dashboard-pomodoro-activity-selector {
+	position: relative;
+	width: 100%;
+	display: flex;
+	justify-content: center;
 }
 
-.dashboard-sidebar-pomodoro-activity--set {
-	height: auto;
-	opacity: 1;
-	padding: 1px 0;
+.dashboard-pomodoro-activity-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	cursor: pointer;
+	padding: 3px 10px;
+	border-radius: 10px;
+	transition: background 0.15s, opacity 0.15s;
+	max-width: 100%;
+}
+
+.dashboard-pomodoro-activity-trigger:hover {
+	background: var(--db-bg-hover);
+}
+
+.dashboard-pomodoro-activity-trigger--set {
+	font-size: 0.7em;
+	color: var(--db-text);
+	font-weight: 500;
+}
+
+.dashboard-pomodoro-activity-trigger--set span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 100px;
+}
+
+.dashboard-pomodoro-activity-placeholder {
+	font-size: 0.65em;
+	color: var(--db-text-faint);
+}
+
+.dashboard-pomodoro-activity-color-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+/* Activity panel (popup) */
+.dashboard-pomodoro-activity-panel {
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 100;
+	background: var(--background-primary, var(--db-bg));
+	border: 1px solid var(--db-border-card);
+	border-radius: 8px;
+	padding: 8px;
+	width: 180px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+	margin-top: 4px;
+}
+
+.dashboard-pomodoro-activity-panel-input {
+	width: 100%;
+	background: var(--db-bg-hover);
+	border: 1px solid var(--db-border-card);
+	border-radius: 6px;
+	padding: 5px 8px;
+	font-size: 0.75em;
+	color: var(--db-text);
+	outline: none;
+}
+
+.dashboard-pomodoro-activity-panel-input:focus {
+	border-color: var(--db-accent);
+}
+
+.dashboard-pomodoro-activity-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 6px;
+}
+
+.dashboard-pomodoro-activity-chip {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	border-radius: 10px;
+	background: var(--db-bg-hover);
+	font-size: 0.65em;
+	color: var(--db-text);
+	cursor: pointer;
+	transition: opacity 0.15s;
+	max-width: 100%;
+}
+
+.dashboard-pomodoro-activity-chip:hover {
+	opacity: 0.75;
+}
+
+.dashboard-pomodoro-activity-chip span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .dashboard-sidebar-pomodoro-stats-hint {
@@ -2614,84 +2692,119 @@
 	margin-bottom: 8px;
 }
 
-.dashboard-pomodoro-stats-chart {
+/* Range toggle */
+.dashboard-pomodoro-range-toggle {
 	display: flex;
-	align-items: flex-end;
-	gap: 6px;
-	height: 80px;
+	gap: 2px;
+	background: var(--db-bg-hover);
+	border-radius: 6px;
+	padding: 2px;
+	margin-bottom: 12px;
 }
 
-.dashboard-pomodoro-stats-bar-col {
+.dashboard-pomodoro-range-btn {
 	flex: 1;
+	text-align: center;
+	font-size: 0.65em;
+	font-weight: 500;
+	color: var(--db-text-muted);
+	padding: 4px 0;
+	border-radius: 5px;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+
+.dashboard-pomodoro-range-btn--active {
+	background: var(--background-primary, var(--db-bg));
+	color: var(--db-accent);
+	font-weight: 600;
+}
+
+/* Donut chart */
+.dashboard-pomodoro-donut-container {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	height: 100%;
-	justify-content: flex-end;
+	gap: 12px;
 }
 
-.dashboard-pomodoro-stats-bar {
-	width: 100%;
-	min-height: 2px;
-	background: var(--db-accent);
-	border-radius: 3px 3px 0 0;
-	transition: height 0.3s;
+.dashboard-pomodoro-donut-svg {
+	display: block;
 }
 
-.dashboard-pomodoro-stats-bar--empty {
-	background: var(--db-bg-hover);
+.dashboard-pomodoro-donut-bg {
+	stroke: var(--db-bg-hover);
 }
 
-.dashboard-pomodoro-stats-bar-label {
-	font-size: 0.55em;
+.dashboard-pomodoro-donut-center-value {
+	fill: var(--db-text);
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.dashboard-pomodoro-donut-center-label {
+	fill: var(--db-text-muted);
+	font-size: 9px;
+}
+
+.dashboard-pomodoro-donut-empty {
+	font-size: 0.75em;
 	color: var(--db-text-faint);
-	margin-top: 3px;
+	text-align: center;
+	padding: 24px 0;
 }
 
-.dashboard-pomodoro-stats-bar-value {
-	font-size: 0.5em;
-	color: var(--db-text-muted);
-	margin-bottom: 2px;
-	height: 12px;
+/* Donut legend */
+.dashboard-pomodoro-donut-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 100%;
 }
 
-.dashboard-pomodoro-stats-activity-row {
+.dashboard-pomodoro-donut-legend-item {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin-bottom: 6px;
+	gap: 6px;
 }
 
-.dashboard-pomodoro-stats-activity-name {
+.dashboard-pomodoro-donut-legend-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.dashboard-pomodoro-donut-legend-name {
 	font-size: 0.7em;
 	color: var(--db-text);
-	width: 60px;
-	flex-shrink: 0;
+	flex: 1;
 	overflow: hidden;
 	text-overflow: ellipsis;
 	white-space: nowrap;
 }
 
-.dashboard-pomodoro-stats-activity-bar-outer {
-	flex: 1;
-	height: 6px;
-	background: var(--db-bg-hover);
-	border-radius: 3px;
-	overflow: hidden;
+.dashboard-pomodoro-donut-legend-pct {
+	font-size: 0.65em;
+	font-weight: 600;
+	color: var(--db-text);
+	width: 32px;
+	text-align: right;
+	flex-shrink: 0;
 }
 
-.dashboard-pomodoro-stats-activity-bar-inner {
-	height: 100%;
-	background: var(--db-accent);
-	border-radius: 3px;
-	transition: width 0.3s;
-}
-
-.dashboard-pomodoro-stats-activity-value {
+.dashboard-pomodoro-donut-legend-time {
 	font-size: 0.6em;
 	color: var(--db-text-muted);
-	width: 50px;
+	width: 48px;
 	text-align: right;
+	flex-shrink: 0;
+}
+
+.dashboard-pomodoro-stats-record-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
 	flex-shrink: 0;
 }
 
