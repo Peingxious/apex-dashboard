@@ -372,6 +372,36 @@ export class DashboardSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					this.plugin.refreshAllDashboards();
 				}));
+
+		// --- Reading card ---
+		const readingCard = containerEl.createDiv({ cls: 'dashboard-widget-settings-card' });
+		new Setting(readingCard)
+			.setName(t('settings.readingEnabled'))
+			.setDesc(t('settings.readingEnabledDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.readingEnabled)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						readingEnabled: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+				}));
+
+		if (this.plugin.settings.readingEnabled) {
+			new Setting(readingCard)
+				.setName(t('settings.readingSound'))
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.readingSoundEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings = {
+							...this.plugin.settings,
+							readingSoundEnabled: value,
+						};
+						await this.plugin.saveSettings();
+					}));
+		}
 	}
 
 	private renderLunarSettings(containerEl: HTMLElement): void {

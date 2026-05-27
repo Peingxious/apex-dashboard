@@ -733,7 +733,7 @@ function generateId(title: string, column: string): string {
 }
 
 function escapeYamlString(str: string): string {
-	return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+	return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
 }
 
 function parseSimpleYaml(yaml: string): Record<string, unknown> {

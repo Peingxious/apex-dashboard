@@ -28,6 +28,8 @@ export interface DashboardSettings {
 	countdownDisplayMode: 'days' | 'hours';
 	countdownReminderDays: number;
 	countdownLabel: string;
+	readingEnabled: boolean;
+	readingSoundEnabled: boolean;
 	taskTemplates: TaskTemplate[];
 }
 
@@ -53,12 +55,14 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	pomodoroAutoStartBreak: true,
 	pomodoroSoundEnabled: true,
 	widgetLunarEnabled: true,
-	widgetOrder: ['weather', 'lunar', 'heatmap', 'pomodoro', 'countdown'],
+	widgetOrder: ['weather', 'lunar', 'heatmap', 'pomodoro', 'reading', 'countdown'],
 	countdownEnabled: false,
 	countdownTargetDate: '',
 	countdownDisplayMode: 'days',
 	countdownReminderDays: 0,
 	countdownLabel: '',
+	readingEnabled: false,
+	readingSoundEnabled: true,
 	taskTemplates: [],
 };
 

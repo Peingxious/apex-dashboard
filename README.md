@@ -29,6 +29,9 @@ The left sidebar features decorative widgets for at-a-glance information:
 - **Week Calendar** — A compact 7-day strip highlighting today's date
 - **Weather Widget** — Real-time weather with current temperature, feels-like, humidity, wind speed, and a 5-day forecast with daily high/low temperatures. Powered by Open-Meteo (no API key needed). City search with geocoding autocomplete for precise location
 - **Heatmap Widget** — Track daily frontmatter data (mood, sleep, etc.) as a GitHub-style contribution heatmap. Configurable summary: streak days (⚡), completion rate (✅), or both
+- **Pomodoro Timer** — A focus timer with activity selector and session tracking. Start, pause, and stop timed sessions with a donut chart showing today's breakdown by activity
+- **Reading Tracker** — Track your reading sessions with a built-in timer. Add books from Douban search or manual input, time your reading sessions, and record progress with page numbers. Each book card shows cover image, author, and reading progress bar
+- **Countdown** — A customizable countdown to any target date, displayed as days or hours remaining
 
 ### 🎨 Banner
 A customizable banner with an inspirational quote and optional background image. Supports both local vault images and web URLs. Double-click to edit.
@@ -72,7 +75,8 @@ All themes support both Obsidian light and dark modes.
 - **Style** — choose from 11 visual themes
 - **Language** — English or Chinese interface
 - **Recent documents count** — control how many recent files appear
-- **Sidebar widgets** — Weather, Weather + Heatmap, or Off. Configure city, tracker key, time range, and summary display
+- **Sidebar widgets** — Weather, Heatmap, Pomodoro, Reading, Countdown. Enable/disable and configure each widget independently
+- **Reading settings** — Toggle reading tracker, enable/disable session completion sound
 
 ## Installation
 
@@ -95,6 +99,14 @@ All themes support both Obsidian light and dark modes.
 > **Note:** Deleting, renaming, or reordering sections must be done by editing the `dashboard.md` file directly. Any changes made to the note will take effect in the dashboard view immediately.
 
 ## What's New
+
+### v1.1.0
+- **Reading Tracker widget** — Full reading session management in the sidebar: add books from Douban search or manual input, start/pause/stop reading timer, and save sessions with page progress
+- **Book cards** — Each active book displays cover image, title, author, reading progress bar, and today's reading time. Cover images support both web URLs and local vault paths
+- **Edit book info** — Hover a book card to reveal edit (pencil) and remove (x) buttons. Edit modal supports changing title, author, total pages, and cover image URL/path
+- **Reading statistics** — Full stats page with total reading time, today's reading, book count, streak days, book list by time range (week/month/year), and recent session records. Delete individual records or entire book histories
+- **Pomodoro activity selector** — Activity selector moved to the timer title position with a dropdown picker for categorizing focus sessions
+- **Pomodoro donut chart** — Visual breakdown of today's focus sessions by activity, displayed as a donut chart in the stats view
 
 ### v1.0.8
 - **Sidebar weather widget** — Real-time weather with current temperature, feels-like temperature, humidity, wind speed, and a 5-day forecast (daily icons + high/low). Powered by Open-Meteo, no API key required

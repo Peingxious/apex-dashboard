@@ -17,6 +17,7 @@ import { WeatherConfigModal } from './weather-config-modal';
 import { TrackerConfigModal } from './tracker-config-modal';
 import { TemplatePickerModal } from './template-modal';
 import { PomodoroService } from './pomodoro-service';
+import { ReadingService } from './reading-service';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -39,9 +40,11 @@ export class DashboardView extends ItemView {
 	private firedReminders = new Set<string>();
 	private sidebarPinned = localStorage.getItem('apex-dashboard-sidebar-pinned') === 'true';
 	private sidebarExpanded = false;
+	private bannerCollapsed = localStorage.getItem('apex-dashboard-banner-collapsed') === 'true';
 	private pendingScrollCardId: string | null = null;
 	private pendingScrollToLastCardOfColumn: string | null = null;
 	private pomodoroService: PomodoroService | null = null;
+	private readingService: ReadingService | null = null;
 	private holidayData: Record<string, HolidayInfo> = {};
 	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
@@ -74,6 +77,8 @@ export class DashboardView extends ItemView {
 		this.startWeatherRefresh();
 		this.pomodoroService = new PomodoroService(this.plugin);
 		await this.pomodoroService.loadSessions();
+		this.readingService = new ReadingService(this.plugin);
+		await this.readingService.loadSessions();
 		loadHolidayData().then(data => {
 			this.holidayData = data;
 			const currentData = this.sync.getData();
@@ -88,6 +93,8 @@ export class DashboardView extends ItemView {
 		this.stopWeatherRefresh();
 		this.pomodoroService?.destroy();
 		this.pomodoroService = null;
+		this.readingService?.destroy();
+		this.readingService = null;
 		this.sync.destroy();
 	}
 
@@ -145,6 +152,11 @@ export class DashboardView extends ItemView {
 		);
 
 		this.renderMobileActions(bannerEl);
+
+		if (this.bannerCollapsed && window.innerWidth > 640) {
+			bannerEl.addClass('dashboard-banner--collapsed');
+		}
+		this.setupBannerBehavior(bannerEl);
 
 		// Banner quote rotation
 		this.setupBannerRotation(container, data.banner);
@@ -250,6 +262,32 @@ export class DashboardView extends ItemView {
 				}
 			});
 		}
+	}
+
+	private setupBannerBehavior(bannerEl: HTMLElement): void {
+		const pinBtn = bannerEl.createEl('button', {
+			cls: 'dashboard-banner-pin-btn',
+			attr: { 'aria-label': 'Toggle banner' },
+		});
+		setIcon(pinBtn, 'bookmark');
+
+		pinBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (window.innerWidth <= 640) return;
+			this.bannerCollapsed = !this.bannerCollapsed;
+			bannerEl.toggleClass('dashboard-banner--collapsed', this.bannerCollapsed);
+			localStorage.setItem('apex-dashboard-banner-collapsed', String(this.bannerCollapsed));
+		});
+
+		const onResize = () => {
+			if (window.innerWidth <= 640 && this.bannerCollapsed) {
+				bannerEl.removeClass('dashboard-banner--collapsed');
+			} else if (this.bannerCollapsed) {
+				bannerEl.addClass('dashboard-banner--collapsed');
+			}
+		};
+		window.addEventListener('resize', onResize);
+		this.cleanupFns.push(() => window.removeEventListener('resize', onResize));
 	}
 
 	private setupBannerRotation(container: HTMLElement, banner: BannerData): void {
@@ -394,7 +432,7 @@ export class DashboardView extends ItemView {
 
 		renderSidebarWeekCalendar(scroll);
 
-		renderSidebarWidgets(scroll, this.plugin.settings, this.app, this.pomodoroService ?? undefined, this.holidayData, async (order) => {
+		renderSidebarWidgets(scroll, this.plugin.settings, this.app, this.pomodoroService ?? undefined, this.readingService ?? undefined, this.holidayData, async (order) => {
 			this.plugin.settings = {
 				...this.plugin.settings,
 				widgetOrder: order,
@@ -782,6 +820,9 @@ export class DashboardView extends ItemView {
 		if (this.pomodoroService) {
 			this.pomodoroService.setOnTick(null);
 			this.pomodoroService.setOnComplete(null);
+		}
+		if (this.readingService) {
+			this.readingService.setOnTick(null);
 		}
 		for (const fn of this.cleanupFns) fn();
 		this.cleanupFns = [];
