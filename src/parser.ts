@@ -9,7 +9,9 @@ import type {
 	TaskItem,
 	WeatherConfig,
 	TrackerConfig,
+	LibraryConfig,
 } from './types';
+import { parse as parseYaml } from 'yaml';
 
 const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'cols', 'rows', 'gcol', 'grow']);
 
@@ -103,6 +105,30 @@ export function serialize(data: DashboardData): string {
 		if (col.sectionType) {
 			lines.push(`    type: ${col.sectionType}`);
 		}
+		if (col.libraryConfig) {
+			lines.push('    library:');
+			const lc = col.libraryConfig;
+			lines.push(`      viewMode: ${lc.viewMode}`);
+			lines.push(`      sortBy: "${lc.sortBy}"`);
+			lines.push(`      sortDesc: ${lc.sortDesc}`);
+			if (lc.kanbanGroupBy) {
+				lines.push(`      kanbanGroupBy: "${escapeYamlString(lc.kanbanGroupBy)}"`);
+			}
+			if (lc.pageSize) {
+				lines.push(`      pageSize: ${lc.pageSize}`);
+			}
+			if (lc.filters.length > 0) {
+				lines.push('      filters:');
+				for (const filter of lc.filters) {
+					lines.push(`        - property: "${escapeYamlString(filter.property)}"`);
+					if (filter.values.length > 0) {
+						lines.push(`          values: [${filter.values.map(v => `"${escapeYamlString(v)}"`).join(', ')}]`);
+					} else {
+						lines.push('          values: []');
+					}
+				}
+			}
+		}
 	}
 
 	lines.push('---');
@@ -111,6 +137,8 @@ export function serialize(data: DashboardData): string {
 	for (const column of data.columns) {
 		lines.push(`## ${column.name}`);
 		lines.push('');
+
+		if (column.sectionType === 'library') continue;
 
 		for (const card of column.cards) {
 			lines.push(`### ${card.title}`);
@@ -166,10 +194,10 @@ export function serialize(data: DashboardData): string {
 				lines.push(`rows: ${card.gridRows}`);
 			}
 			if (card.gridCol > 0) {
-				lines.push();
+				lines.push(`gcol: ${card.gridCol}`);
 			}
 			if (card.gridRow > 0) {
-				lines.push();
+				lines.push(`grow: ${card.gridRow}`);
 			}
 		if (card.weatherConfig) {
 			const wc = card.weatherConfig;
@@ -402,7 +430,7 @@ function splitFrontmatter(markdown: string): { frontmatter: Record<string, unkno
 	const yaml = trimmed.slice(3, end).trim();
 	const body = trimmed.slice(end + 3).trim();
 
-	return { frontmatter: parseSimpleYaml(yaml), body };
+	return { frontmatter: (parseYaml(yaml) ?? {}) as Record<string, unknown>, body };
 }
 
 function parseBanner(fm: Record<string, unknown>): BannerData {
@@ -475,18 +503,19 @@ function parseHiddenPresets(fm: Record<string, unknown>): string[] | undefined {
 	return undefined;
 }
 
-function parseColumnDefs(fm: Record<string, unknown>): Array<{ name: string; color: string; sectionType?: string }> {
+function parseColumnDefs(fm: Record<string, unknown>): Array<{ name: string; color: string; sectionType?: string; libraryConfig?: LibraryConfig }> {
 	const raw = fm.columns;
 	if (!Array.isArray(raw)) return DEFAULT_COLUMNS;
 
-	return (raw as Array<Record<string, string>>).map(item => ({
-		name: item.name ?? 'Unnamed',
-		color: item.color ?? '#6366f1',
-		sectionType: item.type || undefined,
+	return (raw as Array<Record<string, unknown>>).map(item => ({
+			name: String(item.name ?? 'Unnamed'),
+			color: String(item.color ?? '#6366f1'),
+			sectionType: item.type ? String(item.type) : undefined,
+		libraryConfig: item.library ? parseLibraryConfig(item.library as Record<string, unknown>) : undefined,
 	}));
 }
 
-function parseColumns(body: string, defs: Array<{ name: string; color: string; sectionType?: string }>): DashboardColumn[] {
+function parseColumns(body: string, defs: Array<{ name: string; color: string; sectionType?: string; libraryConfig?: LibraryConfig }>): DashboardColumn[] {
 	const sections = splitByH2(body);
 	const defMap = new Map(defs.map(d => [d.name, d]));
 	const usedDefIndices = new Set<number>();
@@ -506,6 +535,7 @@ function parseColumns(body: string, defs: Array<{ name: string; color: string; s
 			color: def?.color ?? '#6366f1',
 			sectionType: resolveSectionType(section.heading, cards, def?.sectionType),
 			cards,
+			libraryConfig: def?.libraryConfig,
 		};
 	});
 }
@@ -523,6 +553,7 @@ function resolveSectionType(
 	if (lower === 'projects') return 'projects';
 	if (lower === 'notes') return 'notes';
 	if (lower === 'dashboard') return 'dashboard';
+	if (lower === 'library') return 'library';
 
 	if (cards.length > 0) {
 		const types = new Set(cards.map(c => c.type));
@@ -535,6 +566,29 @@ function resolveSectionType(
 	}
 
 	return 'projects';
+}
+
+function parseLibraryConfig(raw: Record<string, unknown>): LibraryConfig {
+	const filters: import('./types').PropertyFilter[] = [];
+	const rawFilters = raw.filters;
+	if (Array.isArray(rawFilters)) {
+		for (const item of rawFilters) {
+			const rec = item as Record<string, unknown>;
+			const property = String(rec.property ?? '');
+			const rawValues = rec.values;
+			const values = Array.isArray(rawValues) ? rawValues.map((v: unknown) => String(v)) : [];
+			filters.push({ property, values });
+		}
+	}
+
+	return {
+		filters,
+		viewMode: (['grid', 'list', 'table', 'kanban'].includes(String(raw.viewMode ?? '')) ? raw.viewMode : 'grid') as import('./types').LibraryViewMode,
+		sortBy: String(raw.sortBy ?? 'modified'),
+		sortDesc: raw.sortDesc !== false,
+		kanbanGroupBy: raw.kanbanGroupBy ? String(raw.kanbanGroupBy) : undefined,
+		pageSize: typeof raw.pageSize === 'number' ? raw.pageSize : undefined,
+	};
 }
 
 function splitByH2(body: string): Array<{ heading: string; content: string }> {
@@ -736,184 +790,7 @@ function escapeYamlString(str: string): string {
 	return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, ' ');
 }
 
-function parseSimpleYaml(yaml: string): Record<string, unknown> {
-	const result: Record<string, unknown> = {};
-	const lines = yaml.split('\n');
-	let currentKey = '';
-	let currentArray: unknown[] | null = null;
-	let currentObj: Record<string, string> | null = null;
-	let currentMapKey = '';
-	let currentMap: Record<string, unknown> | null = null;
-	let arrayIndent = -1;
-
-	// Nested array state for arrays inside maps (e.g. banner.quotes, banner.images)
-	let mapArrayKey = '';
-	let mapArray: unknown[] = [];
-	let mapArrayObj: Record<string, string> | null = null;
-	let mapPropIndent = -1;
-
-	function flushMapArray(): void {
-		if (!mapArrayKey || !currentMap) return;
-		if (mapArrayObj) {
-			mapArray.push(mapArrayObj);
-			mapArrayObj = null;
-		}
-		if (mapArray.length > 0) {
-			currentMap[mapArrayKey] = mapArray;
-		}
-		mapArrayKey = '';
-		mapArray = [];
-	}
-
-	for (const line of lines) {
-		const indent = line.search(/\S/);
-		const trimmed = line.trim();
-
-		if (!trimmed) continue;
-
-		if (indent === 0) {
-			flushMapArray();
-			// Flush any pending array or map
-			if (currentArray !== null && currentKey) {
-				if (currentObj) {
-					currentArray.push(currentObj);
-				}
-				result[currentKey] = currentArray;
-			}
-			if (currentMap !== null && currentMapKey) {
-				result[currentMapKey] = currentMap;
-			}
-
-			const colonIdx = trimmed.indexOf(':');
-			if (colonIdx === -1) continue;
-
-			currentKey = trimmed.slice(0, colonIdx).trim();
-			const value = trimmed.slice(colonIdx + 1).trim();
-
-			if (value === '') {
-				currentArray = [];
-				currentObj = null;
-				currentMap = {};
-				currentMapKey = currentKey;
-				arrayIndent = -1;
-				mapPropIndent = -1;
-				mapArrayKey = '';
-			} else {
-				result[currentKey] = parseYamlValue(value);
-				currentArray = null;
-				currentObj = null;
-				currentMap = null;
-				currentMapKey = '';
-				currentKey = '';
-			}
-		} else if (currentMap !== null && mapArrayKey && indent > mapPropIndent) {
-			// Nested array items inside a map (e.g. banner.quotes, banner.images)
-			if (trimmed.startsWith('- ')) {
-				if (mapArrayObj) {
-					mapArray.push(mapArrayObj);
-					mapArrayObj = null;
-				}
-				const rest = trimmed.slice(2).trim();
-				// Quoted strings (e.g. - "https://...") are values, not key-value pairs
-				if ((rest.startsWith('"') && rest.endsWith('"')) || (rest.startsWith("'") && rest.endsWith("'"))) {
-					mapArray.push(parseYamlStringValue(rest));
-				} else {
-					const colonIdx = rest.indexOf(':');
-					if (colonIdx !== -1) {
-						const key = rest.slice(0, colonIdx).trim();
-						const val = rest.slice(colonIdx + 1).trim();
-						mapArrayObj = { [key]: parseYamlStringValue(val) };
-					} else {
-						mapArray.push(parseYamlValue(rest));
-					}
-				}
-			} else if (mapArrayObj) {
-				const colonIdx = trimmed.indexOf(':');
-				if (colonIdx !== -1) {
-					const key = trimmed.slice(0, colonIdx).trim();
-					const val = trimmed.slice(colonIdx + 1).trim();
-					mapArrayObj[key] = parseYamlStringValue(val);
-				}
-			}
-		} else if (currentArray !== null && (trimmed.startsWith('- ') || currentObj !== null)) {
-			// Array items take priority over map when both are possible.
-			// Clear map state so the flush logic won't overwrite the array.
-			if (currentMap !== null) {
-				currentMap = null;
-				currentMapKey = '';
-			}
-			if (trimmed.startsWith('- name:')) {
-				if (currentObj) {
-					currentArray.push(currentObj);
-				}
-				currentObj = {};
-				const val = trimmed.slice('- name:'.length).trim();
-				currentObj.name = parseYamlStringValue(val);
-				arrayIndent = indent;
-			} else if (trimmed.startsWith('- ') && arrayIndent === -1) {
-				const val = trimmed.slice(2).trim();
-				if (currentKey === 'columns') {
-					currentObj = { name: parseYamlStringValue(val) };
-					arrayIndent = indent;
-				} else {
-					currentArray.push(parseYamlValue(val));
-				}
-			} else if (currentObj) {
-				const colonIdx = trimmed.indexOf(':');
-				if (colonIdx !== -1) {
-					const key = trimmed.slice(0, colonIdx).trim();
-					const val = trimmed.slice(colonIdx + 1).trim();
-					currentObj[key] = parseYamlStringValue(val);
-				}
-			}
-		} else if (currentMap !== null) {
-			// Handle map sub-properties and nested array starts
-			if (mapPropIndent === -1) {
-				mapPropIndent = indent;
-			}
-
-			const colonIdx = trimmed.indexOf(':');
-			if (colonIdx !== -1) {
-				const key = trimmed.slice(0, colonIdx).trim();
-				const val = trimmed.slice(colonIdx + 1).trim();
-				if (val === '') {
-					// Flush previous nested array if any, then start new one
-					flushMapArray();
-					mapArrayKey = key;
-					mapArray = [];
-					mapArrayObj = null;
-				} else {
-					currentMap[key] = parseYamlStringValue(val);
-				}
-			}
-		}
-	}
-
-	// Flush any remaining pending structures
-	flushMapArray();
-	if (currentArray !== null && currentKey) {
-		if (currentObj) {
-			currentArray.push(currentObj);
-		}
-		result[currentKey] = currentArray;
-	}
-	if (currentMap !== null && currentMapKey) {
-		result[currentMapKey] = currentMap;
-	}
-
-	return result;
-}
-
-function parseYamlValue(value: string): unknown {
-	if (value === 'true') return true;
-	if (value === 'false') return false;
-	if (value === 'null') return null;
-	if (/^-?\d+$/.test(value)) return parseInt(value, 10);
-	if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
-	return parseYamlStringValue(value);
-}
-
-function parseYamlStringValue(value: string): string {
+function dequote(value: string): string {
 	if (value.startsWith('"') && value.endsWith('"')) {
 		return value.slice(1, -1).replace(/\\\\/g, '\\').replace(/\\"/g, '"');
 	}
@@ -923,13 +800,11 @@ function parseYamlStringValue(value: string): string {
 	return value;
 }
 
-
-
 function parseWeatherConfig(metadata: Record<string, string>): WeatherConfig {
 	return {
 		latitude: parseFloat(metadata.lat ?? '0') || 0,
 		longitude: parseFloat(metadata.lon ?? '0') || 0,
-		cityName: parseYamlStringValue(metadata.city ?? ''),
+		cityName: dequote(metadata.city ?? ''),
 	};
 }
 

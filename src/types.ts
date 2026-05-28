@@ -171,11 +171,28 @@ export interface DashboardCard {
 	trackerConfig?: TrackerConfig;
 }
 
+export type LibraryViewMode = 'grid' | 'list' | 'table' | 'kanban';
+
+export interface PropertyFilter {
+	property: string;
+	values: string[];
+}
+
+export interface LibraryConfig {
+	filters: PropertyFilter[];
+	viewMode: LibraryViewMode;
+	sortBy: string;
+	sortDesc: boolean;
+	kanbanGroupBy?: string;
+	pageSize?: number;
+}
+
 export interface DashboardColumn {
 	name: string;
 	color: string;
 	sectionType?: string;
 	cards: DashboardCard[];
+	libraryConfig?: LibraryConfig;
 }
 
 export interface DashboardData {
@@ -216,4 +233,5 @@ export interface RenderCallbacks {
 	onColumnRename(oldName: string, newName: string): void;
 	onTaskReminderEdit(cardId: string, taskIndex: number, reminder: string | undefined): void;
 	onAddFromTemplate(columnName: string): void;
+	onLibraryConfigChange(columnName: string, config: LibraryConfig): void;
 }

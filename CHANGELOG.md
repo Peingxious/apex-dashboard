@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1 (2025-05-29)
+
+### Fixed
+- Library section config (filters, view mode, sort, page size) lost after restart — replaced custom YAML parser with `yaml` package to correctly handle nested objects in frontmatter
+- Card grid position (gcol/grow) never serialized to file — empty `lines.push()` calls replaced with proper key-value output
+- Write race condition — `lastWrittenHash` now set after file write completes instead of before, preventing stale data overwrite during rapid updates
+
 ## 1.0.9 (2025-05-26)
 
 ### Improved

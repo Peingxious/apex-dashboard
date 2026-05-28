@@ -1,6 +1,6 @@
 import { ItemView, Notice, setIcon, WorkspaceLeaf, TFile, Events } from 'obsidian';
 import type DashboardPlugin from './main';
-import type { DashboardData, DashboardCard, QuickAction, BannerData, WeatherConfig, TrackerConfig } from './types';
+import type { DashboardData, DashboardCard, QuickAction, BannerData, WeatherConfig, TrackerConfig, LibraryConfig } from './types';
 import { SyncEngine } from './sync';
 import { renderDashboard, destroyAllCharts, renderSidebarWidgets, renderSidebarWeekCalendar } from './renderer';
 import { renderBanner, BannerEditModal, resolveVaultImage } from './banner';
@@ -14,6 +14,7 @@ import { loadHolidayData } from './lunar-widget';
 import type { HolidayInfo } from './holiday-service';
 import { WidgetTypeModal, type WidgetType } from './widget-type-modal';
 import { WeatherConfigModal } from './weather-config-modal';
+import { LibraryConfigModal } from './library-config-modal';
 import { TrackerConfigModal } from './tracker-config-modal';
 import { TemplatePickerModal } from './template-modal';
 import { PomodoroService } from './pomodoro-service';
@@ -29,6 +30,7 @@ export class DashboardView extends ItemView {
 	private cleanupFns: Array<() => void> = [];
 	private vaultEventRefs: Array<{ evt: Events; ref: unknown }> = [];
 	private recentDocsTimer: ReturnType<typeof setTimeout> | null = null;
+	private libraryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly RECENT_DOCS_DEBOUNCE = 500;
 	private bannerQuoteIndex = 0;
 	private bannerImageIndex = 0;
@@ -177,6 +179,12 @@ export class DashboardView extends ItemView {
 		const kanban = mainLayout.createDiv({ cls: 'dashboard-kanban-wrapper' });
 		renderDashboard(kanban, data, this.createCallbacks(), this.app, this.plugin.settings);
 		setupDragAndDrop(kanban, this.createCallbacks(), this.cleanupFns);
+		// Library config event delegation
+		kanban.addEventListener('dashboard-library-config', ((e: CustomEvent) => {
+			const { columnName } = e.detail as { columnName: string };
+			this.openLibraryConfigModal(columnName);
+		}) as EventListener);
+
 
 		// Restore scroll positions
 		const newKanban = container.querySelector('.dashboard-kanban');
@@ -560,7 +568,13 @@ export class DashboardView extends ItemView {
 					this.openProjectSearchModal(colName);
 				}
 			},
-			onColumnAdd: (name: string, sectionType?: string) => this.sync.addColumn(name, sectionType),
+				onColumnAdd: (name: string, sectionType?: string) => {
+					this.sync.addColumn(name, sectionType).then(() => {
+						if (sectionType === 'library') {
+							this.openLibraryConfigModal(name);
+						}
+					});
+				},
 			onBannerEdit: () => {
 				if (this.data) this.openBannerEditModal(this.data);
 			},
@@ -585,6 +599,7 @@ export class DashboardView extends ItemView {
 				onColumnRename: (oldName: string, newName: string) => this.sync.renameColumn(oldName, newName),
 			onTaskReminderEdit: (cardId: string, taskIndex: number, reminder: string | undefined) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
 			onAddFromTemplate: (columnName: string) => this.openTemplatePicker(columnName),
+				onLibraryConfigChange: (columnName: string, config: LibraryConfig) => this.sync.updateLibraryConfig(columnName, config),
 		};
 	}
 
@@ -670,6 +685,24 @@ export class DashboardView extends ItemView {
 				});
 			},
 			this.plugin.settings.stylePreset,
+		);
+		modal.open();
+	}
+
+	private openLibraryConfigModal(colName: string): void {
+		const column = this.data?.columns.find(col => col.name === colName);
+		const existingConfig = column?.libraryConfig ?? {
+			filters: [],
+			viewMode: 'grid' as const,
+			sortBy: 'modified',
+			sortDesc: true,
+		};
+		const modal = new LibraryConfigModal(
+			this.app,
+			existingConfig,
+			(config) => {
+				this.sync.updateLibraryConfig(colName, config);
+			},
 		);
 		modal.open();
 	}
@@ -763,7 +796,10 @@ export class DashboardView extends ItemView {
 
 	private registerVaultListeners(): void {
 		const events = this.app.vault;
-		const handler = () => this.debouncedRefreshRecentDocs();
+		const handler = () => {
+			this.debouncedRefreshRecentDocs();
+			this.debouncedRefreshLibrarySections();
+		};
 
 		const createRef = events.on('create', handler);
 		const modifyRef = events.on('modify', (file) => {
@@ -799,6 +835,18 @@ export class DashboardView extends ItemView {
 			this.refreshRecentDocs();
 		}, this.RECENT_DOCS_DEBOUNCE);
 	}
+
+	private debouncedRefreshLibrarySections(): void {
+		if (!this.data) return;
+		const hasLibrary = this.data.columns.some(col => col.sectionType === 'library');
+		if (!hasLibrary) return;
+		if (this.libraryRefreshTimer) clearTimeout(this.libraryRefreshTimer);
+		this.libraryRefreshTimer = setTimeout(() => {
+			const data = this.sync.getData();
+			if (data) this.render(data);
+		}, 500);
+	}
+
 
 	private refreshRecentDocs(): void {
 		const root = this.containerEl.children[1] as HTMLElement;

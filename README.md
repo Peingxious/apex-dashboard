@@ -100,6 +100,11 @@ All themes support both Obsidian light and dark modes.
 
 ## What's New
 
+### v1.1.1
+- **Library config persistence** — Fixed a critical bug where library section configurations (filters, view mode, sort settings, page size) were lost after restarting Obsidian. The YAML parser now correctly handles nested objects in column definitions
+- **Grid position persistence** — Fixed grid position (gcol/grow) values never being saved to the dashboard file, causing card positions to reset on reload
+- **Write race condition fix** — Fixed a race condition where rapid updates could cause the file watcher to overwrite newer data with older content
+
 ### v1.1.0
 - **Reading Tracker widget** — Full reading session management in the sidebar: add books from Douban search or manual input, start/pause/stop reading timer, and save sessions with page progress
 - **Book cards** — Each active book displays cover image, title, author, reading progress bar, and today's reading time. Cover images support both web URLs and local vault paths

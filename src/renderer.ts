@@ -1,6 +1,8 @@
 import { App, setIcon } from 'obsidian';
 import type { DashboardData, DashboardColumn, DashboardCard, RenderCallbacks, TaskItem, DashboardSettings, CardSize, TrackerStyle } from './types';
 import { t, getLanguage } from './i18n';
+import { renderLibrarySection } from './library-section';
+import type { LibraryConfig } from './types';
 import { resolveVaultImage } from './banner';
 import { attachFileSuggest } from './file-suggest';
 import { showConfirmDialog } from './confirm-dialog';
@@ -1590,6 +1592,7 @@ export function renderDashboard(
 			{ value: 'todo', label: t('renderer.typeTodo') },
 			{ value: 'memo', label: t('renderer.typeMemo') },
 			{ value: 'notes', label: t('renderer.typeNotesPlain') },
+			{ value: 'library', label: t('renderer.typeLibrary') },
 		];
 
 		for (const opt of typeOptions) {
@@ -1755,6 +1758,24 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 		});
 		setIcon(templateBtn, 'layout-template');
 		templateBtn.addEventListener('click', () => callbacks.onAddFromTemplate(column.name));
+	}
+
+	// Library section: render differently
+	if (sectionType === 'library') {
+		const configBtn = headerActions.createEl('button', {
+			cls: 'dashboard-section-add-btn',
+			attr: { 'aria-label': t('library.configure') },
+		});
+		setIcon(configBtn, 'settings');
+		configBtn.addEventListener('click', () => {
+			const event = new CustomEvent('dashboard-library-config', { detail: { columnName: column.name }, bubbles: true });
+			el.dispatchEvent(event);
+		});
+
+		renderLibrarySection(el, column, app, (config) => {
+			callbacks.onLibraryConfigChange(column.name, config);
+		});
+		return el;
 	}
 
 	const addCardBtn = headerActions.createEl('button', {
@@ -2566,6 +2587,7 @@ function getSectionType(column: DashboardColumn): string {
 	if (lower === 'projects') return 'projects';
 	if (lower === 'notes') return 'notes';
 	if (lower === 'dashboard') return 'dashboard';
+	if (lower === 'library') return 'library';
 	if (column.cards.length > 0) {
 		const types = new Set(column.cards.map(c => c.type));
 		const dashboardTypes = new Set(['chart', 'weather', 'tracker']);
