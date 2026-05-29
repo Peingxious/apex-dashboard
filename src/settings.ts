@@ -100,22 +100,6 @@ export class DashboardSettingTab extends PluginSettingTab {
 					};
 					await this.plugin.saveSettings();
 				}));
-
-
-		new Setting(containerEl)
-			.setName(t('settings.journalPath'))
-			.setDesc(t('settings.journalPathDesc'))
-			.addText(text => text
-				.setPlaceholder('journal or diary')
-				.setValue(this.plugin.settings.journalPath)
-				.onChange(async (value) => {
-					this.plugin.settings = {
-						...this.plugin.settings,
-						journalPath: value.trim(),
-					};
-					await this.plugin.saveSettings();
-				}));
-
 		// Widget settings - desktop only
 		if (!Platform.isMobile) {
 			this.renderWidgetSettings(containerEl);
@@ -196,8 +180,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}));
 
-			const journalPath = this.plugin.settings.journalPath;
-			const suggestions = suggestTrackerKeys(this.app, journalPath);
+			const suggestions = suggestTrackerKeys(this.app);
 			if (suggestions.length > 0) {
 				trackerKeySetting.descEl.empty();
 				const hintLine = trackerKeySetting.descEl.createDiv({ cls: 'tracker-key-hint' });

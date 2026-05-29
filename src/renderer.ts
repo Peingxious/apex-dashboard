@@ -286,7 +286,7 @@ function renderSidebarHeatmap(container: HTMLElement, settings: import('./types'
 
 	const widget = container.createDiv({ cls: 'dashboard-sidebar-widget dashboard-sidebar-heatmap' });
 
-	const data = readTrackerData(app, settings.journalPath ?? '', settings.widgetTrackerKey, settings.widgetTrackerDays);
+	const data = readTrackerData(app, '', settings.widgetTrackerKey, settings.widgetTrackerDays);
 	const validPoints = data.filter(p => p.value !== null);
 
 	if (validPoints.length === 0) return;
@@ -2986,18 +2986,17 @@ function renderTrackerBody(container: HTMLElement, card: DashboardCard, app: App
 	if (!card.trackerConfig) return;
 
 	const config = card.trackerConfig;
-	const journalPath = settings?.journalPath ?? '';
-	const size: CardSize = card.size || 'M';
+		const size: CardSize = card.size || 'M';
 	const style: TrackerStyle = config.style || 'line';
 	destroyChart(card.id);
 
 	const el = container.createDiv({ cls: `dashboard-tracker dashboard-tracker--${size}` });
 
-	const data = readTrackerData(app, journalPath, config.key, config.days);
+	const data = readTrackerData(app, '', config.key, config.days);
 	const validPoints = data.filter(p => p.value !== null);
 
 	if (validPoints.length === 0) {
-		el.createDiv({ cls: 'dashboard-tracker-empty', text: journalPath ? t('tracker.noData') + ': ' + config.key : t('tracker.noJournal') });
+		el.createDiv({ cls: 'dashboard-tracker-empty', text: t('tracker.noData') + ': ' + config.key });
 		return;
 	}
 

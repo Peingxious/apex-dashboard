@@ -56,8 +56,6 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.styleSakura': 'Sakura',
 		'settings.styleCarbon': 'Eclipse',
 		'settings.styleMoonlight': 'Moonlight',
-			'settings.journalPath': 'Journal folder',
-			'settings.journalPathDesc': 'Path for new journal entries (e.g. journal or diary). Leave empty for vault root.',
 			'settings.widgetTheme': 'Sidebar Widgets',
 			'settings.widgetWeatherEnabled': 'Weather',
 			'settings.widgetWeatherEnabledDesc': 'Show weather and forecast in sidebar',
@@ -469,6 +467,11 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.modified': 'modified',
 		'library.created': 'created',
 		'library.path': 'path',
+		'library.dateStart': 'Start date',
+		'library.dateEnd': 'End date',
+		'library.filterActive': 'Filter active',
+		'library.filterDateRange': '{start} ~ {end}',
+		'library.filterValues': '{property}: {values}',
 	},
 	zh: {
 		// Common
@@ -515,8 +518,6 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.styleSakura': '樱花',
 		'settings.styleCarbon': '日食',
 		'settings.styleMoonlight': '月影',
-			'settings.journalPath': '日记文件夹',
-			'settings.journalPathDesc': '新建日记的保存路径（如 journal 或 diary），留空则保存到仓库根目录',
 			'settings.widgetTheme': '侧边栏小组件',
 			'settings.widgetWeatherEnabled': '天气',
 			'settings.widgetWeatherEnabledDesc': '在侧边栏显示天气和预报',
@@ -923,6 +924,12 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.modified': '修改时间',
 		'library.created': '创建时间',
 		'library.path': '路径',
+		'library.quickFilter': '筛选',
+		'library.dateStart': '开始日期',
+		'library.dateEnd': '结束日期',
+		'library.filterActive': '筛选已激活',
+		'library.filterDateRange': '{start} ~ {end}',
+		'library.filterValues': '{property}: {values}',
 	},
 };
 

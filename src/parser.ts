@@ -127,6 +127,10 @@ export function serialize(data: DashboardData): string {
 					} else {
 						lines.push('          values: []');
 					}
+					if (filter.dateRange) {
+						if (filter.dateRange.start) lines.push(`          dateStart: "${filter.dateRange.start}"`);
+						if (filter.dateRange.end) lines.push(`          dateEnd: "${filter.dateRange.end}"`);
+					}
 				}
 			}
 		}
@@ -649,7 +653,10 @@ function parseLibraryConfig(raw: Record<string, unknown>): LibraryConfig {
 			const property = String(rec.property ?? '');
 			const rawValues = rec.values;
 			const values = Array.isArray(rawValues) ? rawValues.map((v: unknown) => String(v)) : [];
-			filters.push({ property, values });
+			const dateStart = rec.dateStart ? String(rec.dateStart) : '';
+			const dateEnd = rec.dateEnd ? String(rec.dateEnd) : '';
+			const dateRange = (dateStart || dateEnd) ? { start: dateStart, end: dateEnd } : undefined;
+			filters.push({ property, values, dateRange });
 		}
 	}
 

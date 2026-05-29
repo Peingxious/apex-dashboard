@@ -5,7 +5,6 @@ export interface DashboardSettings {
 	recentDocCount: number;
 	language: Language;
 	stylePreset: string;
-	journalPath: string;
 	widgetWeatherEnabled: boolean;
 	widgetHeatmapEnabled: boolean;
 	widgetTrackerKey: string;
@@ -38,7 +37,6 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	recentDocCount: 5,
 	language: 'en',
 	stylePreset: 'earth',
-	journalPath: '',
 	widgetWeatherEnabled: false,
 	widgetHeatmapEnabled: false,
 	widgetTrackerKey: '',
@@ -176,6 +174,7 @@ export type LibraryViewMode = 'grid' | 'list' | 'table' | 'kanban';
 export interface PropertyFilter {
 	property: string;
 	values: string[];
+	dateRange?: { start: string; end: string };
 }
 
 export interface LibraryConfig {

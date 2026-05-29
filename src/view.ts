@@ -662,7 +662,7 @@ export class DashboardView extends ItemView {
 	}
 
 	private openTrackerConfigModal(colName: string): void {
-		const modal = new TrackerConfigModal(this.app, this.plugin.settings.journalPath, (title, config) => {
+		const modal = new TrackerConfigModal(this.app, (title, config) => {
 			this.sync.addCard(colName, {
 				title,
 				type: 'tracker',
@@ -730,17 +730,10 @@ export class DashboardView extends ItemView {
 	private async createNewJournal(): Promise<void> {
 		const now = new Date();
 		const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-		const basePath = this.plugin.settings.journalPath;
-		const filePath = basePath ? `${basePath}/${dateStr}.md` : `${dateStr}.md`;
+		const filePath = `${dateStr}.md`;
 
 		let file = this.app.vault.getFileByPath(filePath);
 		if (!file) {
-			if (basePath) {
-				const folder = this.app.vault.getAbstractFileByPath(basePath);
-				if (!folder) {
-					await this.app.vault.createFolder(basePath);
-				}
-			}
 			file = await this.app.vault.create(filePath, `# ${dateStr}\n\n`);
 		}
 
