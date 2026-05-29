@@ -99,7 +99,7 @@ function evaluateFilter(
 	filter: PropertyFilter,
 	cache: ReturnType<typeof import('obsidian').App.prototype.metadataCache.getFileCache>,
 ): boolean {
-	if (filter.values.length === 0) return true;
+		if (filter.values.length === 0 && !filter.dateRange) return true;
 
 	const prop = filter.property;
 
