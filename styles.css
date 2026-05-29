@@ -7941,18 +7941,18 @@
 }
 
 .dashboard-task-reminder-popup {
-	background: var(--db-bg);
-	border: 1px solid var(--db-border-card);
-	border-radius: var(--db-radius-md);
+	background: var(--db-bg, #1e1e2e);
+	border: 1px solid var(--db-border-card, rgba(255, 255, 255, 0.10));
+	border-radius: var(--db-radius-md, 10px);
 	padding: 12px;
 	z-index: 10000;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
 	min-width: 240px;
 	font-size: 13px;
-	color: var(--db-text);
+	color: var(--db-text, var(--text-normal));
 }
 
 .dashboard-task-reminder-calendar-nav {
@@ -8990,8 +8990,11 @@
 	padding: 12px;
 	border-radius: var(--db-radius-md, 10px);
 	border: 1px solid var(--db-border-card, rgba(255, 255, 255, 0.10));
-	background: var(--db-bg-card, rgba(255, 255, 255, 0.06));
-	max-width: 480px;
+	background: var(--db-bg, var(--db-bg-card, #1e1e2e));
+	max-width: 320px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+	z-index: 10000;
+	color: var(--db-text, var(--text-normal));
 }
 
 .dashboard-library-filter-popup-row {
