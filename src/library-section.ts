@@ -434,8 +434,8 @@ export function renderLibrarySection(
 		let quickEnd = config.quickDateFilter?.end ?? '';
 
 		// Popup
-		const filterPopup = sectionContent.createDiv({ cls: 'dashboard-library-filter-popup' });
-		filterPopup.style.display = 'none';
+		let filterPopup: HTMLElement | null = null;
+
 
 		function applyQuickFilter(): void {
 			config.quickDateFilter = (quickStart || quickEnd) ? { property: quickProp, start: quickStart, end: quickEnd } : undefined;
@@ -446,8 +446,28 @@ export function renderLibrarySection(
 			updateFilterBtnState();
 		}
 
-		function renderPopup(): void {
-			filterPopup.empty();
+		function openPopup(): void {
+			closePopup();
+			filterPopup = document.body.createDiv({ cls: 'dashboard-library-filter-popup' });
+
+			// Inherit theme from dashboard
+			const dashboardRoot = filterBtn.closest('.dashboard-root') as HTMLElement;
+			if (dashboardRoot) {
+				const rs = getComputedStyle(dashboardRoot);
+				['--db-bg', '--db-bg-card', '--db-bg-card-hover', '--db-border-card',
+					'--db-text', '--db-text-muted', '--db-accent', '--db-radius-md', '--db-radius-sm', '--db-font',
+					'--db-bg-input', '--db-bg-hover', '--db-bg-btn', '--db-text-normal', '--db-border-input'].forEach(v => {
+					const val = rs.getPropertyValue(v).trim();
+					if (val) filterPopup!.style.setProperty(v, val);
+				});
+			}
+
+			// Position below the filter button
+			const rect = filterBtn.getBoundingClientRect();
+			filterPopup.style.position = 'fixed';
+			filterPopup.style.top = `${rect.bottom + 4}px`;
+			filterPopup.style.left = `${rect.left}px`;
+			filterPopup.style.zIndex = '10000';
 
 			// Property selector
 			const propRow = filterPopup.createDiv({ cls: 'dashboard-library-quickfilter-row' });
@@ -463,7 +483,6 @@ export function renderLibrarySection(
 			// Date range
 			const dateRow = filterPopup.createDiv({ cls: 'dashboard-library-quickfilter-row' });
 			dateRow.createDiv({ cls: 'dashboard-library-quickfilter-label', text: t('library.filterDateRange') });
-
 			const dateWrap = dateRow.createDiv({ cls: 'dashboard-library-filter-popup-dates' });
 			const startBtn = dateWrap.createEl('button', {
 				cls: 'dashboard-library-filter-date-btn' + (quickStart ? ' has-value' : ''),
@@ -478,20 +497,16 @@ export function renderLibrarySection(
 				ev.stopPropagation();
 				showCalendarPopup(startBtn, quickStart, (date) => {
 					quickStart = date;
-					startBtn.textContent = date;
-					startBtn.classList.add('has-value');
 					applyQuickFilter();
-					renderPopup();
+					openPopup();
 				});
 			});
 			endBtn.addEventListener('click', (ev) => {
 				ev.stopPropagation();
 				showCalendarPopup(endBtn, quickEnd, (date) => {
 					quickEnd = date;
-					endBtn.textContent = date;
-					endBtn.classList.add('has-value');
 					applyQuickFilter();
-					renderPopup();
+					openPopup();
 				});
 			});
 
@@ -506,8 +521,15 @@ export function renderLibrarySection(
 					quickStart = '';
 					quickEnd = '';
 					applyQuickFilter();
-					renderPopup();
+					closePopup();
 				});
+			}
+		}
+
+		function closePopup(): void {
+			if (filterPopup) {
+				filterPopup.remove();
+				filterPopup = null;
 			}
 		}
 
@@ -525,7 +547,7 @@ export function renderLibrarySection(
 				quickStart = '';
 				quickEnd = '';
 				applyQuickFilter();
-				renderPopup();
+				openPopup();
 			});
 		}
 
@@ -535,14 +557,16 @@ export function renderLibrarySection(
 
 		filterBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
-			const isVisible = filterPopup.style.display !== 'none';
-			filterPopup.style.display = isVisible ? 'none' : 'block';
-			if (!isVisible) renderPopup();
+			if (filterPopup) {
+				closePopup();
+			} else {
+				openPopup();
+			}
 		});
 
 		document.addEventListener('click', (e) => {
-			if (!filterPopup.contains(e.target as Node) && !filterBtn.contains(e.target as Node)) {
-				filterPopup.style.display = 'none';
+			if (filterPopup && !filterPopup.contains(e.target as Node) && !filterBtn.contains(e.target as Node)) {
+				closePopup();
 			}
 		});
 
