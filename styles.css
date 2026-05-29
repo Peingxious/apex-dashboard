@@ -3949,6 +3949,346 @@
 	text-align: center;
 }
 
+/* ===== Fortune Stick Button ===== */
+.dashboard-sidebar-lunar {
+	position: relative;
+}
+
+.dashboard-sidebar-lunar-fortune-btn {
+	position: absolute;
+	top: 10px;
+	left: 6px;
+	font-size: 1.1em;
+	cursor: pointer;
+	opacity: 0.6;
+	transition: opacity 0.2s, transform 0.2s;
+	line-height: 1;
+	z-index: 1;
+}
+
+.dashboard-sidebar-lunar-fortune-btn:hover {
+	opacity: 1;
+	transform: scale(1.15);
+}
+
+/* ===== Fortune Stick Modal — Traditional Parchment ===== */
+.modal:has(.fortune-card) {
+	background: transparent !important;
+	border: none !important;
+	box-shadow: none !important;
+	backdrop-filter: none !important;
+}
+
+.modal-bg:has(.fortune-card) {
+	background: rgba(0, 0, 0, 0.55) !important;
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+}
+
+.fortune-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 36px 28px 28px;
+	min-width: 260px;
+	max-width: 300px;
+	margin: 0 auto;
+	background: linear-gradient(160deg, #f7f1e3 0%, #efe6d0 40%, #f2ead8 100%);
+	border: 2px solid #c9a96e;
+	border-radius: 4px;
+	box-shadow:
+		0 2px 12px rgba(139, 69, 19, 0.15),
+		inset 0 0 30px rgba(139, 69, 19, 0.04);
+	color: #2c1810;
+	position: relative;
+}
+
+.fortune-card::before {
+	content: '';
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	right: 6px;
+	bottom: 6px;
+	border: 1px solid rgba(201, 169, 110, 0.4);
+	border-radius: 2px;
+	pointer-events: none;
+}
+
+.fortune-card-title {
+	font-size: 1.5em;
+	font-weight: 700;
+	color: #8B2500;
+	margin-bottom: 6px;
+	letter-spacing: 0.12em;
+	text-align: center;
+}
+
+.fortune-card-subtitle {
+	font-size: 0.85em;
+	color: #6b5a42;
+	margin-bottom: 24px;
+	letter-spacing: 0.04em;
+	text-align: center;
+}
+
+/* Category Grid */
+.fortune-category-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+	width: 100%;
+}
+
+.fortune-category-btn {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 16px 8px;
+	border-radius: 4px;
+	background: rgba(255, 252, 245, 0.7);
+	border: 1.5px solid #c9a96e;
+	cursor: pointer;
+	transition: all 0.2s;
+	color: #2c1810;
+}
+
+.fortune-category-btn:hover {
+	background: rgba(196, 30, 58, 0.08);
+	border-color: #8B2500;
+	transform: translateY(-2px);
+	box-shadow: 0 2px 8px rgba(139, 37, 0, 0.12);
+}
+
+.fortune-category-emoji {
+	font-size: 1.5em;
+	line-height: 1;
+}
+
+.fortune-category-label {
+	font-size: 0.9em;
+	color: #2c1810;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+}
+
+/* ===== Fortune Result Card ===== */
+.fortune-card--result {
+	padding: 32px 24px 24px;
+	min-width: 240px;
+	max-width: 280px;
+	animation: fortune-fade-in 0.3s ease;
+}
+
+/* Seal Stamp Badge */
+.fortune-result-header {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	margin-bottom: 16px;
+}
+
+.fortune-result-seal {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 56px;
+	height: 56px;
+	border: 2.5px solid #B22222;
+	border-radius: 50%;
+	color: #B22222;
+	font-size: 0.85em;
+	font-weight: 800;
+	letter-spacing: 0.04em;
+	line-height: 1.2;
+	text-align: center;
+	transform: rotate(-8deg);
+	position: relative;
+}
+
+.fortune-result-seal::after {
+	content: '';
+	position: absolute;
+	inset: 3px;
+	border: 1px solid rgba(178, 34, 34, 0.3);
+	border-radius: 50%;
+	pointer-events: none;
+}
+
+.fortune-result-seal--super {
+	background: rgba(178, 34, 34, 0.08);
+}
+
+.fortune-result-seal--good {
+	background: rgba(178, 34, 34, 0.05);
+	border-color: #C41E3A;
+	color: #C41E3A;
+}
+
+.fortune-result-seal--good::after {
+	border-color: rgba(196, 30, 58, 0.3);
+}
+
+.fortune-result-seal--medium {
+	background: rgba(107, 90, 66, 0.08);
+	border-color: #6b5a42;
+	color: #6b5a42;
+}
+
+.fortune-result-seal--medium::after {
+	border-color: rgba(107, 90, 66, 0.3);
+}
+
+.fortune-result-category {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	font-size: 0.75em;
+	color: #8b7355;
+	font-weight: 500;
+	letter-spacing: 0.04em;
+	z-index: 2;
+}
+
+.fortune-result-divider {
+	width: 80%;
+	height: 1px;
+	background: linear-gradient(90deg, transparent, #c9a96e, transparent);
+	margin: 0 auto 20px;
+}
+
+/* Vertical Verse */
+.fortune-result-verse {
+	writing-mode: vertical-rl;
+	text-orientation: mixed;
+	font-size: 1.2em;
+	line-height: 2.2;
+	color: #2c1810;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	height: 180px;
+	margin: 0 auto 20px;
+	text-align: start;
+	padding: 0 8px;
+}
+
+/* Flip Card */
+.fortune-flip-container {
+	perspective: 1000px;
+	width: 100%;
+}
+
+.fortune-flip-card {
+	position: relative;
+	width: 100%;
+	transform-style: preserve-3d;
+	transition: transform 0.6s ease;
+}
+
+.fortune-flip-card--flipped {
+	transform: rotateY(180deg);
+}
+
+.fortune-flip-front {
+	backface-visibility: hidden;
+}
+
+.fortune-flip-back {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	backface-visibility: hidden;
+	transform: rotateY(180deg);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 16px;
+	padding: 0 4px;
+	overflow-y: auto;
+}
+
+/* Reveal Button */
+.fortune-result-reveal-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 8px 20px;
+	border: 2px solid #B22222;
+	border-radius: 4px;
+	font-size: 0.9em;
+	font-weight: 700;
+	cursor: pointer;
+	background: transparent;
+	color: #B22222;
+	letter-spacing: 0.1em;
+	transition: all 0.2s;
+	transform: rotate(-2deg);
+}
+
+.fortune-result-reveal-btn:hover {
+	background: #B22222;
+	color: #f7f1e3;
+}
+
+/* Back Face Content */
+.fortune-back-title {
+	font-size: 1.1em;
+	font-weight: 700;
+	color: #8B2500;
+	letter-spacing: 0.1em;
+	margin-bottom: 4px;
+}
+
+.fortune-back-interpretation {
+	width: 100%;
+	font-size: 0.95em;
+	line-height: 2;
+	color: #2c1810;
+	padding: 16px;
+	background: rgba(255, 252, 245, 0.6);
+	border-radius: 4px;
+	border: 1px solid #C41E3A;
+}
+
+/* Typewriter Effect */
+.fortune-verse-char {
+	opacity: 0;
+	animation: fortune-char-appear 0.3s ease forwards;
+}
+
+@keyframes fortune-char-appear {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+.fortune-result-back-btn {
+	margin-top: 20px;
+	font-size: 0.8em;
+	color: #8b7355;
+	cursor: pointer;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	letter-spacing: 0.04em;
+}
+
+.fortune-result-back-btn:hover {
+	opacity: 1;
+	color: #8B2500;
+}
+
+@keyframes fortune-fade-in {
+	from { opacity: 0; transform: translateY(-6px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
 /* Week Calendar Strip */
 .dashboard-sidebar-week-calendar {
 	display: flex;
