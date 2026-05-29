@@ -470,7 +470,6 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.dateStart': 'Start date',
 		'library.dateEnd': 'End date',
 		'library.filterActive': 'Filter active',
-		'library.filterDateRange': '{start} ~ {end}',
 		'library.filterValues': '{property}: {values}',
 	},
 	zh: {
@@ -924,11 +923,12 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.modified': '修改时间',
 		'library.created': '创建时间',
 		'library.path': '路径',
-		'library.quickFilter': '筛选',
+		'library.quickFilter': '日期筛选',
+		'library.filterProperty': '筛选属性',
+		'library.filterDateRange': '日期范围',
 		'library.dateStart': '开始日期',
 		'library.dateEnd': '结束日期',
 		'library.filterActive': '筛选已激活',
-		'library.filterDateRange': '{start} ~ {end}',
 		'library.filterValues': '{property}: {values}',
 	},
 };

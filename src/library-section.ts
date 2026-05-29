@@ -420,186 +420,124 @@ export function renderLibrarySection(
 		});
 	}
 
-		// Quick filter button
+		// Quick date filter button
 		const filterBtn = toolbar.createDiv({ cls: 'dashboard-library-filter-btn' });
 		setIcon(filterBtn, 'filter');
 		filterBtn.title = t('library.quickFilter');
 
-		// Filter tags container
-		const filterTags = toolbar.createDiv({ cls: 'dashboard-library-filter-tags' });
+		// Filter tag
+		const filterTag = toolbar.createDiv({ cls: 'dashboard-library-filter-tags' });
 
-		// Filter popup
+		// Quick date filter state (separate from config.filters)
+		let quickProp: 'created' | 'modified' = config.quickDateFilter?.property ?? 'created';
+		let quickStart = config.quickDateFilter?.start ?? '';
+		let quickEnd = config.quickDateFilter?.end ?? '';
+
+		// Popup
 		const filterPopup = sectionContent.createDiv({ cls: 'dashboard-library-filter-popup' });
 		filterPopup.style.display = 'none';
 
-		const availableProps = extractFrontmatterProperties(app);
-
-		function renderFilterPopup(): void {
-			filterPopup.empty();
-
-			for (let i = 0; i < config.filters.length; i++) {
-				const filter = config.filters[i]!;
-				const row = filterPopup.createDiv({ cls: 'dashboard-library-filter-popup-row' });
-
-				const propSelect = row.createEl('select', { cls: 'dashboard-library-filter-popup-prop' });
-				const propKeys = [...availableProps.keys()].sort();
-				propSelect.createEl('option', { text: t('library.selectProperty'), attr: { value: '' } });
-				for (const key of propKeys) {
-					const opt = propSelect.createEl('option', { text: key, attr: { value: key } });
-					if (key === filter.property) opt.selected = true;
-				}
-				propSelect.addEventListener('change', () => {
-					filter.property = propSelect.value;
-					filter.values = [];
-					filter.dateRange = undefined;
-					renderFilterPopup();
-				});
-
-				if (filter.property === 'created' || filter.property === 'modified') {
-					const dateWrap = row.createDiv({ cls: 'dashboard-library-filter-popup-dates' });
-
-					const startBtn = dateWrap.createEl('button', {
-						cls: 'dashboard-library-filter-date-btn' + (filter.dateRange?.start ? ' has-value' : ''),
-						text: filter.dateRange?.start || t('library.dateStart'),
-					});
-					const endBtn = dateWrap.createEl('button', {
-						cls: 'dashboard-library-filter-date-btn' + (filter.dateRange?.end ? ' has-value' : ''),
-						text: filter.dateRange?.end || t('library.dateEnd'),
-					});
-
-					const applyDates = (): void => {
-						onConfigChange({ ...config, filters: config.filters.map(f => ({ ...f })) });
-						currentPage = 1;
-						renderContent(config);
-						renderFilterTags();
-					};
-
-					startBtn.addEventListener('click', (ev) => {
-						ev.stopPropagation();
-						showCalendarPopup(startBtn, filter.dateRange?.start ?? '', (date) => {
-							filter.dateRange = { start: date, end: filter.dateRange?.end ?? '' };
-							startBtn.textContent = date;
-							startBtn.classList.add('has-value');
-							applyDates();
-						});
-					});
-					endBtn.addEventListener('click', (ev) => {
-						ev.stopPropagation();
-						showCalendarPopup(endBtn, filter.dateRange?.end ?? '', (date) => {
-							filter.dateRange = { start: filter.dateRange?.start ?? '', end: date };
-							endBtn.textContent = date;
-							endBtn.classList.add('has-value');
-							applyDates();
-						});
-					});
-				} else if (filter.property) {
-				} else if (filter.property) {
-					const valuesWrap = row.createDiv({ cls: 'dashboard-library-filter-popup-values' });
-					const avail = availableProps.get(filter.property);
-					if (avail && avail.size > 0) {
-						for (const val of [...avail].sort().slice(0, 20)) {
-							const chip = valuesWrap.createDiv({
-								cls: 'dashboard-library-filter-chip' + (filter.values.includes(val) ? ' active' : ''),
-								text: val,
-							});
-							chip.addEventListener('click', () => {
-								const idx = filter.values.indexOf(val);
-								if (idx >= 0) {
-									filter.values = filter.values.filter(v => v !== val);
-								} else {
-									filter.values = [...filter.values, val];
-								}
-								onConfigChange({ ...config, filters: config.filters.map(f => ({ ...f })) });
-								currentPage = 1;
-								renderContent(config);
-								renderFilterPopup();
-								renderFilterTags();
-							});
-						}
-					}
-				}
-
-				const removeBtn = row.createDiv({ cls: 'dashboard-library-filter-popup-remove' });
-				setIcon(removeBtn, 'x');
-				removeBtn.addEventListener('click', () => {
-					config.filters = config.filters.filter((_, idx) => idx !== i);
-					onConfigChange({ ...config, filters: config.filters.map(f => ({ ...f })) });
-					currentPage = 1;
-					renderContent(config);
-					renderFilterPopup();
-					renderFilterTags();
-					updateFilterBtnState();
-				});
-			}
-
-			const addBtn = filterPopup.createEl('button', {
-				cls: 'dashboard-library-filter-popup-add',
-				text: t('library.addFilter'),
-			});
-			addBtn.addEventListener('click', () => {
-				config.filters = [...config.filters, { property: '', values: [], dateRange: undefined }];
-				renderFilterPopup();
-			});
+		function applyQuickFilter(): void {
+			config.quickDateFilter = (quickStart || quickEnd) ? { property: quickProp, start: quickStart, end: quickEnd } : undefined;
+			onConfigChange({ ...config });
+			currentPage = 1;
+			renderContent(config);
+			renderFilterTag();
+			updateFilterBtnState();
 		}
 
-		function renderFilterTags(): void {
-			filterTags.empty();
-			for (let i = 0; i < config.filters.length; i++) {
-				const filter = config.filters[i]!;
-				if (!filter.property) continue;
-				if (filter.property === 'created' || filter.property === 'modified') {
-					if (!filter.dateRange?.start && !filter.dateRange?.end) continue;
-					const start = filter.dateRange?.start || '...';
-					const end = filter.dateRange?.end || '...';
-					const tag = filterTags.createDiv({
-						cls: 'dashboard-library-filter-tag',
-						text: `${filter.property}: ${start} ~ ${end}`,
-					});
-					const x = tag.createSpan({ cls: 'dashboard-library-filter-tag-x', text: '×' });
-					x.addEventListener('click', () => {
-						config.filters = config.filters.filter((_, idx) => idx !== i);
-						onConfigChange({ ...config, filters: config.filters.map(f => ({ ...f })) });
-						currentPage = 1;
-						renderContent(config);
-						renderFilterPopup();
-						renderFilterTags();
-						updateFilterBtnState();
-					});
-				} else if (filter.values.length > 0) {
-					const tag = filterTags.createDiv({
-						cls: 'dashboard-library-filter-tag',
-						text: `${filter.property}: ${filter.values.join(', ')}`,
-					});
-					const x = tag.createSpan({ cls: 'dashboard-library-filter-tag-x', text: '×' });
-					x.addEventListener('click', () => {
-						config.filters = config.filters.filter((_, idx) => idx !== i);
-						onConfigChange({ ...config, filters: config.filters.map(f => ({ ...f })) });
-						currentPage = 1;
-						renderContent(config);
-						renderFilterPopup();
-						renderFilterTags();
-						updateFilterBtnState();
-					});
-				}
+		function renderPopup(): void {
+			filterPopup.empty();
+
+			// Property selector
+			const propRow = filterPopup.createDiv({ cls: 'dashboard-library-quickfilter-row' });
+			propRow.createDiv({ cls: 'dashboard-library-quickfilter-label', text: t('library.filterProperty') });
+			const propSelect = propRow.createEl('select', { cls: 'dashboard-library-filter-popup-prop' });
+			propSelect.createEl('option', { text: t('library.created'), attr: { value: 'created' } });
+			propSelect.createEl('option', { text: t('library.modified'), attr: { value: 'modified' } });
+			propSelect.value = quickProp;
+			propSelect.addEventListener('change', () => {
+				quickProp = propSelect.value as 'created' | 'modified';
+			});
+
+			// Date range
+			const dateRow = filterPopup.createDiv({ cls: 'dashboard-library-quickfilter-row' });
+			dateRow.createDiv({ cls: 'dashboard-library-quickfilter-label', text: t('library.filterDateRange') });
+
+			const dateWrap = dateRow.createDiv({ cls: 'dashboard-library-filter-popup-dates' });
+			const startBtn = dateWrap.createEl('button', {
+				cls: 'dashboard-library-filter-date-btn' + (quickStart ? ' has-value' : ''),
+				text: quickStart || t('library.dateStart'),
+			});
+			const endBtn = dateWrap.createEl('button', {
+				cls: 'dashboard-library-filter-date-btn' + (quickEnd ? ' has-value' : ''),
+				text: quickEnd || t('library.dateEnd'),
+			});
+
+			startBtn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				showCalendarPopup(startBtn, quickStart, (date) => {
+					quickStart = date;
+					startBtn.textContent = date;
+					startBtn.classList.add('has-value');
+					applyQuickFilter();
+					renderPopup();
+				});
+			});
+			endBtn.addEventListener('click', (ev) => {
+				ev.stopPropagation();
+				showCalendarPopup(endBtn, quickEnd, (date) => {
+					quickEnd = date;
+					endBtn.textContent = date;
+					endBtn.classList.add('has-value');
+					applyQuickFilter();
+					renderPopup();
+				});
+			});
+
+			// Clear button
+			if (quickStart || quickEnd) {
+				const clearBtn = filterPopup.createEl('button', {
+					cls: 'dashboard-library-filter-popup-clear',
+					text: t('reminder.clearReminder'),
+				});
+				clearBtn.addEventListener('click', (ev) => {
+					ev.stopPropagation();
+					quickStart = '';
+					quickEnd = '';
+					applyQuickFilter();
+					renderPopup();
+				});
 			}
+		}
+
+		function renderFilterTag(): void {
+			filterTag.empty();
+			if (!quickStart && !quickEnd) return;
+			const start = quickStart || '...';
+			const end = quickEnd || '...';
+			const tag = filterTag.createDiv({
+				cls: 'dashboard-library-filter-tag',
+				text: `${quickProp}: ${start} ~ ${end}`,
+			});
+			const x = tag.createSpan({ cls: 'dashboard-library-filter-tag-x', text: '×' });
+			x.addEventListener('click', () => {
+				quickStart = '';
+				quickEnd = '';
+				applyQuickFilter();
+				renderPopup();
+			});
 		}
 
 		function updateFilterBtnState(): void {
-			const hasActive = config.filters.some(f =>
-				f.property && (
-					(f.property === 'created' || f.property === 'modified')
-						? (f.dateRange?.start || f.dateRange?.end)
-						: f.values.length > 0
-				)
-			);
-			filterBtn.classList.toggle('active', hasActive);
+			filterBtn.classList.toggle('active', !!(quickStart || quickEnd));
 		}
 
 		filterBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			const isVisible = filterPopup.style.display !== 'none';
 			filterPopup.style.display = isVisible ? 'none' : 'block';
-			if (!isVisible) renderFilterPopup();
+			if (!isVisible) renderPopup();
 		});
 
 		document.addEventListener('click', (e) => {
@@ -608,8 +546,7 @@ export function renderLibrarySection(
 			}
 		});
 
-		// Initial render of tags and button state
-		renderFilterTags();
+		renderFilterTag();
 		updateFilterBtnState();
 
 
@@ -658,6 +595,18 @@ export function renderLibrarySection(
 		if (search) {
 			results = results.filter(r => r.basename.toLowerCase().includes(search));
 		}
+
+			// Apply quick date filter
+			if (currentConfig.quickDateFilter) {
+				const qdf = currentConfig.quickDateFilter;
+				results = results.filter(r => {
+					const ts = qdf.property === 'modified' ? r.mtime : r.ctime;
+					const dateStr = new Date(ts).toISOString().slice(0, 10);
+					if (qdf.start && dateStr < qdf.start) return false;
+					if (qdf.end && dateStr > qdf.end) return false;
+					return true;
+				});
+			}
 
 		const totalResults = results.length;
 		countEl.textContent = t('library.fileCount', { count: totalResults });

@@ -118,6 +118,12 @@ export function serialize(data: DashboardData): string {
 			if (lc.pageSize) {
 				lines.push(`      pageSize: ${lc.pageSize}`);
 			}
+				if (lc.quickDateFilter) {
+					lines.push(`      quickDateFilter:`);
+					lines.push(`        property: "${lc.quickDateFilter.property}"`);
+					lines.push(`        start: "${lc.quickDateFilter.start}"`);
+					lines.push(`        end: "${lc.quickDateFilter.end}"`);
+				}
 			if (lc.filters.length > 0) {
 				lines.push('      filters:');
 				for (const filter of lc.filters) {
@@ -667,9 +673,13 @@ function parseLibraryConfig(raw: Record<string, unknown>): LibraryConfig {
 		sortDesc: raw.sortDesc !== false,
 		kanbanGroupBy: raw.kanbanGroupBy ? String(raw.kanbanGroupBy) : undefined,
 		pageSize: typeof raw.pageSize === 'number' ? raw.pageSize : undefined,
-	};
-}
-
+			quickDateFilter: raw.quickDateFilter && typeof raw.quickDateFilter === 'object' ? {
+				property: (raw.quickDateFilter as Record<string, unknown>).property === 'modified' ? 'modified' as const : 'created' as const,
+				start: String((raw.quickDateFilter as Record<string, unknown>).start ?? ''),
+				end: String((raw.quickDateFilter as Record<string, unknown>).end ?? ''),
+			} : undefined,
+		};
+	}
 function splitByH2(body: string): Array<{ heading: string; content: string }> {
 	const lines = body.split('\n');
 	const sections: Array<{ heading: string; content: string }> = [];

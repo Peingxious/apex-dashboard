@@ -183,7 +183,8 @@ export interface LibraryConfig {
 	sortBy: string;
 	sortDesc: boolean;
 	kanbanGroupBy?: string;
-	pageSize?: number;
+		pageSize?: number;
+		quickDateFilter?: { property: 'created' | 'modified'; start: string; end: string };
 }
 
 export interface DashboardColumn {
