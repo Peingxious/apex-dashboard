@@ -103,7 +103,7 @@ export function renderSidebarWidgets(
 	type WidgetEntry = { key: string; render: () => void };
 	const enabled: WidgetEntry[] = [];
 	if (settings.widgetLunarEnabled) {
-		enabled.push({ key: 'lunar', render: () => renderSidebarLunarWidget(widgetArea, holidayData ?? {}) });
+		enabled.push({ key: 'lunar', render: () => renderSidebarLunarWidget(widgetArea, holidayData ?? {}, app) });
 	}
 	if (settings.widgetWeatherEnabled) {
 		enabled.push({ key: 'weather', render: () => renderSidebarWeather(widgetArea, settings, app) });
