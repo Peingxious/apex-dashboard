@@ -9027,16 +9027,29 @@
 	align-items: center;
 }
 
-.dashboard-library-filter-date {
-	padding: 4px 8px;
+.dashboard-library-filter-date-btn {
+	cursor: pointer;
+	padding: 4px 10px;
 	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
 	border-radius: var(--db-radius-sm, 6px);
 	background: var(--db-bg-input, rgba(255, 255, 255, 0.05));
-	color: var(--db-text, var(--text-normal));
+	color: var(--db-text-muted, var(--text-muted));
 	font-size: 12px;
-	outline: none;
-	width: 130px;
+	font-family: var(--db-font, var(--font-interface));
+	transition: all 0.15s ease;
 }
+
+.dashboard-library-filter-date-btn:hover {
+	border-color: var(--db-accent, var(--interactive-accent));
+	color: var(--db-text, var(--text-normal));
+}
+
+.dashboard-library-filter-date-btn.has-value {
+	color: var(--db-accent, var(--interactive-accent));
+	border-color: var(--db-accent, var(--interactive-accent));
+	background: var(--db-bg-btn, rgba(139, 92, 246, 0.10));
+}
+
 
 .dashboard-library-filter-popup-values {
 	display: flex;
