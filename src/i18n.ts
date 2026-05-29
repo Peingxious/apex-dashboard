@@ -87,6 +87,25 @@ const translations: Record<Language, Record<string, string>> = {
 		'main.addSection': 'Add new section',
 
 		// Renderer
+		// Default dashboard content
+		'default.memoTitle': '{date} memo',
+		'default.memoBody': 'Welcome to Apex Dashboard! Click here to edit your first memo.',
+		'default.memoPathTitle': 'Tip: Dashboard File Path',
+		'default.memoPathBody': 'You can change the dashboard file path in Settings > Apex Dashboard.',
+		'default.memoDeleteTitle': 'Tip: Delete Sections',
+		'default.memoDeleteBody': 'To delete a section, edit the dashboard.md file directly — remove the corresponding section block.',
+		'default.todoTitle1': 'Getting Started',
+		'default.todo1': 'Try adding a new card',
+		'default.todo2': 'Drag cards between sections',
+		'default.todo3': 'Edit the banner quote',
+		'default.todo4': 'Add a quick link',
+		'default.todoTitle2': 'Interface Guide',
+		'default.guide1': 'Click the left edge strip to open the sidebar',
+		'default.guide2': 'Click the pin button to pin the sidebar',
+		'default.guide3': 'Click the bookmark button in Banner to collapse the banner',
+		'default.guide4': 'Enable more widgets in Settings',
+		'default.projectTitle': 'My First Project',
+
 		'renderer.addSection': '+ Add section',
 		'renderer.sectionName': 'Section name:',
 		'renderer.addCardTo': 'Add card to {column}',
@@ -527,6 +546,25 @@ const translations: Record<Language, Record<string, string>> = {
 		'main.addSection': '添加新分区',
 
 		// Renderer
+		// Default dashboard content
+		'default.memoTitle': '{date} 备忘',
+		'default.memoBody': '欢迎使用 Apex Dashboard！点击此处编辑你的第一条备忘。',
+		'default.memoPathTitle': '提示：Dashboard 文件路径',
+		'default.memoPathBody': '你可以在 设置 > Apex Dashboard 中修改 dashboard 文件路径。',
+		'default.memoDeleteTitle': '提示：删除分区',
+		'default.memoDeleteBody': '如需删除某个分区，请直接编辑 dashboard.md 文件，删除对应的分区内容块即可。',
+		'default.todoTitle1': '快速上手',
+		'default.todo1': '尝试添加一张新卡片',
+		'default.todo2': '在不同分区之间拖拽卡片',
+		'default.todo3': '编辑 Banner 区的名言',
+		'default.todo4': '添加一个快捷链接',
+		'default.todoTitle2': '界面操作指南',
+		'default.guide1': '点击左侧隐藏条拉出左侧栏',
+		'default.guide2': '点击图钉按钮固定左侧栏',
+		'default.guide3': '点击 Banner 区的书签按钮收起 Banner',
+		'default.guide4': '在设置中开启更多小组件',
+		'default.projectTitle': '我的第一个项目',
+
 		'renderer.addSection': '+ 添加分区',
 		'renderer.sectionName': '分区名称：',
 		'renderer.addCardTo': '添加卡片到 {column}',
