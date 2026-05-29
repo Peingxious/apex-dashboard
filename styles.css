@@ -7955,6 +7955,54 @@
 	color: var(--db-text, var(--text-normal));
 }
 
+/* Calendar popup on body (outside theme scope) */
+.dashboard-library-calendar-popup,
+.dashboard-task-reminder-popup.dashboard-library-calendar-popup {
+	background: #ffffff;
+	color: #1a1a1a;
+	border-color: #e0e0e0;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day {
+	color: #333;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day--today {
+	color: var(--interactive-accent, #7c3aed);
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day--selected {
+	background: var(--interactive-accent, #7c3aed) !important;
+	color: #fff !important;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day--other-month {
+	color: #bbb;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-nav span {
+	color: #333;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-nav button {
+	color: #666;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-calendar-nav button:hover {
+	color: #333;
+	background: #f0f0f0;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-popup-btns button {
+	color: #333;
+}
+
+.dashboard-library-calendar-popup .dashboard-task-reminder-time select {
+	background: #f5f5f5;
+	color: #333;
+	border-color: #ddd;
+}
+
 .dashboard-task-reminder-calendar-nav {
 	display: flex;
 	align-items: center;
@@ -8989,12 +9037,12 @@
 	margin-top: 4px;
 	padding: 12px;
 	border-radius: var(--db-radius-md, 10px);
-	border: 1px solid var(--db-border-card, rgba(255, 255, 255, 0.10));
-	background: var(--db-bg, var(--db-bg-card, #1e1e2e));
+	border: 1px solid #e0e0e0;
+	background: #ffffff;
 	max-width: 320px;
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 	z-index: 10000;
-	color: var(--db-text, var(--text-normal));
+	color: #1a1a1a;
 }
 
 .dashboard-library-filter-popup-row {
@@ -9015,10 +9063,10 @@
 
 .dashboard-library-filter-popup-prop {
 	padding: 4px 8px;
-	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
-	border-radius: var(--db-radius-sm, 6px);
-	background: var(--db-bg-input, rgba(255, 255, 255, 0.05));
-	color: var(--db-text, var(--text-normal));
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	background: #f5f5f5;
+	color: #333;
 	font-size: 12px;
 	outline: none;
 	min-width: 120px;
@@ -9033,24 +9081,24 @@
 .dashboard-library-filter-date-btn {
 	cursor: pointer;
 	padding: 4px 10px;
-	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
-	border-radius: var(--db-radius-sm, 6px);
-	background: var(--db-bg-input, rgba(255, 255, 255, 0.05));
-	color: var(--db-text-muted, var(--text-muted));
+	border: 1px solid #ddd;
+	border-radius: 6px;
+	background: #f5f5f5;
+	color: #888;
 	font-size: 12px;
 	font-family: var(--db-font, var(--font-interface));
 	transition: all 0.15s ease;
 }
 
 .dashboard-library-filter-date-btn:hover {
-	border-color: var(--db-accent, var(--interactive-accent));
-	color: var(--db-text, var(--text-normal));
+	border-color: var(--interactive-accent, #7c3aed);
+	color: #333;
 }
 
 .dashboard-library-filter-date-btn.has-value {
-	color: var(--db-accent, var(--interactive-accent));
-	border-color: var(--db-accent, var(--interactive-accent));
-	background: var(--db-bg-btn, rgba(139, 92, 246, 0.10));
+	color: var(--interactive-accent, #7c3aed);
+	border-color: var(--interactive-accent, #7c3aed);
+	background: rgba(139, 92, 246, 0.08);
 }
 
 
