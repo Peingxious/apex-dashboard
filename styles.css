@@ -9575,3 +9575,31 @@
 	color: var(--db-text-muted, var(--text-muted));
 	user-select: none;
 }
+
+/* Library config modal header */
+.dashboard-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.dashboard-modal-title {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.dashboard-modal-close {
+	cursor: pointer;
+	padding: 4px;
+	border-radius: var(--db-radius-sm, 6px);
+	color: var(--db-text-muted, var(--text-muted));
+	display: flex;
+	align-items: center;
+	transition: all 0.15s ease;
+}
+
+.dashboard-modal-close:hover {
+	color: var(--db-text, var(--text-normal));
+	background: var(--db-bg-hover, rgba(255, 255, 255, 0.05));
+}
