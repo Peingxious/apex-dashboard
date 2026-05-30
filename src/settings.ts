@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Platform, Setting } from 'obsidian';
+import { App, PluginSettingTab, Setting } from 'obsidian';
 import type DashboardPlugin from './main';
 import { DEFAULT_SETTINGS, type DashboardSettings } from './types';
 import { t, setLanguage, type Language } from './i18n';
@@ -100,10 +100,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 					};
 					await this.plugin.saveSettings();
 				}));
-		// Widget settings - desktop only
-		if (!Platform.isMobile) {
-			this.renderWidgetSettings(containerEl);
-		}
+		this.renderWidgetSettings(containerEl);
 
 		this.renderLunarSettings(containerEl);
 

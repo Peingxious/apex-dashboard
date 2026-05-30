@@ -24,7 +24,7 @@ export interface DashboardSettings {
 	widgetOrder: string[];
 	countdownEnabled: boolean;
 	countdownTargetDate: string;
-	countdownDisplayMode: 'days' | 'hours';
+	countdownDisplayMode: 'days' | 'hours' | 'minutes';
 	countdownReminderDays: number;
 	countdownLabel: string;
 	readingEnabled: boolean;

@@ -3897,6 +3897,10 @@
 	letter-spacing: 0.04em;
 	text-align: center;
 	margin-top: 2px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 6px;
 }
 
 .dashboard-sidebar-lunar-badges {
@@ -3918,6 +3922,11 @@
 .dashboard-sidebar-lunar-badge--holiday {
 	background: rgba(239, 68, 68, 0.12);
 	color: #ef4444;
+}
+
+.dashboard-sidebar-lunar-badge--inline {
+	font-size: 0.55em;
+	flex-shrink: 0;
 }
 
 .dashboard-sidebar-lunar-badge--festival {
@@ -4234,6 +4243,17 @@
 .fortune-result-reveal-btn:hover {
 	background: #B22222;
 	color: #f7f1e3;
+}
+
+.fortune-result-reveal-btn--hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+.fortune-result-reveal-btn--show {
+	opacity: 1;
+	pointer-events: auto;
+	transition: opacity 0.5s ease;
 }
 
 /* Back Face Content */

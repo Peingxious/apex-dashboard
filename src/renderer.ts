@@ -644,8 +644,9 @@ export function renderSidebarCountdown(
 	const diffMs = target.getTime() - now.getTime();
 	const remainDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 	const remainHours = Math.ceil(diffMs / (1000 * 60 * 60));
-	const isHours = settings.countdownDisplayMode === 'hours';
-	const currentVal = isHours ? remainHours : remainDays;
+	const displayMode = settings.countdownDisplayMode;
+	const remainMinutes = Math.ceil(diffMs / (1000 * 60));
+	const currentVal = displayMode === 'minutes' ? remainMinutes : displayMode === 'hours' ? remainHours : remainDays;
 
 	// "距离xx还有" label above the number
 	if (settings.countdownLabel) {
@@ -655,7 +656,7 @@ export function renderSidebarCountdown(
 	// Value display with flip
 	const flipWrap = content.createDiv({ cls: 'dashboard-sidebar-countdown-flip' });
 	const valueEl = flipWrap.createDiv({ cls: 'dashboard-sidebar-countdown-value', text: String(currentVal) });
-	flipWrap.createDiv({ cls: 'dashboard-sidebar-countdown-unit', text: isHours ? t('countdown.hours') : t('countdown.days') });
+	flipWrap.createDiv({ cls: 'dashboard-sidebar-countdown-unit', text: displayMode === 'minutes' ? t('countdown.minutes') : displayMode === 'hours' ? t('countdown.hours') : t('countdown.days') });
 
 	// Auto-refresh with flip animation
 	let prevVal = currentVal;
@@ -668,7 +669,7 @@ export function renderSidebarCountdown(
 			return;
 		}
 		const diff = target.getTime() - now2.getTime();
-		const newVal = isHours ? Math.ceil(diff / (1000 * 60 * 60)) : Math.ceil(diff / (1000 * 60 * 60 * 24));
+		const newVal = displayMode === 'minutes' ? Math.ceil(diff / (1000 * 60)) : displayMode === 'hours' ? Math.ceil(diff / (1000 * 60 * 60)) : Math.ceil(diff / (1000 * 60 * 60 * 24));
 		if (newVal !== prevVal) {
 			prevVal = newVal;
 			valueEl.textContent = String(newVal);
