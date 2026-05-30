@@ -2285,12 +2285,18 @@
 }
 
 .dashboard-countdown-time-select {
-	width: 70px !important;
+	width: 70px;
 	min-width: 70px;
 	padding: 8px 4px;
 	text-align: center;
 	-webkit-appearance: menulist;
 	appearance: menulist;
+	border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+	border-radius: var(--db-radius-sm, 6px);
+	background: var(--db-bg-input, rgba(255, 255, 255, 0.04));
+	color: var(--db-text, var(--text-normal));
+	font-size: 0.95em;
+	font-family: var(--db-font, var(--font-interface));
 }
 
 .dashboard-countdown-time-sep {
