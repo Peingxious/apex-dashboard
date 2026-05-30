@@ -2285,7 +2285,9 @@
 }
 
 .dashboard-countdown-time-select {
-	width: 70px;
+	width: 70px !important;
+	min-width: 70px;
+	padding: 8px 4px;
 	text-align: center;
 	-webkit-appearance: menulist;
 	appearance: menulist;
