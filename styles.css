@@ -4023,14 +4023,14 @@
 }
 
 /* ===== Fortune Stick Modal — Traditional Parchment ===== */
-.modal:has(.fortune-card) {
+.modal.modal--fortune {
 	background: transparent !important;
 	border: none !important;
 	box-shadow: none !important;
 	backdrop-filter: none !important;
 }
 
-.modal-bg:has(.fortune-card) {
+.modal-bg.modal-bg--fortune {
 	background: rgba(0, 0, 0, 0.55) !important;
 	backdrop-filter: blur(2px);
 	-webkit-backdrop-filter: blur(2px);
@@ -5780,7 +5780,7 @@
 	background: linear-gradient(135deg, var(--db-accent) 0%, var(--db-bg-card-hover) 50%, var(--db-bg-card) 100%);
 }
 
-.dashboard-card:has(.dashboard-project-cover) {
+.dashboard-card.dashboard-card--cover {
 	padding-top: 0;
 	overflow: hidden;
 }
@@ -5812,7 +5812,7 @@
 }
 
 /* Glass modal: override Obsidian's .modal container */
-.modal:has(.dashboard-modal) {
+.modal.modal--dashboard {
 	background: transparent !important;
 	border: none !important;
 	box-shadow: none !important;
@@ -5824,31 +5824,31 @@
 	scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 
-.modal:has(.dashboard-modal)::-webkit-scrollbar {
+.modal.modal--dashboard::-webkit-scrollbar {
 	width: 4px;
 }
 
-.modal:has(.dashboard-modal)::-webkit-scrollbar-track {
+.modal.modal--dashboard::-webkit-scrollbar-track {
 	background: transparent;
 }
 
-.modal:has(.dashboard-modal)::-webkit-scrollbar-thumb {
+.modal.modal--dashboard::-webkit-scrollbar-thumb {
 	background: rgba(255, 255, 255, 0.12);
 	border-radius: 4px;
 }
 
-.modal:has(.dashboard-modal)::-webkit-scrollbar-thumb:hover {
+.modal.modal--dashboard::-webkit-scrollbar-thumb:hover {
 	background: rgba(255, 255, 255, 0.25);
 }
 
-.modal-bg:has(.dashboard-modal) {
+.modal-bg.modal-bg--dashboard {
 	background: rgba(0, 0, 0, 0.5) !important;
 	backdrop-filter: blur(4px);
 	-webkit-backdrop-filter: blur(4px);
 }
 
-.modal-close-button:has(~ .dashboard-modal),
-.modal:has(.dashboard-modal) .modal-close-button {
+.modal.modal--dashboard > .modal-close-button,
+.modal.modal--dashboard .modal-close-button {
 	color: var(--db-text-muted) !important;
 }
 

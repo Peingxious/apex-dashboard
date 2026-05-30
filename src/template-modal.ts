@@ -29,6 +29,8 @@ export class TemplatePickerModal extends Modal {
 		const { contentEl, containerEl } = this;
 		containerEl.dataset.theme = this.theme;
 		contentEl.addClass('dashboard-modal');
+		containerEl.addClass('modal--dashboard');
+		containerEl.parentElement?.addClass('modal-bg--dashboard');
 		this.render();
 	}
 

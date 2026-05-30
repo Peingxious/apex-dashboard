@@ -937,7 +937,8 @@ export class DashboardView extends ItemView {
 			if (this.plugin.settings.countdownEnabled && this.plugin.settings.countdownTargetDate && this.plugin.settings.countdownReminderDays > 0) {
 				const ckKey = 'countdown-remind';
 				if (!this.firedReminders.has(ckKey)) {
-					const target = new Date(this.plugin.settings.countdownTargetDate + 'T00:00:00');
+					const raw = this.plugin.settings.countdownTargetDate;
+				const target = raw.includes('T') ? new Date(raw) : new Date(raw + 'T00:00:00');
 					const diffMs = target.getTime() - now.getTime();
 					const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 					if (daysLeft >= 0 && daysLeft <= this.plugin.settings.countdownReminderDays) {

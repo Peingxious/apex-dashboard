@@ -80,9 +80,9 @@ All themes support both Obsidian light and dark modes.
 
 ## Installation
 
-### From Obsidian Community Plugins (coming soon)
+### From Obsidian Community Plugins
 1. Open Settings > Community Plugins
-2. Search for "Apex Dashboard"
+2. Browse and search for "Apex Dashboard"
 3. Click Install, then Enable
 
 ### Manual Installation

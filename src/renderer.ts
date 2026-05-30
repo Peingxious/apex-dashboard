@@ -630,7 +630,7 @@ export function renderSidebarCountdown(
 		return;
 	}
 
-	const target = new Date(targetDate + 'T00:00:00');
+	const target = targetDate.includes('T') ? new Date(targetDate) : new Date(targetDate + 'T00:00:00');
 	const now = new Date();
 
 	if (now >= target) {
@@ -1821,6 +1821,10 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	const isProjectLike = !isMemo && !isTask && !isWidget;
 	const isDashboardSection = sectionType === 'dashboard';
 	const showCover = isProjectLike && !isDashboardSection && sectionType !== 'notes';
+
+	if (showCover) {
+		el.addClass('dashboard-card--cover');
+	}
 
 	if (card.coverImage && showCover) {
 		const resolved = resolveVaultImage(app, card.coverImage);
