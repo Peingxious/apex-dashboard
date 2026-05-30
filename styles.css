@@ -8357,6 +8357,59 @@
 	color: var(--db-text, var(--text-normal));
 }
 
+/* Countdown calendar popup (outside dashboard-root, use Obsidian theme vars) */
+.dashboard-countdown-calendar-popup {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	border-color: var(--background-modifier-border);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-day {
+	color: var(--text-normal);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-day--today {
+	color: var(--interactive-accent);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-day--selected {
+	background: var(--interactive-accent) !important;
+	color: var(--text-on-accent) !important;
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-day--other-month {
+	color: var(--text-faint);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-nav span {
+	color: var(--text-normal);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-nav button {
+	color: var(--text-muted);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-calendar-nav button:hover {
+	color: var(--text-normal);
+	background: var(--background-modifier-hover);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-popup-btns button {
+	color: var(--text-normal);
+	background: var(--background-secondary);
+	border-color: var(--background-modifier-border);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-popup-btns button:hover {
+	background: var(--background-modifier-hover);
+}
+
+.dashboard-countdown-calendar-popup .dashboard-task-reminder-popup-btns button.mod-cta {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+	border-color: var(--interactive-accent);
+}
+
 /* Calendar popup on body (outside theme scope) */
 .dashboard-library-calendar-popup,
 .dashboard-task-reminder-popup.dashboard-library-calendar-popup {
