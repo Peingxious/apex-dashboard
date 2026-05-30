@@ -2266,6 +2266,37 @@
 	appearance: menulist;
 }
 
+.dashboard-countdown-date-trigger {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	cursor: pointer;
+	user-select: none;
+}
+
+.dashboard-countdown-date-trigger:hover {
+	border-color: var(--interactive-accent);
+}
+
+.dashboard-countdown-time-wrap {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.dashboard-countdown-time-select {
+	width: 70px;
+	text-align: center;
+	-webkit-appearance: menulist;
+	appearance: menulist;
+}
+
+.dashboard-countdown-time-sep {
+	font-size: 1.1em;
+	font-weight: 700;
+	padding: 0 2px;
+}
+
 /* Weather Widget */
 .dashboard-sidebar-weather-top {
 	display: flex;
