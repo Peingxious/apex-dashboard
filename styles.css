@@ -8390,6 +8390,10 @@
 	color: #333;
 }
 
+.dashboard-library-calendar-popup .dashboard-task-reminder-popup-btns button.mod-cta {
+	color: #fff;
+}
+
 .dashboard-library-calendar-popup .dashboard-task-reminder-time select {
 	background: #f5f5f5;
 	color: #333;
