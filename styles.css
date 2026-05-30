@@ -2287,7 +2287,9 @@
 .dashboard-countdown-time-select {
 	width: 70px;
 	min-width: 70px;
-	padding: 8px 4px;
+	height: 36px;
+	padding: 0 4px;
+	line-height: 36px;
 	text-align: center;
 	-webkit-appearance: menulist;
 	appearance: menulist;
@@ -2297,6 +2299,7 @@
 	color: var(--db-text, var(--text-normal));
 	font-size: 0.95em;
 	font-family: var(--db-font, var(--font-interface));
+	box-sizing: border-box;
 }
 
 .dashboard-countdown-time-sep {
