@@ -55,10 +55,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 					lilac: t('settings.styleLilac'),
 					haze: t('settings.styleHaze'),
 					ember: t('settings.styleEmber'),
-					dusk: t('settings.styleDusk'),
 					jade: t('settings.styleJade'),
-					sakura: t('settings.styleSakura'),
-					moonlight: t('settings.styleMoonlight'),
 					carbon: t('settings.styleCarbon'),
 				})
 				.setValue(this.plugin.settings.stylePreset)

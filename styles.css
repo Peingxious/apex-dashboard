@@ -14,7 +14,7 @@
    ================================================================= */
 
 /* ----- 1. AURORA (极光) ----- */
-.dashboard-root[data-theme="aurora"] {
+.apex-dashboard-root[data-theme="aurora"] {
 		--db-bg: #0f0a1e;
 		--db-bg-section: rgba(139, 92, 246, 0.05);
 	--db-bg-card: rgba(255, 255, 255, 0.06);
@@ -75,7 +75,7 @@
 	--db-aurora-size: 400% 400%;
 	--db-aurora-speed: 12s;
 }
-	.theme-light .dashboard-root[data-theme="aurora"] {
+	.theme-light .apex-dashboard-root[data-theme="aurora"] {
 		--db-bg: #f3f0ff;
 		--db-bg-section: rgba(139, 92, 246, 0.06);
 		--db-bg-card-hover: rgba(255, 255, 255, 0.70);
@@ -116,7 +116,7 @@
 				#f3f0ff 100%);
 	}
 /* ----- 2. PRISM (棱镜) ----- */
-.dashboard-root[data-theme="prism"] {
+.apex-dashboard-root[data-theme="prism"] {
 	--db-bg: #12081a;
 	--db-bg-section: rgba(244, 63, 94, 0.04);
 	--db-bg-card: rgba(255, 255, 255, 0.06);
@@ -176,7 +176,7 @@
 	--db-aurora-size: 400% 400%;
 	--db-aurora-speed: 14s;
 }
-.theme-light .dashboard-root[data-theme="prism"] {
+.theme-light .apex-dashboard-root[data-theme="prism"] {
 	--db-bg: #faf5f8;
 	--db-bg-section: rgba(244, 63, 94, 0.05);
 	--db-bg-card: rgba(255, 255, 255, 0.55);
@@ -226,9 +226,8 @@
 		#faf5f8 100%);
 }
 
-
 /* ----- 4. EARTH ----- */
-.dashboard-root[data-theme="earth"] {
+.apex-dashboard-root[data-theme="earth"] {
 	--db-bg: #F5EFE6;
 	--db-bg-section: #EDE5D8;
 	--db-bg-card: #FAF6F0;
@@ -278,7 +277,7 @@
 	--db-quote-border: #d97706;
 	--db-link: #d97706;
 }
-.theme-dark .dashboard-root[data-theme="earth"] {
+.theme-dark .apex-dashboard-root[data-theme="earth"] {
 	--db-bg: #1c1812;
 	--db-bg-section: #252018;
 	--db-bg-card: #1e1a14;
@@ -314,7 +313,7 @@
 }
 
 /* ----- 5. NORDIC ----- */
-.dashboard-root[data-theme="nordic"] {
+.apex-dashboard-root[data-theme="nordic"] {
 	--db-bg: #F8FAFC;
 	--db-bg-section: #F1F5F9;
 	--db-bg-card: #FFFFFF;
@@ -364,7 +363,7 @@
 	--db-quote-border: #0ea5e9;
 	--db-link: #3b82f6;
 }
-.theme-dark .dashboard-root[data-theme="nordic"] {
+.theme-dark .apex-dashboard-root[data-theme="nordic"] {
 	--db-bg: #0f172a;
 	--db-bg-section: #1e293b;
 	--db-bg-card: #1e293b;
@@ -400,7 +399,7 @@
 }
 
 /* ----- 6. ISLAND (动物森友会 — 淡彩无人岛) ----- */
-.dashboard-root[data-theme="island"] {
+.apex-dashboard-root[data-theme="island"] {
 	/* 背景：奶油白底，区块/侧栏用淡绿淡蓝 */
 	--db-bg: #f8f8f0;
 	--db-bg-section: #e6f4e8;
@@ -459,7 +458,7 @@
 	--db-quote-border: #82d5bb;
 	--db-link: #19c8b9;
 }
-.theme-dark .dashboard-root[data-theme="island"] {
+.theme-dark .apex-dashboard-root[data-theme="island"] {
 	--db-bg: #1a2a1e;
 	--db-bg-section: #223428;
 	--db-bg-card: #263830;
@@ -495,7 +494,7 @@
 }
 
 /* ----- 7. TUNDRA (苔原 — Earth clone, transparent sections) ----- */
-.dashboard-root[data-theme="tundra"] {
+.apex-dashboard-root[data-theme="tundra"] {
 	--db-bg: #eef0ec;
 	--db-bg-section: transparent;
 	--db-bg-card: #FAF6F0;
@@ -556,7 +555,7 @@
 	--db-aurora-size: 400% 400%;
 	--db-aurora-speed: 14s;
 }
-.theme-dark .dashboard-root[data-theme="tundra"] {
+.theme-dark .apex-dashboard-root[data-theme="tundra"] {
 	--db-bg: #141816;
 	--db-bg-section: transparent;
 		--db-bg-card: rgba(107, 143, 94, 0.10);
@@ -604,7 +603,7 @@
 }
 
 /* ----- 8. HAZE (薄雾 — Neon clone, transparent sections) ----- */
-.dashboard-root[data-theme="haze"] {
+.apex-dashboard-root[data-theme="haze"] {
 	--db-bg: #0a0d14;
 	--db-bg-section: transparent;
 	--db-bg-card: transparent;
@@ -654,7 +653,7 @@
 	--db-quote-border: #ff00aa;
 	--db-link: #00f0ff;
 }
-.theme-light .dashboard-root[data-theme="haze"] {
+.theme-light .apex-dashboard-root[data-theme="haze"] {
 	--db-bg: #e8ecf2;
 	--db-bg-section: transparent;
 	--db-bg-card: transparent;
@@ -691,7 +690,7 @@
 }
 
 /* ----- 9. BLOSSOM (花漾 — Prism clone, transparent sections) ----- */
-.dashboard-root[data-theme="blossom"] {
+.apex-dashboard-root[data-theme="blossom"] {
 	--db-bg: #12081a;
 	--db-bg-section: transparent;
 	--db-bg-card: rgba(255, 255, 255, 0.06);
@@ -751,7 +750,7 @@
 	--db-aurora-size: 400% 400%;
 	--db-aurora-speed: 14s;
 }
-.theme-light .dashboard-root[data-theme="blossom"] {
+.theme-light .apex-dashboard-root[data-theme="blossom"] {
 	--db-bg: #faf5f8;
 	--db-bg-section: transparent;
 	--db-bg-card: rgba(255, 255, 255, 0.55);
@@ -802,13 +801,13 @@
 }
 
 /* Blossom: static gradient background (like prism) */
-.dashboard-root[data-theme="blossom"] {
+.apex-dashboard-root[data-theme="blossom"] {
 	background: var(--db-aurora-bg);
 	transition: color 0.3s ease;
 }
 
 /* Tundra: aurora animation — cold gray + avocado green */
-.dashboard-root[data-theme="tundra"] {
+.apex-dashboard-root[data-theme="tundra"] {
 	background: var(--db-aurora-bg);
 	background-size: var(--db-aurora-size);
 	animation: db-aurora-shift var(--db-aurora-speed) ease-in-out infinite;
@@ -817,7 +816,7 @@
 }
 
 /* Haze: smoky mist gradient — white top, blue bottom */
-.dashboard-root[data-theme="haze"] {
+.apex-dashboard-root[data-theme="haze"] {
 	background:
 		radial-gradient(ellipse at 20% 10%, rgba(220, 230, 245, 0.6) 0%, transparent 50%),
 		radial-gradient(ellipse at 75% 5%, rgba(200, 215, 240, 0.4) 0%, transparent 45%),
@@ -826,7 +825,7 @@
 		linear-gradient(180deg, #e8ecf2 0%, #c8d4e8 30%, #6882a8 70%, #0a0d14 100%);
 	transition: color 0.3s ease;
 }
-.theme-dark .dashboard-root[data-theme="haze"] {
+.theme-dark .apex-dashboard-root[data-theme="haze"] {
 	background:
 		radial-gradient(ellipse at 30% 15%, rgba(60, 80, 120, 0.15) 0%, transparent 50%),
 		radial-gradient(ellipse at 70% 10%, rgba(50, 70, 110, 0.10) 0%, transparent 45%),
@@ -835,11 +834,11 @@
 }
 
 /* ===== Shared: transparent sections for tundra, haze, blossom, matcha, lilac ===== */
-.dashboard-root[data-theme="tundra"] .dashboard-section-row,
-.dashboard-root[data-theme="haze"] .dashboard-section-row,
-.dashboard-root[data-theme="blossom"] .dashboard-section-row,
-.dashboard-root[data-theme="matcha"] .dashboard-section-row,
-.dashboard-root[data-theme="lilac"] .dashboard-section-row {
+.apex-dashboard-root[data-theme="tundra"] .dashboard-section-row,
+.apex-dashboard-root[data-theme="haze"] .dashboard-section-row,
+.apex-dashboard-root[data-theme="blossom"] .dashboard-section-row,
+.apex-dashboard-root[data-theme="matcha"] .dashboard-section-row,
+.apex-dashboard-root[data-theme="lilac"] .dashboard-section-row {
 	background: transparent;
 	border: none;
 	backdrop-filter: none;
@@ -847,11 +846,11 @@
 	padding: 6px;
 }
 
-.dashboard-root[data-theme="tundra"] .dashboard-section,
-.dashboard-root[data-theme="haze"] .dashboard-section,
-.dashboard-root[data-theme="blossom"] .dashboard-section,
-.dashboard-root[data-theme="matcha"] .dashboard-section,
-.dashboard-root[data-theme="lilac"] .dashboard-section {
+.apex-dashboard-root[data-theme="tundra"] .dashboard-section,
+.apex-dashboard-root[data-theme="haze"] .dashboard-section,
+.apex-dashboard-root[data-theme="blossom"] .dashboard-section,
+.apex-dashboard-root[data-theme="matcha"] .dashboard-section,
+.apex-dashboard-root[data-theme="lilac"] .dashboard-section {
 	background: transparent;
 	border: none;
 	backdrop-filter: none;
@@ -859,31 +858,28 @@
 }
 
 /* Tighter kanban gap for transparent-section themes */
-.dashboard-root[data-theme="tundra"] .dashboard-kanban,
-.dashboard-root[data-theme="haze"] .dashboard-kanban,
-.dashboard-root[data-theme="blossom"] .dashboard-kanban,
-.dashboard-root[data-theme="matcha"] .dashboard-kanban,
-.dashboard-root[data-theme="lilac"] .dashboard-kanban {
+.apex-dashboard-root[data-theme="tundra"] .dashboard-kanban,
+.apex-dashboard-root[data-theme="haze"] .dashboard-kanban,
+.apex-dashboard-root[data-theme="blossom"] .dashboard-kanban,
+.apex-dashboard-root[data-theme="matcha"] .dashboard-kanban,
+.apex-dashboard-root[data-theme="lilac"] .dashboard-kanban {
 	gap: 8px;
 }
 
 /* Allow card hover translate without clipping top border */
-.dashboard-root[data-theme="tundra"] .dashboard-section-cards,
-.dashboard-root[data-theme="haze"] .dashboard-section-cards,
-.dashboard-root[data-theme="blossom"] .dashboard-section-cards,
-.dashboard-root[data-theme="matcha"] .dashboard-section-cards,
-.dashboard-root[data-theme="lilac"] .dashboard-section-cards,
-.dashboard-root[data-theme="ember"] .dashboard-section-cards,
-.dashboard-root[data-theme="dusk"] .dashboard-section-cards,
-.dashboard-root[data-theme="jade"] .dashboard-section-cards,
-.dashboard-root[data-theme="sakura"] .dashboard-section-cards,
-.dashboard-root[data-theme="moonlight"] .dashboard-section-cards,
-.dashboard-root[data-theme="carbon"] .dashboard-section-cards {
+.apex-dashboard-root[data-theme="tundra"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="haze"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="blossom"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="matcha"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="lilac"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="ember"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="jade"] .dashboard-section-cards,
+.apex-dashboard-root[data-theme="carbon"] .dashboard-section-cards {
 	overflow: visible;
 }
 
 /* ----- 10. EMBER (余烬) — Warm smoke, cloned from Haze ----- */
-.dashboard-root[data-theme="ember"] {
+.apex-dashboard-root[data-theme="ember"] {
 	--db-bg: #f5f0ea;
 	--db-bg-section: transparent;
 	--db-bg-card: transparent;
@@ -933,7 +929,7 @@
 	--db-quote-border: #f5c16c;
 	--db-link: #e07a4a;
 }
-.theme-dark .dashboard-root[data-theme="ember"] {
+.theme-dark .apex-dashboard-root[data-theme="ember"] {
 	--db-bg: #18120e;
 	--db-bg-section: transparent;
 	--db-bg-card: transparent;
@@ -968,7 +964,7 @@
 	--db-link: #e07a4a;
 }
 /* Ember: warm smoke gradient */
-.dashboard-root[data-theme="ember"] {
+.apex-dashboard-root[data-theme="ember"] {
 	background:
 		radial-gradient(ellipse at 20% 10%, rgba(245, 193, 108, 0.3) 0%, transparent 50%),
 		radial-gradient(ellipse at 75% 5%, rgba(224, 160, 100, 0.2) 0%, transparent 45%),
@@ -977,7 +973,7 @@
 		linear-gradient(180deg, #f5f0ea 0%, #e8d4c0 30%, #8a4a28 70%, #18120e 100%);
 	transition: color 0.3s ease;
 }
-.theme-dark .dashboard-root[data-theme="ember"] {
+.theme-dark .apex-dashboard-root[data-theme="ember"] {
 	background:
 		radial-gradient(ellipse at 30% 15%, rgba(180, 100, 50, 0.12) 0%, transparent 50%),
 		radial-gradient(ellipse at 70% 10%, rgba(150, 80, 40, 0.08) 0%, transparent 45%),
@@ -985,111 +981,8 @@
 		linear-gradient(180deg, #201810 0%, #18120e 40%, #0e0a08 100%);
 }
 
-/* ----- 11. DUSK (暮霞) — Purple twilight mist, cloned from Haze ----- */
-.dashboard-root[data-theme="dusk"] {
-	--db-bg: #f5f0f8;
-	--db-bg-section: transparent;
-	--db-bg-card: transparent;
-	--db-bg-card-hover: rgba(192, 132, 252, 0.06);
-	--db-bg-sidebar: transparent;
-	--db-bg-input: rgba(192, 132, 252, 0.05);
-	--db-bg-btn: rgba(192, 132, 252, 0.08);
-	--db-bg-btn-hover: rgba(192, 132, 252, 0.14);
-	--db-bg-banner: rgba(192, 132, 252, 0.06);
-	--db-bg-overlay: linear-gradient(135deg, rgba(40,10,50,0.5) 0%, rgba(40,10,50,0.2) 100%);
-	--db-bg-hover: rgba(192, 132, 252, 0.05);
-	--db-bg-hover-strong: rgba(192, 132, 252, 0.09);
-	--db-bg-add-section: rgba(192, 132, 252, 0.04);
-	--db-bg-drop-indicator: rgba(192, 132, 252, 0.08);
-
-	--db-border: rgba(192, 132, 252, 0.08);
-	--db-border-card: rgba(192, 132, 252, 0.18);
-	--db-border-section: transparent;
-	--db-border-sidebar: transparent;
-	--db-border-input: rgba(192, 132, 252, 0.08);
-	--db-border-input-focus: #c084fc;
-	--db-border-btn: rgba(192, 132, 252, 0.10);
-	--db-border-add-section: rgba(192, 132, 252, 0.12);
-
-	--db-text: #1a0e20;
-	--db-text-muted: #f0e8f5;
-	--db-text-faint: #c0b0d0;
-	--db-text-inverse: rgba(255, 255, 255, 0.95);
-	--db-text-inverse-muted: rgba(255, 255, 255, 0.55);
-
-	--db-accent: #c084fc;
-	--db-accent-light: #f0abfc;
-	--db-danger: #f43f5e;
-
-	--db-shadow-card: 0 2px 8px rgba(60, 20, 80, 0.06);
-	--db-shadow-card-hover: 0 6px 20px rgba(192, 132, 252, 0.10);
-	--db-backdrop-blur: none;
-
-	--db-radius-sm: 14px;
-	--db-radius-md: 16px;
-	--db-radius-lg: 20px;
-
-	--db-font: 'Quicksand', 'ZCOOL KuaiLe', var(--font-interface);
-	--db-progress-from: #c084fc;
-	--db-progress-to: #f0abfc;
-	--db-checkbox: #c084fc;
-	--db-quote-border: #f0abfc;
-	--db-link: #c084fc;
-}
-.theme-dark .dashboard-root[data-theme="dusk"] {
-	--db-bg: #100a18;
-	--db-bg-section: transparent;
-	--db-bg-card: transparent;
-	--db-bg-card-hover: rgba(192, 132, 252, 0.08);
-	--db-bg-sidebar: transparent;
-	--db-bg-input: rgba(192, 132, 252, 0.05);
-	--db-bg-btn: rgba(192, 132, 252, 0.08);
-	--db-bg-btn-hover: rgba(192, 132, 252, 0.14);
-	--db-bg-banner: rgba(192, 132, 252, 0.06);
-	--db-bg-overlay: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%);
-	--db-bg-hover: rgba(192, 132, 252, 0.04);
-	--db-bg-hover-strong: rgba(192, 132, 252, 0.08);
-	--db-bg-add-section: rgba(192, 132, 252, 0.04);
-	--db-border: rgba(192, 132, 252, 0.08);
-	--db-border-card: rgba(192, 132, 252, 0.15);
-	--db-border-section: transparent;
-	--db-border-sidebar: transparent;
-	--db-border-input: rgba(192, 132, 252, 0.08);
-	--db-border-input-focus: #c084fc;
-	--db-text: #e8d8f0;
-	--db-text-muted: #b8a0c8;
-	--db-text-faint: #786088;
-	--db-accent: #c084fc;
-	--db-accent-light: #f0abfc;
-	--db-danger: #f43f5e;
-	--db-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
-	--db-shadow-card-hover: 0 6px 20px rgba(192, 132, 252, 0.12);
-	--db-progress-from: #c084fc;
-	--db-progress-to: #f0abfc;
-	--db-checkbox: #c084fc;
-	--db-quote-border: #f0abfc;
-	--db-link: #c084fc;
-}
-/* Dusk: purple twilight mist gradient */
-.dashboard-root[data-theme="dusk"] {
-	background:
-		radial-gradient(ellipse at 20% 10%, rgba(240, 171, 252, 0.25) 0%, transparent 50%),
-		radial-gradient(ellipse at 75% 5%, rgba(200, 140, 240, 0.2) 0%, transparent 45%),
-		radial-gradient(ellipse at 40% 85%, rgba(16, 10, 24, 0.9) 0%, transparent 50%),
-		radial-gradient(ellipse at 85% 75%, rgba(24, 14, 36, 0.7) 0%, transparent 45%),
-		linear-gradient(180deg, #f5f0f8 0%, #e0ccf0 30%, #6b3a8a 70%, #100a18 100%);
-	transition: color 0.3s ease;
-}
-.theme-dark .dashboard-root[data-theme="dusk"] {
-	background:
-		radial-gradient(ellipse at 30% 15%, rgba(140, 80, 180, 0.12) 0%, transparent 50%),
-		radial-gradient(ellipse at 70% 10%, rgba(120, 60, 160, 0.08) 0%, transparent 45%),
-		radial-gradient(ellipse at 50% 80%, rgba(6, 4, 10, 0.6) 0%, transparent 50%),
-		linear-gradient(180deg, #18101e 0%, #100a18 40%, #0a0610 100%);
-}
-
 /* ----- 12. JADE (翡翠) — Green bamboo mist, cloned from Haze ----- */
-.dashboard-root[data-theme="jade"] {
+.apex-dashboard-root[data-theme="jade"] {
 	--db-bg: #f0f5f2;
 	--db-bg-section: transparent;
 	--db-bg-card: transparent;
@@ -1139,7 +1032,7 @@
 	--db-quote-border: #fbbf24;
 	--db-link: #10b981;
 }
-.theme-dark .dashboard-root[data-theme="jade"] {
+.theme-dark .apex-dashboard-root[data-theme="jade"] {
 	--db-bg: #0a1210;
 	--db-bg-section: transparent;
 	--db-bg-card: transparent;
@@ -1174,7 +1067,7 @@
 	--db-link: #10b981;
 }
 /* Jade: green bamboo mist gradient */
-.dashboard-root[data-theme="jade"] {
+.apex-dashboard-root[data-theme="jade"] {
 	background:
 		radial-gradient(ellipse at 20% 10%, rgba(16, 185, 129, 0.2) 0%, transparent 50%),
 		radial-gradient(ellipse at 75% 5%, rgba(100, 200, 160, 0.15) 0%, transparent 45%),
@@ -1183,7 +1076,7 @@
 		linear-gradient(180deg, #f0f5f2 0%, #c8e0d4 30%, #2a6850 70%, #0a1210 100%);
 	transition: color 0.3s ease;
 }
-.theme-dark .dashboard-root[data-theme="jade"] {
+.theme-dark .apex-dashboard-root[data-theme="jade"] {
 	background:
 		radial-gradient(ellipse at 30% 15%, rgba(40, 120, 80, 0.12) 0%, transparent 50%),
 		radial-gradient(ellipse at 70% 10%, rgba(30, 100, 70, 0.08) 0%, transparent 45%),
@@ -1192,7 +1085,7 @@
 	}
 
 	/* ----- 13. MATCHA (抹茶) — Morandi green, solid warm ----- */
-	.dashboard-root[data-theme="matcha"] {
+	.apex-dashboard-root[data-theme="matcha"] {
 		--db-bg: #b8c8ac;
 		--db-bg-section: transparent;
 		--db-bg-card: #dde4d0;
@@ -1252,7 +1145,7 @@
 		--db-aurora-size: 400% 400%;
 		--db-aurora-speed: 14s;
 	}
-	.theme-light .dashboard-root[data-theme="matcha"] {
+	.theme-light .apex-dashboard-root[data-theme="matcha"] {
 		--db-bg: #dde6d8;
 		--db-bg-section: transparent;
 		--db-bg-card: #e8efe4;
@@ -1303,13 +1196,13 @@
 	}
 
 	/* Matcha: gradient background */
-	.dashboard-root[data-theme="matcha"] {
+	.apex-dashboard-root[data-theme="matcha"] {
 		background: var(--db-aurora-bg);
 		transition: color 0.3s ease;
 	}
 
 	/* ----- 14. LILAC (丁香) — Morandi purple, solid warm ----- */
-	.dashboard-root[data-theme="lilac"] {
+	.apex-dashboard-root[data-theme="lilac"] {
 		--db-bg: #a898b4;
 		--db-bg-section: transparent;
 		--db-bg-card: #d4cce0;
@@ -1369,7 +1262,7 @@
 		--db-aurora-size: 400% 400%;
 		--db-aurora-speed: 14s;
 	}
-	.theme-light .dashboard-root[data-theme="lilac"] {
+	.theme-light .apex-dashboard-root[data-theme="lilac"] {
 		--db-bg: #ddd4e4;
 		--db-bg-section: transparent;
 		--db-bg-card: #e4dce8;
@@ -1420,219 +1313,13 @@
 	}
 
 	/* Lilac: gradient background */
-	.dashboard-root[data-theme="lilac"] {
+	.apex-dashboard-root[data-theme="lilac"] {
 		background: var(--db-aurora-bg);
 		transition: color 0.3s ease;
 	}
 
-	/* ----- 15. SAKURA (樱花) — Pink-white petal mist ----- */
-	.dashboard-root[data-theme="sakura"] {
-		--db-bg: #fdf2f4;
-		--db-bg-section: transparent;
-		--db-bg-card: transparent;
-		--db-bg-card-hover: rgba(255, 143, 163, 0.06);
-		--db-bg-sidebar: transparent;
-		--db-bg-input: rgba(255, 143, 163, 0.05);
-		--db-bg-btn: rgba(255, 143, 163, 0.08);
-		--db-bg-btn-hover: rgba(255, 143, 163, 0.14);
-		--db-bg-banner: rgba(255, 143, 163, 0.06);
-		--db-bg-overlay: linear-gradient(135deg, rgba(80,20,40,0.4) 0%, rgba(80,20,40,0.15) 100%);
-		--db-bg-hover: rgba(255, 143, 163, 0.05);
-		--db-bg-hover-strong: rgba(255, 143, 163, 0.09);
-		--db-bg-add-section: rgba(255, 143, 163, 0.04);
-		--db-bg-drop-indicator: rgba(255, 143, 163, 0.08);
-
-		--db-border: rgba(255, 143, 163, 0.10);
-		--db-border-card: rgba(255, 143, 163, 0.20);
-		--db-border-section: transparent;
-		--db-border-sidebar: transparent;
-		--db-border-input: rgba(255, 143, 163, 0.10);
-		--db-border-input-focus: #ff8fa3;
-		--db-border-btn: rgba(255, 143, 163, 0.12);
-		--db-border-add-section: rgba(255, 143, 163, 0.15);
-
-		--db-text: #2a0e18;
-		--db-text-muted: #f0e0e5;
-		--db-text-faint: #c0a0a8;
-		--db-text-inverse: rgba(255, 255, 255, 0.95);
-		--db-text-inverse-muted: rgba(255, 255, 255, 0.55);
-
-		--db-accent: #ff8fa3;
-		--db-accent-light: #fbb1c4;
-		--db-danger: #e11d48;
-
-		--db-shadow-card: 0 2px 8px rgba(200, 80, 110, 0.06);
-		--db-shadow-card-hover: 0 6px 20px rgba(255, 143, 163, 0.10);
-		--db-backdrop-blur: none;
-
-		--db-radius-sm: 12px;
-		--db-radius-md: 14px;
-		--db-radius-lg: 18px;
-
-		--db-font: 'Quicksand', 'ZCOOL KuaiLe', var(--font-interface);
-		--db-progress-from: #ff8fa3;
-		--db-progress-to: #fbb1c4;
-		--db-checkbox: #ff8fa3;
-		--db-quote-border: #fbb1c4;
-		--db-link: #ff8fa3;
-	}
-	.theme-dark .dashboard-root[data-theme="sakura"] {
-		--db-bg: #180810;
-		--db-bg-section: transparent;
-		--db-bg-card: transparent;
-		--db-bg-card-hover: rgba(255, 143, 163, 0.08);
-		--db-bg-sidebar: transparent;
-		--db-bg-input: rgba(255, 143, 163, 0.05);
-		--db-bg-btn: rgba(255, 143, 163, 0.08);
-		--db-bg-btn-hover: rgba(255, 143, 163, 0.14);
-		--db-bg-banner: rgba(255, 143, 163, 0.06);
-		--db-bg-overlay: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%);
-		--db-bg-hover: rgba(255, 143, 163, 0.04);
-		--db-bg-hover-strong: rgba(255, 143, 163, 0.08);
-		--db-bg-add-section: rgba(255, 143, 163, 0.04);
-		--db-border: rgba(255, 143, 163, 0.08);
-		--db-border-card: rgba(255, 143, 163, 0.15);
-		--db-border-section: transparent;
-		--db-border-sidebar: transparent;
-		--db-border-input: rgba(255, 143, 163, 0.08);
-		--db-border-input-focus: #ff8fa3;
-		--db-text: #f0dce0;
-		--db-text-muted: #b8989f;
-		--db-text-faint: #785860;
-		--db-accent: #ff8fa3;
-		--db-accent-light: #fbb1c4;
-		--db-danger: #f43f5e;
-		--db-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
-		--db-shadow-card-hover: 0 6px 20px rgba(255, 143, 163, 0.12);
-		--db-progress-from: #ff8fa3;
-		--db-progress-to: #fbb1c4;
-		--db-checkbox: #ff8fa3;
-		--db-quote-border: #fbb1c4;
-		--db-link: #ff8fa3;
-	}
-	/* Sakura: pink petal mist gradient */
-	.dashboard-root[data-theme="sakura"] {
-		background:
-			radial-gradient(ellipse at 20% 10%, rgba(251, 177, 196, 0.3) 0%, transparent 50%),
-			radial-gradient(ellipse at 75% 5%, rgba(255, 200, 210, 0.2) 0%, transparent 45%),
-			radial-gradient(ellipse at 40% 85%, rgba(24, 8, 16, 0.9) 0%, transparent 50%),
-			radial-gradient(ellipse at 85% 75%, rgba(32, 12, 20, 0.7) 0%, transparent 45%),
-			linear-gradient(180deg, #fdf2f4 0%, #f5ccd4 30%, #a04860 70%, #180810 100%);
-		transition: color 0.3s ease;
-	}
-	.theme-dark .dashboard-root[data-theme="sakura"] {
-		background:
-			radial-gradient(ellipse at 30% 15%, rgba(200, 80, 110, 0.10) 0%, transparent 50%),
-			radial-gradient(ellipse at 70% 10%, rgba(180, 60, 90, 0.06) 0%, transparent 45%),
-			radial-gradient(ellipse at 50% 80%, rgba(8, 4, 6, 0.6) 0%, transparent 50%),
-			linear-gradient(180deg, #201018 0%, #180810 40%, #10060a 100%);
-	}
-
-	/* ----- 14. MOONLIGHT (月影) — Cold silver night ----- */
-	.dashboard-root[data-theme="moonlight"] {
-		--db-bg: #eceef4;
-		--db-bg-section: transparent;
-		--db-bg-card: transparent;
-		--db-bg-card-hover: rgba(196, 181, 253, 0.06);
-		--db-bg-sidebar: transparent;
-		--db-bg-input: rgba(147, 130, 220, 0.05);
-		--db-bg-btn: rgba(147, 130, 220, 0.08);
-		--db-bg-btn-hover: rgba(147, 130, 220, 0.14);
-		--db-bg-banner: rgba(147, 130, 220, 0.06);
-		--db-bg-overlay: linear-gradient(135deg, rgba(20,20,50,0.5) 0%, rgba(20,20,50,0.2) 100%);
-		--db-bg-hover: rgba(147, 130, 220, 0.05);
-		--db-bg-hover-strong: rgba(147, 130, 220, 0.09);
-		--db-bg-add-section: rgba(147, 130, 220, 0.04);
-		--db-bg-drop-indicator: rgba(196, 181, 253, 0.08);
-
-		--db-border: rgba(147, 130, 220, 0.10);
-		--db-border-card: rgba(196, 181, 253, 0.18);
-		--db-border-section: transparent;
-		--db-border-sidebar: transparent;
-		--db-border-input: rgba(147, 130, 220, 0.10);
-		--db-border-input-focus: #c4b5fd;
-		--db-border-btn: rgba(147, 130, 220, 0.14);
-		--db-border-add-section: rgba(147, 130, 220, 0.12);
-
-		--db-text: #0e0e20;
-		--db-text-muted: #e0dce8;
-		--db-text-faint: #a8a0c0;
-		--db-text-inverse: rgba(255, 255, 255, 0.95);
-		--db-text-inverse-muted: rgba(255, 255, 255, 0.55);
-
-		--db-accent: #c4b5fd;
-		--db-accent-light: #e0d5f5;
-		--db-danger: #f43f5e;
-
-		--db-shadow-card: 0 2px 8px rgba(60, 50, 100, 0.06);
-		--db-shadow-card-hover: 0 6px 20px rgba(196, 181, 253, 0.10);
-		--db-backdrop-blur: none;
-
-		--db-radius-sm: 6px;
-		--db-radius-md: 8px;
-		--db-radius-lg: 10px;
-
-		--db-font: 'DM Sans', 'Noto Sans SC', var(--font-interface);
-		--db-progress-from: #c4b5fd;
-		--db-progress-to: #93a3e0;
-		--db-checkbox: #c4b5fd;
-		--db-quote-border: #93a3e0;
-		--db-link: #c4b5fd;
-	}
-	.theme-dark .dashboard-root[data-theme="moonlight"] {
-		--db-bg: #0a0a18;
-		--db-bg-section: transparent;
-		--db-bg-card: transparent;
-		--db-bg-card-hover: rgba(196, 181, 253, 0.06);
-		--db-bg-sidebar: transparent;
-		--db-bg-input: rgba(196, 181, 253, 0.04);
-		--db-bg-btn: rgba(196, 181, 253, 0.06);
-		--db-bg-btn-hover: rgba(196, 181, 253, 0.10);
-		--db-bg-banner: rgba(196, 181, 253, 0.04);
-		--db-bg-overlay: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 100%);
-		--db-bg-hover: rgba(196, 181, 253, 0.03);
-		--db-bg-hover-strong: rgba(196, 181, 253, 0.06);
-		--db-bg-add-section: rgba(196, 181, 253, 0.02);
-		--db-border: rgba(196, 181, 253, 0.08);
-		--db-border-card: rgba(196, 181, 253, 0.12);
-		--db-border-section: transparent;
-		--db-border-sidebar: transparent;
-		--db-border-input: rgba(196, 181, 253, 0.08);
-		--db-border-input-focus: #c4b5fd;
-		--db-text: #d8d0f0;
-		--db-text-muted: #8880a8;
-		--db-text-faint: #484060;
-		--db-accent: #c4b5fd;
-		--db-accent-light: #e0d5f5;
-		--db-danger: #f43f5e;
-		--db-shadow-card: 0 1px 2px rgba(196, 181, 253, 0.06);
-		--db-shadow-card-hover: 0 0 12px rgba(196, 181, 253, 0.08), 0 4px 16px rgba(0, 0, 0, 0.2);
-		--db-progress-from: #c4b5fd;
-		--db-progress-to: #93a3e0;
-		--db-checkbox: #c4b5fd;
-		--db-quote-border: #93a3e0;
-		--db-link: #c4b5fd;
-	}
-	/* Moonlight: cold silver night gradient */
-	.dashboard-root[data-theme="moonlight"] {
-		background:
-			radial-gradient(ellipse at 20% 10%, rgba(224, 213, 245, 0.35) 0%, transparent 50%),
-			radial-gradient(ellipse at 75% 5%, rgba(196, 181, 253, 0.2) 0%, transparent 45%),
-			radial-gradient(ellipse at 40% 85%, rgba(10, 10, 24, 0.9) 0%, transparent 50%),
-			radial-gradient(ellipse at 85% 75%, rgba(16, 14, 30, 0.7) 0%, transparent 45%),
-			linear-gradient(180deg, #eceef4 0%, #c8c0e0 30%, #3a3080 70%, #0a0a18 100%);
-		transition: color 0.3s ease;
-	}
-	.theme-dark .dashboard-root[data-theme="moonlight"] {
-		background:
-			radial-gradient(ellipse at 30% 15%, rgba(100, 80, 160, 0.10) 0%, transparent 50%),
-			radial-gradient(ellipse at 70% 10%, rgba(80, 60, 140, 0.06) 0%, transparent 45%),
-			radial-gradient(ellipse at 50% 80%, rgba(4, 4, 10, 0.6) 0%, transparent 50%),
-			linear-gradient(180deg, #12101e 0%, #0a0a18 40%, #060610 100%);
-	}
-
 	/* ----- 15. CARBON (日食) — Industrial monochrome ----- */
-	.dashboard-root[data-theme="carbon"] {
+	.apex-dashboard-root[data-theme="carbon"] {
 		--db-bg: #e8e8ea;
 		--db-bg-section: transparent;
 		--db-bg-card: transparent;
@@ -1682,7 +1369,7 @@
 		--db-quote-border: #71717a;
 		--db-link: #a1a1aa;
 	}
-	.theme-dark .dashboard-root[data-theme="carbon"] {
+	.theme-dark .apex-dashboard-root[data-theme="carbon"] {
 		--db-bg: #09090b;
 		--db-bg-section: transparent;
 		--db-bg-card: transparent;
@@ -1717,7 +1404,7 @@
 		--db-link: #a1a1aa;
 	}
 	/* Carbon: industrial monochrome gradient */
-	.dashboard-root[data-theme="carbon"] {
+	.apex-dashboard-root[data-theme="carbon"] {
 		background:
 			radial-gradient(ellipse at 20% 10%, rgba(212, 212, 216, 0.3) 0%, transparent 50%),
 			radial-gradient(ellipse at 75% 5%, rgba(180, 180, 185, 0.2) 0%, transparent 45%),
@@ -1726,7 +1413,7 @@
 			linear-gradient(180deg, #e8e8ea 0%, #c8c8cc 30%, #3a3a40 70%, #09090b 100%);
 		transition: color 0.3s ease;
 	}
-	.theme-dark .dashboard-root[data-theme="carbon"] {
+	.theme-dark .apex-dashboard-root[data-theme="carbon"] {
 		background:
 			radial-gradient(ellipse at 30% 15%, rgba(80, 80, 90, 0.08) 0%, transparent 50%),
 			radial-gradient(ellipse at 70% 10%, rgba(60, 60, 70, 0.05) 0%, transparent 45%),
@@ -1734,13 +1421,10 @@
 			linear-gradient(180deg, #111114 0%, #09090b 40%, #050507 100%);
 	}
 
-	/* ===== Shared: transparent sections for ember, dusk, jade, sakura, moonlight, carbon ===== */
-.dashboard-root[data-theme="ember"] .dashboard-section-row,
-.dashboard-root[data-theme="dusk"] .dashboard-section-row,
-.dashboard-root[data-theme="jade"] .dashboard-section-row,
-.dashboard-root[data-theme="sakura"] .dashboard-section-row,
-.dashboard-root[data-theme="moonlight"] .dashboard-section-row,
-.dashboard-root[data-theme="carbon"] .dashboard-section-row {
+	/* ===== Shared: transparent sections for ember, jade, carbon ===== */
+.apex-dashboard-root[data-theme="ember"] .dashboard-section-row,
+.apex-dashboard-root[data-theme="jade"] .dashboard-section-row,
+.apex-dashboard-root[data-theme="carbon"] .dashboard-section-row {
 	background: transparent;
 	border: none;
 	backdrop-filter: none;
@@ -1748,25 +1432,19 @@
 	padding: 6px;
 }
 
-.dashboard-root[data-theme="ember"] .dashboard-section,
-.dashboard-root[data-theme="dusk"] .dashboard-section,
-.dashboard-root[data-theme="jade"] .dashboard-section,
-.dashboard-root[data-theme="sakura"] .dashboard-section,
-.dashboard-root[data-theme="moonlight"] .dashboard-section,
-.dashboard-root[data-theme="carbon"] .dashboard-section {
+.apex-dashboard-root[data-theme="ember"] .dashboard-section,
+.apex-dashboard-root[data-theme="jade"] .dashboard-section,
+.apex-dashboard-root[data-theme="carbon"] .dashboard-section {
 	background: transparent;
 	border: none;
 	backdrop-filter: none;
 	-webkit-backdrop-filter: none;
 }
 
-/* Tighter kanban gap for ember, dusk, jade, sakura, moonlight, carbon */
-.dashboard-root[data-theme="ember"] .dashboard-kanban,
-.dashboard-root[data-theme="dusk"] .dashboard-kanban,
-.dashboard-root[data-theme="jade"] .dashboard-kanban,
-.dashboard-root[data-theme="sakura"] .dashboard-kanban,
-.dashboard-root[data-theme="moonlight"] .dashboard-kanban,
-.dashboard-root[data-theme="carbon"] .dashboard-kanban {
+/* Tighter kanban gap for ember, jade, carbon */
+.apex-dashboard-root[data-theme="ember"] .dashboard-kanban,
+.apex-dashboard-root[data-theme="jade"] .dashboard-kanban,
+.apex-dashboard-root[data-theme="carbon"] .dashboard-kanban {
 	gap: 8px;
 }
 
@@ -1780,7 +1458,7 @@
 }
 
 /* ===== Root ===== */
-.dashboard-root {
+.apex-dashboard-root {
 	display: flex;
 	flex-direction: column;
 	height: 100%;
@@ -1805,7 +1483,7 @@
 }
 
 /* Aurora gradient animation for aurora theme only */
-.dashboard-root[data-theme="aurora"] {
+.apex-dashboard-root[data-theme="aurora"] {
 	background: var(--db-aurora-bg);
 	background-size: var(--db-aurora-size);
 	animation: db-aurora-shift var(--db-aurora-speed) ease-in-out infinite;
@@ -1814,7 +1492,7 @@
 }
 
 /* Prism: static gradient background */
-.dashboard-root[data-theme="prism"] {
+.apex-dashboard-root[data-theme="prism"] {
 	background: var(--db-aurora-bg);
 	transition: color 0.3s ease;
 }
@@ -2073,6 +1751,10 @@
 
 /* ===== Mobile Drawer (hidden on desktop) ===== */
 .dashboard-mobile-actions {
+	display: none;
+}
+
+.dashboard-mobile-widget-bar {
 	display: none;
 }
 
@@ -3220,7 +2902,6 @@
 	color: var(--db-text-muted);
 }
 
-
 /* Book search modal */
 .dashboard-reading-book-overlay {
 	position: fixed;
@@ -4023,15 +3704,14 @@
 }
 
 /* ===== Fortune Stick Modal — Traditional Parchment ===== */
-.modal.modal--fortune {
-	background: transparent !important;
-	border: none !important;
-	box-shadow: none !important;
-	backdrop-filter: none !important;
-}
-
-.modal-bg.modal-bg--fortune {
-	background: rgba(0, 0, 0, 0.55) !important;
+.fortune-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.55);
 	backdrop-filter: blur(2px);
 	-webkit-backdrop-filter: blur(2px);
 }
@@ -5101,7 +4781,7 @@
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover {
-	overflow: visible;
+	overflow: hidden;
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card-body {
@@ -5146,7 +4826,7 @@
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover {
-	overflow: visible;
+	overflow: hidden;
 }
 
 .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover .dashboard-card-resize-handle,
@@ -5501,7 +5181,8 @@
 	font-size: 0.95em;
 	font-family: var(--db-font);
 	padding: 10px;
-	resize: vertical;
+	resize: none;
+		overflow-y: auto;
 	line-height: 1.6;
 	outline: none;
 	transition: border-color 0.15s ease;
@@ -5530,6 +5211,7 @@
 	cursor: pointer;
 	white-space: pre-wrap;
 	word-break: break-word;
+	overflow-y: auto;
 	transition: border-color 0.15s ease;
 }
 
@@ -6487,7 +6169,6 @@
 
 /* ===== Theme-specific enhancements ===== */
 
-
 /* Aurora: modal — frosted glass with cyan glow */
 [data-theme="aurora"] .dashboard-modal {
 	border-radius: 16px;
@@ -6741,155 +6422,155 @@
 }
 
 /* -- Aurora: glass glow, soft rounded -- */
-.dashboard-root[data-theme="aurora"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="aurora"] .dashboard-card:hover {
 	box-shadow: 0 6px 24px rgba(139, 92, 246, 0.12), 0 0 16px rgba(168, 85, 247, 0.06);
 	border-color: rgba(139, 92, 246, 0.2);
 }
 
-.dashboard-root[data-theme="aurora"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="aurora"] .dashboard-memo-textarea:focus {
 	border-color: rgba(139, 92, 246, 0.4);
 	box-shadow: 0 0 16px rgba(139, 92, 246, 0.08);
 }
 
-.dashboard-root[data-theme="aurora"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="aurora"] .dashboard-modal-input:focus {
 	border-color: rgba(139, 92, 246, 0.4);
 	box-shadow: 0 0 16px rgba(139, 92, 246, 0.08);
 }
 
-.dashboard-root[data-theme="aurora"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="aurora"] .dashboard-section-row--drag-over {
 	border-color: rgba(139, 92, 246, 0.4);
 	box-shadow: 0 0 20px rgba(139, 92, 246, 0.06);
 }
 
-.dashboard-root[data-theme="aurora"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="aurora"] .dashboard-add-section {
 	border-radius: 14px;
 	border-color: rgba(139, 92, 246, 0.15);
 }
 
-.dashboard-root[data-theme="aurora"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="aurora"] .dashboard-add-section:hover {
 	border-color: rgba(139, 92, 246, 0.4);
 	box-shadow: 0 0 12px rgba(139, 92, 246, 0.06);
 }
 
 /* -- Prism: rose glass glow, soft rounded -- */
-.dashboard-root[data-theme="prism"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="prism"] .dashboard-card:hover {
 	box-shadow: 0 6px 24px rgba(244, 63, 94, 0.12), 0 0 16px rgba(168, 85, 247, 0.06);
 	border-color: rgba(244, 63, 94, 0.2);
 }
 
-.dashboard-root[data-theme="prism"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="prism"] .dashboard-memo-textarea:focus {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.dashboard-root[data-theme="prism"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="prism"] .dashboard-modal-input:focus {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.dashboard-root[data-theme="prism"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="prism"] .dashboard-section-row--drag-over {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 20px rgba(244, 63, 94, 0.06);
 }
 
-.dashboard-root[data-theme="prism"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="prism"] .dashboard-add-section {
 	border-radius: 14px;
 	border-color: rgba(244, 63, 94, 0.15);
 }
 
-.dashboard-root[data-theme="prism"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="prism"] .dashboard-add-section:hover {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 12px rgba(244, 63, 94, 0.06);
 }
 
 /* -- Earth: pill-shaped, warm organic -- */
 
-.dashboard-root[data-theme="earth"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="earth"] .dashboard-add-section {
 	border-radius: 16px;
 	border-color: rgba(217, 119, 6, 0.25);
 }
 
-.dashboard-root[data-theme="earth"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="earth"] .dashboard-add-section:hover {
 	border-color: #d97706;
 }
 
 /* -- Nordic: clean minimal with subtle accent border -- */
-.dashboard-root[data-theme="nordic"] .dashboard-card {
+.apex-dashboard-root[data-theme="nordic"] .dashboard-card {
 	border: 1px solid rgba(59, 130, 246, 0.1);
 }
 
-.theme-dark .dashboard-root[data-theme="nordic"] .dashboard-card {
+.theme-dark .apex-dashboard-root[data-theme="nordic"] .dashboard-card {
 	border-color: rgba(96, 165, 250, 0.15);
 }
 
-.dashboard-root[data-theme="nordic"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="nordic"] .dashboard-add-section {
 	border-color: rgba(148, 163, 184, 0.3);
 	border-radius: 8px;
 }
 
-.theme-dark .dashboard-root[data-theme="nordic"] .dashboard-add-section {
+.theme-dark .apex-dashboard-root[data-theme="nordic"] .dashboard-add-section {
 	border-color: rgba(100, 116, 139, 0.25);
 }
 
-.dashboard-root[data-theme="nordic"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="nordic"] .dashboard-add-section:hover {
 	border-color: #3b82f6;
 }
 
 /* -- Island: Animal Crossing — forest greens, ocean accents, 3D press -- */
-.dashboard-root[data-theme="island"] .dashboard-card {
+.apex-dashboard-root[data-theme="island"] .dashboard-card {
 	border: 2px solid var(--db-border-card);
 	box-shadow: 0 4px 0 0 #a8c8a5;
 	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.dashboard-root[data-theme="island"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="island"] .dashboard-card:hover {
 	box-shadow: 0 5px 0 0 #98b894, 0 8px 24px rgba(74, 103, 65, 0.15);
 	transform: translateY(-2px);
 	border-color: #82b87e;
 }
 
-.theme-dark .dashboard-root[data-theme="island"] .dashboard-card {
+.theme-dark .apex-dashboard-root[data-theme="island"] .dashboard-card {
 	box-shadow: 0 4px 0 0 #2a4a2e;
 }
 
-.theme-dark .dashboard-root[data-theme="island"] .dashboard-card:hover {
+.theme-dark .apex-dashboard-root[data-theme="island"] .dashboard-card:hover {
 	box-shadow: 0 5px 0 0 #2a4a2e, 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.dashboard-root[data-theme="island"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="island"] .dashboard-memo-textarea:focus {
 	border-color: #ffcc00;
 	box-shadow: 0 3px 0 0 #e0b800, 0 0 0 3px rgba(255, 204, 0, 0.15);
 }
 
-.dashboard-root[data-theme="island"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="island"] .dashboard-modal-input:focus {
 	border-color: #ffcc00;
 	box-shadow: 0 3px 0 0 #e0b800, 0 0 0 3px rgba(255, 204, 0, 0.15);
 }
 
-.dashboard-root[data-theme="island"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="island"] .dashboard-section-row--drag-over {
 	border-color: #19c8b9;
 	box-shadow: 0 0 0 2px rgba(25, 200, 185, 0.15);
 }
 
-.dashboard-root[data-theme="island"] .dashboard-note-quote {
+.apex-dashboard-root[data-theme="island"] .dashboard-note-quote {
 	border-left-color: #82d5bb;
 }
 
-.dashboard-root[data-theme="island"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="island"] .dashboard-add-section {
 	border-radius: 50px;
 	border: 2px dashed rgba(25, 200, 185, 0.35);
 	font-weight: 600;
 	letter-spacing: 0.02em;
 }
 
-.dashboard-root[data-theme="island"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="island"] .dashboard-add-section:hover {
 	border-color: #19c8b9;
 	background: rgba(25, 200, 185, 0.06);
 	transform: translateY(-1px);
 	box-shadow: 0 4px 0 0 #a8c8a5;
 }
 
-.theme-dark .dashboard-root[data-theme="island"] .dashboard-add-section:hover {
+.theme-dark .apex-dashboard-root[data-theme="island"] .dashboard-add-section:hover {
 	box-shadow: 0 4px 0 0 #2a4a2e;
 }
 
@@ -6983,67 +6664,67 @@
 }
 
 /* Island: checkbox — grass green */
-.dashboard-root[data-theme="island"] .task-checkbox:checked {
+.apex-dashboard-root[data-theme="island"] .task-checkbox:checked {
 	accent-color: #6fba2c;
 }
 
 /* Island: banner — forest frame */
-.dashboard-root[data-theme="island"] .dashboard-banner {
+.apex-dashboard-root[data-theme="island"] .dashboard-banner {
 	border-radius: 20px;
 	border: 2px solid #b5d4b0;
 }
 
 /* Island: card title — round, friendly */
-.dashboard-root[data-theme="island"] .dashboard-card-title {
+.apex-dashboard-root[data-theme="island"] .dashboard-card-title {
 	font-weight: 600;
 	letter-spacing: 0.02em;
 	color: #4a6741;
 }
 
 /* Island: section headers — forest accent */
-.dashboard-root[data-theme="island"] .dashboard-section-header {
+.apex-dashboard-root[data-theme="island"] .dashboard-section-header {
 	color: #4a6741;
 }
 
 /* Island: sidebar links — ocean tint on hover */
-.dashboard-root[data-theme="island"] .dashboard-quick-link:hover {
+.apex-dashboard-root[data-theme="island"] .dashboard-quick-link:hover {
 	background: #e4f0f8;
 }
 
 /* Island: NookPhone-style pastel tints on memo cards */
-.dashboard-root[data-theme="island"] .dashboard-card[data-type="memo"] {
+.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="memo"] {
 	border-left: 4px solid #82d5bb;
 }
 
-.dashboard-root[data-theme="island"] .dashboard-card[data-type="todo"] {
+.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="todo"] {
 	border-left: 4px solid #6fba2c;
 }
 
-.dashboard-root[data-theme="island"] .dashboard-card[data-type="project"] {
+.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="project"] {
 	border-left: 4px solid #889df0;
 }
 
-.dashboard-root[data-theme="island"] .dashboard-card[data-type="link"] {
+.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="link"] {
 	border-left: 4px solid #f8a6b2;
 }
 
-.dashboard-root[data-theme="island"] .dashboard-card[data-type="notes"] {
+.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="notes"] {
 	border-left: 4px solid #f7cd67;
 }
 
 /* Island: progress bar — teal to grass green gradient */
-.dashboard-root[data-theme="island"] .dashboard-progress-fill {
+.apex-dashboard-root[data-theme="island"] .dashboard-progress-fill {
 	background: linear-gradient(90deg, #19c8b9, #6fba2c);
 }
 
 /* -- Tundra: pill-shaped, warm organic (cloned from Earth) -- */
 
-.dashboard-root[data-theme="tundra"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="tundra"] .dashboard-add-section {
 	border-radius: 16px;
 	border-color: rgba(217, 119, 6, 0.25);
 }
 
-.dashboard-root[data-theme="tundra"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="tundra"] .dashboard-add-section:hover {
 	border-color: #d97706;
 }
 
@@ -7109,38 +6790,38 @@
 }
 
 /* -- Haze: sharp edges, neon glow (cloned from Neon) -- */
-.dashboard-root[data-theme="haze"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="haze"] .dashboard-card:hover {
 	border-color: rgba(0, 240, 255, 0.4);
 		box-shadow: 0 0 12px rgba(0, 240, 255, 0.12), 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-.dashboard-root[data-theme="haze"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="haze"] .dashboard-memo-textarea:focus {
 	border-color: rgba(0, 240, 255, 0.6);
 	box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
 }
 
-.dashboard-root[data-theme="haze"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="haze"] .dashboard-modal-input:focus {
 	border-color: rgba(0, 240, 255, 0.6);
 	box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
 }
 
-.dashboard-root[data-theme="haze"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="haze"] .dashboard-section-row--drag-over {
 	border-color: rgba(0, 240, 255, 0.6);
 	box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
 }
 
-.dashboard-root[data-theme="haze"] .dashboard-note-quote {
+.apex-dashboard-root[data-theme="haze"] .dashboard-note-quote {
 	border-left-color: #ff00aa;
 }
 
-.dashboard-root[data-theme="haze"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="haze"] .dashboard-add-section {
 	border-radius: 2px;
 	border-style: solid;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 }
 
-.dashboard-root[data-theme="haze"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="haze"] .dashboard-add-section:hover {
 	border-color: rgba(0, 240, 255, 0.5);
 	box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
 }
@@ -7218,32 +6899,32 @@
 }
 
 /* -- Blossom: rose glass glow (cloned from Prism) -- */
-.dashboard-root[data-theme="blossom"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="blossom"] .dashboard-card:hover {
 	box-shadow: 0 6px 24px rgba(244, 63, 94, 0.12), 0 0 16px rgba(168, 85, 247, 0.06);
 	border-color: rgba(244, 63, 94, 0.2);
 }
 
-.dashboard-root[data-theme="blossom"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="blossom"] .dashboard-memo-textarea:focus {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.dashboard-root[data-theme="blossom"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="blossom"] .dashboard-modal-input:focus {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.dashboard-root[data-theme="blossom"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="blossom"] .dashboard-section-row--drag-over {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 20px rgba(244, 63, 94, 0.06);
 }
 
-.dashboard-root[data-theme="blossom"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="blossom"] .dashboard-add-section {
 	border-radius: 14px;
 	border-color: rgba(244, 63, 94, 0.15);
 }
 
-.dashboard-root[data-theme="blossom"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="blossom"] .dashboard-add-section:hover {
 	border-color: rgba(244, 63, 94, 0.4);
 	box-shadow: 0 0 12px rgba(244, 63, 94, 0.06);
 }
@@ -7314,27 +6995,27 @@
 }
 
 /* -- Matcha: gentle green glow -- */
-.dashboard-root[data-theme="matcha"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="matcha"] .dashboard-card:hover {
 	box-shadow: 0 6px 24px rgba(143, 170, 152, 0.12), 0 0 16px rgba(200, 184, 144, 0.06);
 	border-color: rgba(143, 170, 152, 0.2);
 }
-.dashboard-root[data-theme="matcha"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="matcha"] .dashboard-memo-textarea:focus {
 	border-color: rgba(143, 170, 152, 0.4);
 	box-shadow: 0 0 16px rgba(143, 170, 152, 0.08);
 }
-.dashboard-root[data-theme="matcha"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="matcha"] .dashboard-modal-input:focus {
 	border-color: rgba(143, 170, 152, 0.4);
 	box-shadow: 0 0 16px rgba(143, 170, 152, 0.08);
 }
-.dashboard-root[data-theme="matcha"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="matcha"] .dashboard-section-row--drag-over {
 	border-color: rgba(143, 170, 152, 0.4);
 	box-shadow: 0 0 20px rgba(143, 170, 152, 0.06);
 }
-.dashboard-root[data-theme="matcha"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="matcha"] .dashboard-add-section {
 	border-radius: 14px;
 	border-color: rgba(143, 170, 152, 0.15);
 }
-.dashboard-root[data-theme="matcha"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="matcha"] .dashboard-add-section:hover {
 	border-color: rgba(143, 170, 152, 0.4);
 	box-shadow: 0 0 12px rgba(143, 170, 152, 0.06);
 }
@@ -7404,27 +7085,27 @@
 }
 
 /* -- Lilac: gentle purple glow -- */
-.dashboard-root[data-theme="lilac"] .dashboard-card:hover {
+.apex-dashboard-root[data-theme="lilac"] .dashboard-card:hover {
 	box-shadow: 0 6px 24px rgba(184, 160, 200, 0.12), 0 0 16px rgba(208, 184, 184, 0.06);
 	border-color: rgba(184, 160, 200, 0.2);
 }
-.dashboard-root[data-theme="lilac"] .dashboard-memo-textarea:focus {
+.apex-dashboard-root[data-theme="lilac"] .dashboard-memo-textarea:focus {
 	border-color: rgba(184, 160, 200, 0.4);
 	box-shadow: 0 0 16px rgba(184, 160, 200, 0.08);
 }
-.dashboard-root[data-theme="lilac"] .dashboard-modal-input:focus {
+.apex-dashboard-root[data-theme="lilac"] .dashboard-modal-input:focus {
 	border-color: rgba(184, 160, 200, 0.4);
 	box-shadow: 0 0 16px rgba(184, 160, 200, 0.08);
 }
-.dashboard-root[data-theme="lilac"] .dashboard-section-row--drag-over {
+.apex-dashboard-root[data-theme="lilac"] .dashboard-section-row--drag-over {
 	border-color: rgba(184, 160, 200, 0.4);
 	box-shadow: 0 0 20px rgba(184, 160, 200, 0.06);
 }
-.dashboard-root[data-theme="lilac"] .dashboard-add-section {
+.apex-dashboard-root[data-theme="lilac"] .dashboard-add-section {
 	border-radius: 14px;
 	border-color: rgba(184, 160, 200, 0.15);
 }
-.dashboard-root[data-theme="lilac"] .dashboard-add-section:hover {
+.apex-dashboard-root[data-theme="lilac"] .dashboard-add-section:hover {
 	border-color: rgba(184, 160, 200, 0.4);
 	box-shadow: 0 0 12px rgba(184, 160, 200, 0.06);
 }
@@ -7561,72 +7242,6 @@
 }
 
 /* -- Dusk: dreamy cloud-soft modal -- */
-[data-theme="dusk"] .dashboard-modal {
-	border-radius: 20px;
-	border: 1px solid rgba(192, 132, 252, 0.12);
-	background: rgba(20, 14, 30, 0.90) !important;
-	backdrop-filter: blur(24px);
-	-webkit-backdrop-filter: blur(24px);
-}
-.theme-light [data-theme="dusk"] .dashboard-modal {
-	background: rgba(245, 240, 248, 0.90) !important;
-	border-color: rgba(192, 132, 252, 0.10);
-}
-[data-theme="dusk"] .dashboard-modal h2 {
-	color: #c084fc;
-	border-bottom-color: rgba(192, 132, 252, 0.10);
-	font-weight: 600;
-	letter-spacing: 0.02em;
-}
-.theme-light [data-theme="dusk"] .dashboard-modal h2 {
-	color: #9060d0;
-}
-[data-theme="dusk"] .dashboard-modal-form label {
-	color: #b0a0c0;
-}
-.theme-light [data-theme="dusk"] .dashboard-modal-form label {
-	color: #5a4070;
-}
-[data-theme="dusk"] .dashboard-modal-input {
-	background: rgba(192, 132, 252, 0.04);
-	border-color: rgba(192, 132, 252, 0.08);
-	color: #e8d8f0;
-	border-radius: 14px;
-}
-.theme-light [data-theme="dusk"] .dashboard-modal-input {
-	background: rgba(192, 132, 252, 0.04);
-	border-color: rgba(192, 132, 252, 0.08);
-	color: #1a0e20;
-}
-[data-theme="dusk"] .dashboard-modal-input:focus {
-	border-color: rgba(192, 132, 252, 0.40);
-	box-shadow: 0 0 16px rgba(192, 132, 252, 0.08);
-}
-[data-theme="dusk"] .dashboard-modal-actions button {
-	border-radius: 14px;
-}
-[data-theme="dusk"] .dashboard-modal-actions .mod-cta {
-	background: rgba(192, 132, 252, 0.12);
-	color: #c084fc;
-	border: 1px solid rgba(192, 132, 252, 0.22);
-}
-.theme-light [data-theme="dusk"] .dashboard-modal-actions .mod-cta {
-	background: rgba(144, 96, 208, 0.10);
-	color: #9060d0;
-	border-color: rgba(144, 96, 208, 0.22);
-}
-[data-theme="dusk"] .dashboard-modal-actions .mod-cta:hover {
-	background: rgba(192, 132, 252, 0.22);
-	box-shadow: 0 0 12px rgba(192, 132, 252, 0.10);
-}
-[data-theme="dusk"] .dashboard-add-section {
-	border-radius: 50px;
-	border-color: rgba(192, 132, 252, 0.10);
-}
-[data-theme="dusk"] .dashboard-add-section:hover {
-	border-color: rgba(192, 132, 252, 0.25);
-	box-shadow: 0 0 10px rgba(192, 132, 252, 0.06);
-}
 
 /* -- Jade: crisp sharp modal -- */
 [data-theme="jade"] .dashboard-modal {
@@ -7696,139 +7311,8 @@
 }
 
 /* -- Sakura: soft petal glow modal -- */
-[data-theme="sakura"] .dashboard-modal {
-	border-radius: 18px;
-	border: 1px solid rgba(255, 143, 163, 0.15);
-	background: rgba(30, 16, 22, 0.90) !important;
-	backdrop-filter: blur(24px);
-	-webkit-backdrop-filter: blur(24px);
-}
-.theme-light [data-theme="sakura"] .dashboard-modal {
-	background: rgba(253, 242, 244, 0.90) !important;
-	border-color: rgba(255, 143, 163, 0.12);
-}
-[data-theme="sakura"] .dashboard-modal h2 {
-	color: #ff8fa3;
-	border-bottom-color: rgba(255, 143, 163, 0.12);
-	font-weight: 600;
-	letter-spacing: 0.02em;
-}
-.theme-light [data-theme="sakura"] .dashboard-modal h2 {
-	color: #e11d48;
-}
-[data-theme="sakura"] .dashboard-modal-form label {
-	color: #b8989f;
-}
-.theme-light [data-theme="sakura"] .dashboard-modal-form label {
-	color: #6a3048;
-}
-[data-theme="sakura"] .dashboard-modal-input {
-	background: rgba(255, 143, 163, 0.05);
-	border-color: rgba(255, 143, 163, 0.10);
-	color: #f0dce0;
-	border-radius: 12px;
-}
-.theme-light [data-theme="sakura"] .dashboard-modal-input {
-	background: rgba(255, 143, 163, 0.04);
-	border-color: rgba(255, 143, 163, 0.10);
-	color: #2a0e18;
-}
-[data-theme="sakura"] .dashboard-modal-input:focus {
-	border-color: rgba(255, 143, 163, 0.40);
-	box-shadow: 0 0 16px rgba(255, 143, 163, 0.08);
-}
-[data-theme="sakura"] .dashboard-modal-actions button {
-	border-radius: 12px;
-}
-[data-theme="sakura"] .dashboard-modal-actions .mod-cta {
-	background: rgba(255, 143, 163, 0.12);
-	color: #ff8fa3;
-	border: 1px solid rgba(255, 143, 163, 0.22);
-}
-.theme-light [data-theme="sakura"] .dashboard-modal-actions .mod-cta {
-	background: rgba(225, 29, 72, 0.10);
-	color: #e11d48;
-	border-color: rgba(225, 29, 72, 0.22);
-}
-[data-theme="sakura"] .dashboard-modal-actions .mod-cta:hover {
-	background: rgba(255, 143, 163, 0.22);
-	box-shadow: 0 0 12px rgba(255, 143, 163, 0.10);
-}
-[data-theme="sakura"] .dashboard-add-section {
-	border-radius: 50px;
-	border-color: rgba(255, 143, 163, 0.12);
-}
-[data-theme="sakura"] .dashboard-add-section:hover {
-	border-color: rgba(255, 143, 163, 0.30);
-	box-shadow: 0 0 10px rgba(255, 143, 163, 0.06);
-}
 
 /* -- Moonlight: ethereal silver modal -- */
-[data-theme="moonlight"] .dashboard-modal {
-	border-radius: 10px;
-	border: 1px solid rgba(196, 181, 253, 0.12);
-	background: rgba(12, 12, 30, 0.90) !important;
-	backdrop-filter: blur(24px);
-	-webkit-backdrop-filter: blur(24px);
-}
-.theme-light [data-theme="moonlight"] .dashboard-modal {
-	background: rgba(236, 238, 244, 0.90) !important;
-	border-color: rgba(147, 130, 220, 0.10);
-}
-[data-theme="moonlight"] .dashboard-modal h2 {
-	color: #c4b5fd;
-	border-bottom-color: rgba(196, 181, 253, 0.10);
-	font-weight: 600;
-}
-.theme-light [data-theme="moonlight"] .dashboard-modal h2 {
-	color: #7060c0;
-}
-[data-theme="moonlight"] .dashboard-modal-form label {
-	color: #8880a8;
-}
-.theme-light [data-theme="moonlight"] .dashboard-modal-form label {
-	color: #3a3070;
-}
-[data-theme="moonlight"] .dashboard-modal-input {
-	background: rgba(196, 181, 253, 0.04);
-	border-color: rgba(196, 181, 253, 0.10);
-	color: #d8d0f0;
-	border-radius: 8px;
-}
-.theme-light [data-theme="moonlight"] .dashboard-modal-input {
-	background: rgba(147, 130, 220, 0.04);
-	border-color: rgba(147, 130, 220, 0.10);
-	color: #0e0e20;
-}
-[data-theme="moonlight"] .dashboard-modal-input:focus {
-	border-color: rgba(196, 181, 253, 0.45);
-	box-shadow: 0 0 12px rgba(196, 181, 253, 0.08);
-}
-[data-theme="moonlight"] .dashboard-modal-actions button {
-	border-radius: 8px;
-}
-[data-theme="moonlight"] .dashboard-modal-actions .mod-cta {
-	background: rgba(196, 181, 253, 0.10);
-	color: #c4b5fd;
-	border: 1px solid rgba(196, 181, 253, 0.22);
-}
-.theme-light [data-theme="moonlight"] .dashboard-modal-actions .mod-cta {
-	background: rgba(112, 96, 192, 0.10);
-	color: #7060c0;
-	border-color: rgba(112, 96, 192, 0.22);
-}
-[data-theme="moonlight"] .dashboard-modal-actions .mod-cta:hover {
-	background: rgba(196, 181, 253, 0.20);
-	box-shadow: 0 0 12px rgba(196, 181, 253, 0.08);
-}
-[data-theme="moonlight"] .dashboard-add-section {
-	border-radius: 8px;
-	border-color: rgba(196, 181, 253, 0.10);
-}
-[data-theme="moonlight"] .dashboard-add-section:hover {
-	border-color: rgba(196, 181, 253, 0.30);
-	box-shadow: 0 0 10px rgba(196, 181, 253, 0.06);
-}
 
 /* -- Carbon: sharp industrial modal -- */
 [data-theme="carbon"] .dashboard-modal {
@@ -7917,7 +7401,7 @@
 	}
 
 	/* Root: allow vertical scrolling */
-	.dashboard-root {
+	.apex-dashboard-root {
 		overflow-y: auto;
 		overflow-x: hidden;
 	}
@@ -7985,6 +7469,80 @@
 	.dashboard-mobile-action-btn:active {
 		color: rgba(255, 255, 255, 0.7);
 	}
+
+		/* Mobile widget bar: bookmark tabs pulled from banner bottom */
+		.dashboard-mobile-widget-bar {
+			display: block;
+			position: relative;
+			z-index: 5;
+			margin-top: -12px;
+			margin-bottom: 0;
+			padding: 0 16px;
+		}
+
+		.dashboard-mobile-widget-btns {
+			display: flex;
+			gap: 5px;
+			justify-content: center;
+		}
+
+		.dashboard-mobile-widget-btn {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 38px;
+			height: 24px;
+			background: rgba(255, 255, 255, 0.10) !important;
+			border: 1px solid rgba(255, 255, 255, 0.15) !important;
+			border-bottom: none !important;
+			border-radius: 8px 8px 0 0;
+			padding: 0;
+			color: rgba(255, 255, 255, 0.50);
+			cursor: pointer;
+			transition: all 0.2s ease;
+			outline: none;
+			box-shadow: none;
+			line-height: 1;
+			opacity: 0.8;
+			backdrop-filter: blur(8px);
+			-webkit-backdrop-filter: blur(8px);
+		}
+
+		.dashboard-mobile-widget-btn svg {
+			width: 14px;
+			height: 14px;
+		}
+
+		.dashboard-mobile-widget-btn.active {
+			opacity: 1;
+			color: rgba(255, 255, 255, 0.90);
+			background: rgba(255, 255, 255, 0.18) !important;
+			border-color: rgba(255, 255, 255, 0.25) !important;
+			border-bottom: none !important;
+			height: 26px;
+		}
+
+		/* Expandable widget panel */
+		.dashboard-mobile-widget-panel {
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+
+		.dashboard-mobile-widget-panel--open {
+			max-height: 400px;
+			overflow-y: auto;
+			margin-top: 0;
+			-webkit-overflow-scrolling: touch;
+		}
+
+		.dashboard-mobile-widget-panel .dashboard-sidebar-widget {
+			background: var(--db-bg-card);
+			border: 1px solid var(--db-border-card);
+			border-radius: var(--db-radius-md);
+			backdrop-filter: var(--db-backdrop-blur);
+			-webkit-backdrop-filter: var(--db-backdrop-blur);
+		}
 
 	/* Hide banner edit btn on mobile by default */
 	.dashboard-banner .dashboard-banner-edit-btn {
@@ -8357,7 +7915,7 @@
 	color: var(--db-text, var(--text-normal));
 }
 
-/* Countdown calendar popup (outside dashboard-root, use Obsidian theme vars) */
+/* Countdown calendar popup (outside apex-dashboard-root, use Obsidian theme vars) */
 .dashboard-countdown-calendar-popup {
 	background: var(--background-primary);
 	color: var(--text-normal);
@@ -8413,53 +7971,57 @@
 /* Calendar popup on body (outside theme scope) */
 .dashboard-library-calendar-popup,
 .dashboard-task-reminder-popup.dashboard-library-calendar-popup {
-	background: #ffffff;
-	color: #1a1a1a;
-	border-color: #e0e0e0;
+	background: var(--db-bg-card, rgba(255, 255, 255, 0.06));
+	color: var(--db-text, var(--text-normal));
+	border-color: var(--db-border-card, rgba(255, 255, 255, 0.1));
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day {
-	color: #333;
+	color: var(--db-text, var(--text-normal)) !important;
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day--today {
-	color: var(--interactive-accent, #7c3aed);
+	color: var(--db-accent, var(--interactive-accent));
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day--selected {
-	background: var(--interactive-accent, #7c3aed) !important;
+	background: var(--db-accent, var(--interactive-accent)) !important;
 	color: #fff !important;
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-day--other-month {
-	color: #bbb;
+	color: var(--db-text-muted, var(--text-faint));
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-nav span {
-	color: #333;
+	color: var(--db-text, var(--text-normal)) !important;
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-nav button {
-	color: #666;
+	color: var(--db-text-muted, var(--text-muted)) !important;
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-calendar-nav button:hover {
-	color: #333;
-	background: #f0f0f0;
+	color: var(--db-text, var(--text-normal));
+	background: var(--db-bg-card-hover, rgba(255, 255, 255, 0.08));
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-popup-btns button {
-	color: #333;
+	color: var(--db-text, var(--text-normal)) !important;
 }
 
 .dashboard-library-calendar-popup .dashboard-task-reminder-popup-btns button.mod-cta {
 	color: #fff;
 }
 
+.dashboard-library-calendar-popup .dashboard-task-reminder-time {
+	color: var(--db-text, var(--text-normal));
+}
+
 .dashboard-library-calendar-popup .dashboard-task-reminder-time select {
-	background: #f5f5f5;
-	color: #333;
-	border-color: #ddd;
+	background: var(--db-bg-input, var(--db-bg-card));
+	color: var(--db-text, var(--text-normal));
+	border-color: var(--db-border-input, var(--db-border-card));
 }
 
 .dashboard-task-reminder-calendar-nav {
@@ -8498,7 +8060,7 @@
 
 .dashboard-task-reminder-calendar-header {
 	font-size: 11px;
-	color: var(--db-text-muted);
+	color: var(--db-text-muted, var(--text-faint));
 	padding: 4px 0;
 	font-weight: 500;
 }
@@ -8584,7 +8146,6 @@
 	color: var(--db-text-muted);
 }
 
-
 /* ===== Dashboard Section (Charts) ===== */
 .dashboard-section-row[data-section-type="dashboard"] .dashboard-section-cards {
 	flex-wrap: wrap;
@@ -8605,23 +8166,46 @@
 }
 
 /* ===== Confirm Dialog ===== */
-.dashboard-confirm-dialog {
+.dashboard-confirm-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.5);
+	backdrop-filter: blur(4px);
+	-webkit-backdrop-filter: blur(4px);
+}
+
+.dashboard-confirm-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
 	max-width: 340px;
+	width: 90%;
 	padding: 24px 28px 20px;
 	text-align: center;
+	background: rgba(255, 255, 255, 0.06);
+	backdrop-filter: blur(24px);
+	-webkit-backdrop-filter: blur(24px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 12px;
+	color: var(--text-normal);
 }
 
 .dashboard-confirm-title {
 	margin: 0 0 8px;
 	font-size: 1.1em;
-	color: var(--db-text, var(--text-normal));
+	color: var(--text-normal);
 	border-bottom: none;
 }
 
 .dashboard-confirm-message {
 	margin: 0 0 20px;
 	font-size: 0.9em;
-	color: var(--db-text-muted, var(--text-muted));
+	color: var(--text-normal);
+	opacity: 0.7;
 	line-height: 1.5;
 }
 
@@ -8634,25 +8218,24 @@
 .dashboard-confirm-cancel,
 .dashboard-confirm-delete {
 	padding: 7px 20px;
-	border-radius: var(--db-radius-sm, 8px);
+	border-radius: 8px;
 	font-size: 0.9em;
-	font-family: var(--db-font, var(--font-interface));
 	cursor: pointer;
 	transition: all 0.15s ease;
 }
 
 .dashboard-confirm-cancel {
-	background: var(--db-bg-btn, rgba(255, 255, 255, 0.06));
-	border: 1px solid var(--db-border-btn, rgba(255, 255, 255, 0.10));
-	color: var(--db-text, var(--text-normal));
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.10);
+	color: var(--text-normal);
 }
 
 .dashboard-confirm-cancel:hover {
-	background: var(--db-bg-btn-hover, rgba(255, 255, 255, 0.10));
+	background: rgba(255, 255, 255, 0.10);
 }
 
 .dashboard-confirm-delete {
-	background: var(--db-danger, #f43f5e);
+	background: #f43f5e;
 	border: 1px solid transparent;
 	color: #fff;
 }
@@ -8959,7 +8542,6 @@
 	align-items: center;
 	line-height: 1;
 }
-
 
 /* Tracker Config Modal */
 .tracker-key-hint {
@@ -9435,7 +9017,6 @@
 	background: var(--db-bg-hover, rgba(255, 255, 255, 0.05));
 }
 
-
 /* Quick filter button */
 .dashboard-library-filter-btn {
 	cursor: pointer;
@@ -9559,7 +9140,6 @@
 	border-color: var(--interactive-accent, #7c3aed);
 	background: rgba(139, 92, 246, 0.08);
 }
-
 
 .dashboard-library-filter-popup-values {
 	display: flex;
@@ -10112,4 +9692,54 @@
 .dashboard-modal-close:hover {
 	color: var(--db-text, var(--text-normal));
 	background: var(--db-bg-hover, rgba(255, 255, 255, 0.05));
+}
+
+/* Reminder notice modal */
+.dashboard-reminder-modal {
+	padding: 24px 28px 20px;
+	min-width: 280px;
+}
+
+.dashboard-reminder-message {
+	font-size: 15px;
+	font-weight: 500;
+	color: var(--db-text, var(--text-normal));
+	margin-bottom: 20px;
+	line-height: 1.5;
+}
+
+.dashboard-reminder-actions {
+	display: flex;
+	gap: 10px;
+	justify-content: flex-end;
+}
+
+.dashboard-reminder-actions button {
+	padding: 6px 16px;
+	border-radius: var(--db-radius-sm, 6px);
+	border: 1px solid var(--db-border-card, rgba(255, 255, 255, 0.1));
+	background: var(--db-bg-card, rgba(255, 255, 255, 0.06));
+	color: var(--db-text, var(--text-normal));
+	font-size: 13px;
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.dashboard-reminder-actions button:hover {
+	background: var(--db-bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+.dashboard-reminder-dismiss {
+	color: var(--db-text-muted, var(--text-muted));
+}
+
+.dashboard-reminder-snooze {
+	background: var(--db-accent, #6366f1) !important;
+	color: #fff !important;
+	border-color: transparent !important;
+	font-weight: 500;
+}
+
+.dashboard-reminder-snooze:hover {
+	opacity: 0.9;
 }

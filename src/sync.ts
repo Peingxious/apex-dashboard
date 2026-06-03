@@ -78,6 +78,10 @@ export class SyncEngine {
 					const newTasks: TaskItem[] = card.tasks.map((t, i) =>
 						i === taskIndex ? { ...t, checked } : t
 					);
+					if (checked) {
+						const [moved] = newTasks.splice(taskIndex, 1);
+						newTasks.push(moved!);
+					}
 					return { ...card, tasks: newTasks };
 				}),
 			})),

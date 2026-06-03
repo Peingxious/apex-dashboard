@@ -37,7 +37,7 @@ export function destroyAllCharts(): void {
 }
 
 function getCSSVar(name: string): string {
-	const el = document.querySelector('.dashboard-root');
+	const el = document.querySelector('.apex-dashboard-root');
 	if (!el) return '';
 	return getComputedStyle(el).getPropertyValue(name).trim();
 }
@@ -2744,7 +2744,7 @@ function showReminderPopup(
 	const popup = document.body.createDiv({ cls: 'dashboard-task-reminder-popup' });
 
 	// Inherit theme variables from dashboard root (popup is on body, outside theme scope)
-	const dashboardRoot = anchorBtn.closest('.dashboard-root') as HTMLElement;
+	const dashboardRoot = anchorBtn.closest('.apex-dashboard-root') as HTMLElement;
 	if (dashboardRoot) {
 		const rs = getComputedStyle(dashboardRoot);
 		const themeVars = ['--db-bg', '--db-bg-card', '--db-bg-card-hover', '--db-border-card',

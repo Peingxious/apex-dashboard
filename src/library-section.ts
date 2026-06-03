@@ -221,9 +221,9 @@ function closeCalendarPopup(): void {
 function showCalendarPopup(anchor: HTMLElement, initialValue: string, onSelect: (date: string) => void): void {
 	closeCalendarPopup();
 
-	const popup = document.body.createDiv({ cls: 'dashboard-task-reminder-popup dashboard-library-calendar-popup' });
+		const popup = document.body.createDiv({ cls: 'dashboard-task-reminder-popup dashboard-library-calendar-popup' });
 
-	const dashboardRoot = anchor.closest('.dashboard-root') as HTMLElement;
+	const dashboardRoot = anchor.closest('.apex-dashboard-root') as HTMLElement;
 	if (dashboardRoot) {
 		const rs = getComputedStyle(dashboardRoot);
 		const themeVars = ['--db-bg', '--db-bg-card', '--db-bg-card-hover', '--db-border-card',
@@ -233,6 +233,11 @@ function showCalendarPopup(anchor: HTMLElement, initialValue: string, onSelect: 
 			if (val) popup.style.setProperty(v, val);
 		});
 	}
+
+	popup.style.background = 'var(--db-bg-card, rgba(255, 255, 255, 0.06))';
+	popup.style.backdropFilter = 'blur(16px)';
+	popup.style.color = 'var(--db-text, var(--text-normal))';
+	popup.style.borderColor = 'var(--db-border-card, rgba(255,255,255,0.1))';
 
 	const rect = anchor.getBoundingClientRect();
 	popup.style.position = 'fixed';
@@ -451,7 +456,7 @@ export function renderLibrarySection(
 			filterPopup = document.body.createDiv({ cls: 'dashboard-library-filter-popup' });
 
 			// Inherit theme from dashboard
-			const dashboardRoot = filterBtn.closest('.dashboard-root') as HTMLElement;
+			const dashboardRoot = filterBtn.closest('.apex-dashboard-root') as HTMLElement;
 			if (dashboardRoot) {
 				const rs = getComputedStyle(dashboardRoot);
 				['--db-bg', '--db-bg-card', '--db-bg-card-hover', '--db-border-card',
@@ -498,7 +503,7 @@ export function renderLibrarySection(
 				showCalendarPopup(startBtn, quickStart, (date) => {
 					quickStart = date;
 					applyQuickFilter();
-					openPopup();
+					if (document.body.contains(filterBtn)) openPopup();
 				});
 			});
 			endBtn.addEventListener('click', (ev) => {
@@ -506,7 +511,7 @@ export function renderLibrarySection(
 				showCalendarPopup(endBtn, quickEnd, (date) => {
 					quickEnd = date;
 					applyQuickFilter();
-					openPopup();
+					if (document.body.contains(filterBtn)) openPopup();
 				});
 			});
 

@@ -49,13 +49,10 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.styleBlossom': 'Blossom',
 		'settings.styleHaze': 'Haze',
 		'settings.styleEmber': 'Ember',
-		'settings.styleDusk': 'Dusk',
 		'settings.styleJade': 'Jade',
 		'settings.styleMatcha': 'Matcha',
 		'settings.styleLilac': 'Lilac',
-		'settings.styleSakura': 'Sakura',
 		'settings.styleCarbon': 'Eclipse',
-		'settings.styleMoonlight': 'Moonlight',
 			'settings.widgetTheme': 'Sidebar Widgets',
 			'settings.widgetWeatherEnabled': 'Weather',
 			'settings.widgetWeatherEnabledDesc': 'Show weather and forecast in sidebar',
@@ -290,6 +287,9 @@ const translations: Record<Language, Record<string, string>> = {
 		// Mobile
 		'mobile.quickActions': 'Quick Actions',
 		'mobile.recent': 'Recent',
+		'mobile.pomodoro': 'Pomodoro',
+		'mobile.reading': 'Reading',
+		'mobile.lunar': 'Lunar',
 
 		// Heatmap
 		'heatmap.streak': 'Streak {count}d',
@@ -300,6 +300,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'reminder.editReminder': 'Edit reminder',
 		'reminder.clearReminder': 'Clear reminder',
 		'reminder.dueNotice': '🔔 Task due: {task}',
+		'reminder.dismiss': 'Dismiss',
+		'reminder.snooze': 'Snooze 1h',
 
 		// Template
 		'template.addFromTemplate': 'Add from template',
@@ -512,13 +514,10 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.styleHaze': '薄雾',
 		'settings.styleBlossom': '花漾',
 		'settings.styleEmber': '余烬',
-		'settings.styleDusk': '暮霞',
 		'settings.styleJade': '翡翠',
 		'settings.styleMatcha': '抹茶',
 		'settings.styleLilac': '丁香',
-		'settings.styleSakura': '樱花',
 		'settings.styleCarbon': '日食',
-		'settings.styleMoonlight': '月影',
 			'settings.widgetTheme': '侧边栏小组件',
 			'settings.widgetWeatherEnabled': '天气',
 			'settings.widgetWeatherEnabledDesc': '在侧边栏显示天气和预报',
@@ -750,6 +749,9 @@ const translations: Record<Language, Record<string, string>> = {
 		// Mobile
 		'mobile.quickActions': '快捷操作',
 		'mobile.recent': '最近编辑',
+		'mobile.pomodoro': '番茄钟',
+		'mobile.reading': '读书',
+		'mobile.lunar': '农历',
 
 		// Heatmap
 		'heatmap.streak': '连续打卡 {count} 天',
@@ -758,6 +760,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'reminder.editReminder': '编辑提醒',
 		'reminder.clearReminder': '取消提醒',
 		'reminder.dueNotice': '🔔 任务到期：{task}',
+		'reminder.dismiss': '关闭',
+		'reminder.snooze': '稍后提醒（1小时）',
 
 		// Template
 		'template.addFromTemplate': '从模板添加',

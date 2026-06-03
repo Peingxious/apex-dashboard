@@ -2,7 +2,7 @@ import { ItemView, Notice, setIcon, WorkspaceLeaf, TFile, Events } from 'obsidia
 import type DashboardPlugin from './main';
 import type { DashboardData, DashboardCard, QuickAction, BannerData, WeatherConfig, TrackerConfig, LibraryConfig } from './types';
 import { SyncEngine } from './sync';
-import { renderDashboard, destroyAllCharts, renderSidebarWidgets, renderSidebarWeekCalendar } from './renderer';
+import { renderDashboard, destroyAllCharts, renderSidebarWidgets, renderSidebarWeekCalendar, renderSidebarPomodoro, renderSidebarReading } from './renderer';
 import { renderBanner, BannerEditModal, resolveVaultImage } from './banner';
 import { getRecentDocs, renderRecentDocs } from './recent';
 import { renderQuickActions, AddActionModal, DocSearchModal } from './quick-actions';
@@ -10,7 +10,7 @@ import { setupDragAndDrop } from './dnd';
 import { CardEditModal } from './card-edit-modal';
 import { showConfirmDialog } from './confirm-dialog';
 import { clearWeatherCache } from './weather-service';
-import { loadHolidayData } from './lunar-widget';
+import { renderSidebarLunarWidget, loadHolidayData } from './lunar-widget';
 import type { HolidayInfo } from './holiday-service';
 import { WidgetTypeModal, type WidgetType } from './widget-type-modal';
 import { WeatherConfigModal } from './weather-config-modal';
@@ -19,6 +19,7 @@ import { TrackerConfigModal } from './tracker-config-modal';
 import { TemplatePickerModal } from './template-modal';
 import { PomodoroService } from './pomodoro-service';
 import { ReadingService } from './reading-service';
+import { ReminderNoticeModal } from './reminder-notice';
 import { t } from './i18n';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
@@ -48,6 +49,7 @@ export class DashboardView extends ItemView {
 	private pomodoroService: PomodoroService | null = null;
 	private readingService: ReadingService | null = null;
 	private holidayData: Record<string, HolidayInfo> = {};
+	private mobileWidgetExpanded: 'pomodoro' | 'reading' | 'lunar' | null = null;
 	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -143,7 +145,7 @@ export class DashboardView extends ItemView {
 
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
-		container.addClass('dashboard-root');
+		container.addClass('apex-dashboard-root');
 		container.setAttribute('data-theme', this.plugin.settings.stylePreset);
 
 		const bannerEl = renderBanner(
@@ -162,6 +164,8 @@ export class DashboardView extends ItemView {
 
 		// Banner quote rotation
 		this.setupBannerRotation(container, data.banner);
+
+		this.renderMobileWidgetBar(container);
 
 		const mainLayout = container.createDiv({ cls: 'dashboard-main' });
 
@@ -269,6 +273,73 @@ export class DashboardView extends ItemView {
 					}
 				}
 			});
+		}
+	}
+
+	private renderMobileWidgetBar(container: HTMLElement): void {
+		const bar = container.createDiv({ cls: 'dashboard-mobile-widget-bar' });
+
+		const btnRow = bar.createDiv({ cls: 'dashboard-mobile-widget-btns' });
+
+		const widgets: Array<{ key: 'pomodoro' | 'reading' | 'lunar'; label: string; icon: string }> = [
+			{ key: 'pomodoro', label: t('mobile.pomodoro'), icon: 'clock' },
+			{ key: 'reading', label: t('mobile.reading'), icon: 'book-open' },
+			{ key: 'lunar', label: t('mobile.lunar'), icon: 'sun' },
+		];
+
+		const panel = bar.createDiv({ cls: 'dashboard-mobile-widget-panel' });
+
+		for (const w of widgets) {
+			const btn = btnRow.createEl('button', {
+				cls: 'dashboard-mobile-widget-btn',
+				attr: { 'aria-label': w.label },
+			});
+			setIcon(btn, w.icon);
+
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				const isExpanded = this.mobileWidgetExpanded === w.key;
+				if (isExpanded) {
+					this.mobileWidgetExpanded = null;
+				} else {
+					this.mobileWidgetExpanded = w.key;
+				}
+				this.refreshMobileWidgetPanel(bar);
+			});
+
+			btn.dataset.widgetKey = w.key;
+		}
+
+		this.refreshMobileWidgetPanel(bar);
+	}
+
+	private refreshMobileWidgetPanel(bar: HTMLElement): void {
+		const btnRow = bar.querySelector('.dashboard-mobile-widget-btns');
+		const panel = bar.querySelector('.dashboard-mobile-widget-panel') as HTMLElement | null;
+		if (!btnRow || !panel) return;
+
+		// Update button active states
+		btnRow.querySelectorAll('.dashboard-mobile-widget-btn').forEach((btn) => {
+			const el = btn as HTMLElement;
+			el.classList.toggle('active', el.dataset.widgetKey === this.mobileWidgetExpanded);
+		});
+
+		// Render panel content
+		panel.empty();
+
+		if (!this.mobileWidgetExpanded) {
+			panel.removeClass('dashboard-mobile-widget-panel--open');
+			return;
+		}
+
+		panel.addClass('dashboard-mobile-widget-panel--open');
+
+		if (this.mobileWidgetExpanded === 'pomodoro' && this.pomodoroService) {
+			renderSidebarPomodoro(panel, this.pomodoroService, this.plugin.settings);
+		} else if (this.mobileWidgetExpanded === 'reading' && this.readingService) {
+			renderSidebarReading(panel, this.readingService);
+		} else if (this.mobileWidgetExpanded === 'lunar') {
+			renderSidebarLunarWidget(panel, this.holidayData, this.app);
 		}
 	}
 
@@ -928,7 +999,7 @@ export class DashboardView extends ItemView {
 							const inner = match.slice(2, -2);
 							return inner.split('|').pop()?.split('/').pop()?.replace(/\.md$/, '') ?? inner;
 						});
-						new Notice(t('reminder.dueNotice', { task: cleanText }));
+						this.showReminderModal(cleanText, card.id, i);
 					}
 				}
 			}
@@ -949,5 +1020,23 @@ export class DashboardView extends ItemView {
 				}
 			}
 		}
+	}
+
+	private showReminderModal(taskText: string, cardId: string, taskIndex: number): void {
+		const modal = new ReminderNoticeModal(
+			this.app,
+			taskText,
+			() => {
+				this.sync.editTaskReminder(cardId, taskIndex, undefined);
+			},
+			() => {
+				const snoozed = new Date(Date.now() + 60 * 60 * 1000);
+				const pad = (n: number) => String(n).padStart(2, '0');
+				const newReminder = `${snoozed.getFullYear()}-${pad(snoozed.getMonth() + 1)}-${pad(snoozed.getDate())} ${pad(snoozed.getHours())}:${pad(snoozed.getMinutes())}`;
+				this.firedReminders.delete(`${cardId}-${taskIndex}`);
+				this.sync.editTaskReminder(cardId, taskIndex, newReminder);
+			},
+		);
+		modal.open();
 	}
 }
