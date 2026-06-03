@@ -7470,56 +7470,91 @@
 		color: rgba(255, 255, 255, 0.7);
 	}
 
-		/* Mobile widget bar: bookmark tabs pulled from banner bottom */
+		/* Mobile widget bar: sits below the banner */
 		.dashboard-mobile-widget-bar {
 			display: block;
 			position: relative;
 			z-index: 5;
-			margin-top: -12px;
+			margin-top: 0;
 			margin-bottom: 0;
 			padding: 0 16px;
 		}
 
-		.dashboard-mobile-widget-btns {
+		/* Collapsed strip: thin interactive bar below the banner */
+		.dashboard-mobile-widget-strip {
+			height: 8px;
+			cursor: pointer;
 			display: flex;
-			gap: 5px;
+			align-items: center;
 			justify-content: center;
+			transition: background 0.2s ease;
+		}
+
+		.dashboard-mobile-widget-strip-hint {
+			width: 32px;
+			height: 3px;
+			border-radius: 1.5px;
+			background: var(--db-border-card);
+			opacity: 0.5;
+			transition: opacity 0.2s ease, width 0.2s ease, background 0.2s ease;
+			pointer-events: none;
+		}
+
+		.dashboard-mobile-widget-strip:active .dashboard-mobile-widget-strip-hint,
+		.dashboard-mobile-widget-strip--active .dashboard-mobile-widget-strip-hint {
+			opacity: 0.9;
+			width: 40px;
+			background: var(--db-text-faint);
+		}
+
+		/* Tab row: hidden by default, drops down when strip is tapped */
+		.dashboard-mobile-widget-tabs {
+			display: flex;
+			gap: 6px;
+			justify-content: center;
+			max-height: 0;
+			overflow: hidden;
+			opacity: 0;
+			transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+			            opacity 0.2s ease,
+			            padding 0.25s ease;
+			padding: 0;
+		}
+
+		.dashboard-mobile-widget-tabs--open {
+			max-height: 50px;
+			opacity: 1;
+			padding: 4px 0 2px 0;
 		}
 
 		.dashboard-mobile-widget-btn {
 			display: flex;
 			align-items: center;
 			justify-content: center;
-			width: 38px;
-			height: 24px;
-			background: rgba(255, 255, 255, 0.10) !important;
-			border: 1px solid rgba(255, 255, 255, 0.15) !important;
-			border-bottom: none !important;
-			border-radius: 8px 8px 0 0;
+			width: 52px;
+			height: 28px;
+			background: var(--db-bg-card) !important;
+			border: 1px solid var(--db-border-card) !important;
+			border-radius: var(--db-radius-sm);
 			padding: 0;
-			color: rgba(255, 255, 255, 0.50);
+			color: var(--db-text-faint);
 			cursor: pointer;
 			transition: all 0.2s ease;
 			outline: none;
 			box-shadow: none;
 			line-height: 1;
-			opacity: 0.8;
-			backdrop-filter: blur(8px);
-			-webkit-backdrop-filter: blur(8px);
 		}
 
 		.dashboard-mobile-widget-btn svg {
-			width: 14px;
-			height: 14px;
+			width: 16px;
+			height: 16px;
 		}
 
 		.dashboard-mobile-widget-btn.active {
-			opacity: 1;
-			color: rgba(255, 255, 255, 0.90);
-			background: rgba(255, 255, 255, 0.18) !important;
-			border-color: rgba(255, 255, 255, 0.25) !important;
-			border-bottom: none !important;
-			height: 26px;
+			color: var(--db-text);
+			background: var(--db-bg-card-hover) !important;
+			border-color: var(--db-border) !important;
+			height: 30px;
 		}
 
 		/* Expandable widget panel */
@@ -7532,7 +7567,7 @@
 		.dashboard-mobile-widget-panel--open {
 			max-height: 400px;
 			overflow-y: auto;
-			margin-top: 0;
+			margin-top: 4px;
 			-webkit-overflow-scrolling: touch;
 		}
 
@@ -7544,7 +7579,7 @@
 			-webkit-backdrop-filter: var(--db-backdrop-blur);
 		}
 
-	/* Hide banner edit btn on mobile by default */
+		/* Hide banner edit btn on mobile by default */
 	.dashboard-banner .dashboard-banner-edit-btn {
 		opacity: 0 !important;
 		pointer-events: none;

@@ -100,6 +100,18 @@ All themes support both Obsidian light and dark modes.
 
 ## What's New
 
+### 1.1.3
+- **Mobile widget bar redesign** — Replaced the overlapping tab buttons with a collapsible strip below the banner. Tap the strip to reveal wider bookmark tabs (Pomodoro, Reading, Lunar), then tap a tab to expand its widget panel
+- **Theme-aware tab colors** — Tab icons now transition from gray (inactive) to the theme primary text color (active), adapting to both light and dark themes
+- **Updated widget icons** — Pomodoro uses hourglass icon, Lunar uses moon icon for clearer visual identity
+- **Custom dialogs** — Replaced native browser dialogs with Obsidian-styled custom modals
+- **Class rename** — Cleaned up internal class naming conventions
+- **Style improvements** — Various visual polish and consistency fixes
+
+### 1.1.2
+- **Obsidian plugin review fixes** — Addressed feedback from the official Obsidian plugin review process
+- **MIT license** — Changed license from ISC to MIT
+
 ### v1.1.1
 - **Library config persistence** — Fixed a critical bug where library section configurations (filters, view mode, sort settings, page size) were lost after restarting Obsidian. The YAML parser now correctly handles nested objects in column definitions
 - **Grid position persistence** — Fixed grid position (gcol/grow) values never being saved to the dashboard file, causing card positions to reset on reload

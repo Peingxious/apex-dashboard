@@ -50,6 +50,7 @@ export class DashboardView extends ItemView {
 	private readingService: ReadingService | null = null;
 	private holidayData: Record<string, HolidayInfo> = {};
 	private mobileWidgetExpanded: 'pomodoro' | 'reading' | 'lunar' | null = null;
+	private mobileWidgetTabsOpen: boolean = false;
 	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -277,20 +278,36 @@ export class DashboardView extends ItemView {
 	}
 
 	private renderMobileWidgetBar(container: HTMLElement): void {
+		this.mobileWidgetTabsOpen = false;
+		this.mobileWidgetExpanded = null;
+
 		const bar = container.createDiv({ cls: 'dashboard-mobile-widget-bar' });
 
-		const btnRow = bar.createDiv({ cls: 'dashboard-mobile-widget-btns' });
+		// Thin strip: collapsed state, tap to expand tabs
+		const strip = bar.createDiv({ cls: 'dashboard-mobile-widget-strip' });
+		strip.createDiv({ cls: 'dashboard-mobile-widget-strip-hint' });
+		strip.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.mobileWidgetTabsOpen = !this.mobileWidgetTabsOpen;
+			if (!this.mobileWidgetTabsOpen) {
+				this.mobileWidgetExpanded = null;
+			}
+			this.refreshMobileWidgetPanel(bar);
+		});
+
+		// Tab row: hidden by default, revealed by tapping strip
+		const tabs = bar.createDiv({ cls: 'dashboard-mobile-widget-tabs' });
 
 		const widgets: Array<{ key: 'pomodoro' | 'reading' | 'lunar'; label: string; icon: string }> = [
-			{ key: 'pomodoro', label: t('mobile.pomodoro'), icon: 'clock' },
+			{ key: 'pomodoro', label: t('mobile.pomodoro'), icon: 'hourglass' },
 			{ key: 'reading', label: t('mobile.reading'), icon: 'book-open' },
-			{ key: 'lunar', label: t('mobile.lunar'), icon: 'sun' },
+			{ key: 'lunar', label: t('mobile.lunar'), icon: 'moon' },
 		];
 
 		const panel = bar.createDiv({ cls: 'dashboard-mobile-widget-panel' });
 
 		for (const w of widgets) {
-			const btn = btnRow.createEl('button', {
+			const btn = tabs.createEl('button', {
 				cls: 'dashboard-mobile-widget-btn',
 				attr: { 'aria-label': w.label },
 			});
@@ -298,8 +315,7 @@ export class DashboardView extends ItemView {
 
 			btn.addEventListener('click', (e) => {
 				e.stopPropagation();
-				const isExpanded = this.mobileWidgetExpanded === w.key;
-				if (isExpanded) {
+				if (this.mobileWidgetExpanded === w.key) {
 					this.mobileWidgetExpanded = null;
 				} else {
 					this.mobileWidgetExpanded = w.key;
@@ -314,12 +330,19 @@ export class DashboardView extends ItemView {
 	}
 
 	private refreshMobileWidgetPanel(bar: HTMLElement): void {
-		const btnRow = bar.querySelector('.dashboard-mobile-widget-btns');
+		const strip = bar.querySelector('.dashboard-mobile-widget-strip');
+		const tabs = bar.querySelector('.dashboard-mobile-widget-tabs');
 		const panel = bar.querySelector('.dashboard-mobile-widget-panel') as HTMLElement | null;
-		if (!btnRow || !panel) return;
+		if (!strip || !tabs || !panel) return;
+
+		// Toggle strip active state
+		strip.classList.toggle('dashboard-mobile-widget-strip--active', this.mobileWidgetTabsOpen);
+
+		// Toggle tabs visibility
+		tabs.classList.toggle('dashboard-mobile-widget-tabs--open', this.mobileWidgetTabsOpen);
 
 		// Update button active states
-		btnRow.querySelectorAll('.dashboard-mobile-widget-btn').forEach((btn) => {
+		tabs.querySelectorAll('.dashboard-mobile-widget-btn').forEach((btn) => {
 			const el = btn as HTMLElement;
 			el.classList.toggle('active', el.dataset.widgetKey === this.mobileWidgetExpanded);
 		});
