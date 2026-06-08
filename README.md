@@ -47,32 +47,11 @@ The sidebar shows recently edited files with relative timestamps, so you can jum
 
 ## Themes
 
-![Themes Preview](screenshot2.png)
-![Themes Preview](screenshot3.png)
-![Themes Preview](screenshot4.png)
-
-11 handcrafted themes, each with distinct visual identity:
-
-| Theme | Style |
-|-------|-------|
-| **Earth** | Warm organic tones, parchment textures |
-| **Nordic** | Clean minimal with blue accents |
-| **Aurora** | Frosted glass with animated aurora gradient |
-| **Spring** | Rose glass with warm glow |
-| **Island** | Animal Crossing pastels, forest green and ocean blue |
-| **Tundra** | Cold gray + avocado green aurora, sage glass cards |
-| **Blossom** | Rose glass glow, transparent sections |
-| **Haze** | Smoky white-to-blue mist, extreme glass transparency |
-| **Ember** | Warm campfire smoke gradient, amber glow |
-| **Dusk** | Purple twilight mist, cloud-soft rounded |
-| **Jade** | Green bamboo mist, crisp jade-cut edges |
-
-All themes support both Obsidian light and dark modes.
+The dashboard automatically inherits your Obsidian theme colors, seamlessly adapting to any community theme in both light and dark modes — no extra configuration needed.
 
 ## Settings
 
 - **Dashboard file** — customize the file path for your dashboard data
-- **Style** — choose from 11 visual themes
 - **Language** — English or Chinese interface
 - **Recent documents count** — control how many recent files appear
 - **Sidebar widgets** — Weather, Heatmap, Pomodoro, Reading, Countdown. Enable/disable and configure each widget independently
@@ -96,7 +75,37 @@ All themes support both Obsidian light and dark modes.
 2. A `dashboard.md` file is automatically created in your vault root
 3. All changes are saved directly to the file — it's your data, in plain text
 
-> **Note:** Deleting, renaming, or reordering sections must be done by editing the `dashboard.md` file directly. Any changes made to the note will take effect in the dashboard view immediately.
+### File Format
+
+The dashboard uses an indented bullet-list format:
+
+```markdown
+## Memo
+
+- 2026-06-08 memo
+	- Welcome to Apex Dashboard! Click here to edit your first memo.
+
+## Todo
+
+- Task list
+	- [ ] Review dashboard plugin code
+	- [ ] Write documentation
+	- due: 2025-05-20
+
+## Projects
+
+- Obsidian Dashboard
+	- [[obsidian-dashboard/README.md]]
+	- progress: 60
+```
+
+- `##` headings define sections
+- Top-level `-` defines card titles
+- Indented `\t-` defines card content (text, tasks, metadata, etc.)
+- Tasks use `- [ ]` / `- [x]` format
+- Metadata uses `key: value` format (e.g. `due:`, `progress:`, `link:`)
+
+> **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
 

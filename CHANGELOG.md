@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.4 (2025-06-09)
+
+### Changed
+- **Theme system simplified** — Removed built-in theme presets. Dashboard now automatically inherits Obsidian's native theme colors, seamlessly adapting to any community theme in both light and dark modes
+- **File format redesigned** — Switched from `###` headings with `id:` markers to indented bullet-list format. Cleaner, more readable, and easier to edit manually
+
+### Added
+- **Delete section button** — Each section header now has a trash button to delete sections directly from the dashboard UI
+- **WikiLink short names** — WikiLinks now display only the basename (e.g. `README` instead of `path/to/README.md`), with parent folder disambiguation for duplicate names
+
+### Fixed
+- **Card edit modal** — Fixed project card edit modal showing blank content
+- **Todo task parsing** — Fixed indented task lines (`\t- [ ]`) not being recognized as tasks in the new bullet format
+
 ## 1.1.1 (2025-05-29)
 
 ### Fixed

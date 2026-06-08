@@ -321,6 +321,16 @@ export class SyncEngine {
 		await this.writeToDisk();
 	}
 
+	async deleteColumn(name: string): Promise<void> {
+		if (!this.data) return;
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.filter(col => col.name !== name),
+		};
+		await this.writeToDisk();
+	}
+
 	async moveCard(cardId: string, targetColumn: string, targetIndex: number): Promise<void> {
 		if (!this.data) return;
 

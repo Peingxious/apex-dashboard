@@ -147,7 +147,6 @@ export class DashboardView extends ItemView {
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
 		container.addClass('apex-dashboard-root');
-		container.setAttribute('data-theme', this.plugin.settings.stylePreset);
 
 		const bannerEl = renderBanner(
 			container,
@@ -691,6 +690,15 @@ export class DashboardView extends ItemView {
 				onCardGridMove: (cardId: string, gridCol: number, gridRow: number) => this.sync.updateCardGridMove(cardId, gridCol, gridRow),
 				onFileDrop: (cardId: string, filePath: string) => this.handleFileDrop(cardId, filePath),
 				onColumnRename: (oldName: string, newName: string) => this.sync.renameColumn(oldName, newName),
+			onColumnDelete: async (columnName: string) => {
+				const confirmed = await showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('renderer.deleteSectionConfirm', { column: columnName }),
+				});
+				if (confirmed) {
+					this.sync.deleteColumn(columnName);
+				}
+			},
 			onTaskReminderEdit: (cardId: string, taskIndex: number, reminder: string | undefined) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
 			onAddFromTemplate: (columnName: string) => this.openTemplatePicker(columnName),
 				onLibraryConfigChange: (columnName: string, config: LibraryConfig) => this.sync.updateLibraryConfig(columnName, config),

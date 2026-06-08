@@ -14,7 +14,7 @@ import type {
 import { parse as parseYaml } from 'yaml';
 import { t } from './i18n';
 
-const KNOWN_METADATA_KEYS = new Set(['id', 'link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'cols', 'rows', 'gcol', 'grow']);
+const KNOWN_METADATA_KEYS = new Set(['link', 'progress', 'due', 'streak', 'type', 'color', 'cover', 'width', 'size', 'lat', 'lon', 'city', 'track', 'days', 'cols', 'rows', 'gcol', 'grow']);
 
 const REMINDER_REGEX = /\s*⏰\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*$/;
 
@@ -152,95 +152,104 @@ export function serialize(data: DashboardData): string {
 		if (column.sectionType === 'library') continue;
 
 		for (const card of column.cards) {
-			lines.push(`### ${card.title}`);
-
-			if (card.id) {
-				lines.push(`id: ${card.id}`);
-			}
+			// New format: use bullet list instead of ### headings
+			// Card title becomes a top-level bullet item
+			// Card body/metadata becomes indented sub-items
+			const cardLines: string[] = [];
+			const metadataLines: string[] = [];
 
 			if (card.type === 'task') {
-				lines.push(`type: task`);
+				metadataLines.push(`type: task`);
 			}
 
 			if (card.type === 'project') {
-				lines.push(`type: project`);
+				metadataLines.push(`type: project`);
 			}
 
 			if (card.wikiLink) {
-				lines.push(`link: [[${card.wikiLink}]]`);
+				metadataLines.push(`link: [[${card.wikiLink}]]`);
 			} else if (card.url) {
-				lines.push(`link: ${card.url}`);
+				metadataLines.push(`link: ${card.url}`);
 			}
 
 			if (card.progress >= 0 && card.type === 'project') {
-				lines.push(`progress: ${card.progress}%`);
+				metadataLines.push(`progress: ${card.progress}%`);
 			}
 
 			if (card.dueDate) {
-				lines.push(`due: ${card.dueDate}`);
+				metadataLines.push(`due: ${card.dueDate}`);
 			}
 
 			if (card.streak > 0 && card.type === 'habit') {
-				lines.push(`streak: ${card.streak}`);
+				metadataLines.push(`streak: ${card.streak}`);
 			}
 
 			if (card.color) {
-				lines.push(`color: ${card.color}`);
+				metadataLines.push(`color: ${card.color}`);
 			}
 
 			if (card.coverImage) {
-				lines.push(`cover: ${card.coverImage}`);
+				metadataLines.push(`cover: ${card.coverImage}`);
 			}
 
 			if (card.width > 0) {
-				lines.push(`width: ${card.width}`);
+				metadataLines.push(`width: ${card.width}`);
 			}
 			if (card.size && card.size !== 'M') {
-				lines.push(`size: ${card.size}`);
+				metadataLines.push(`size: ${card.size}`);
 			}
 			if (card.gridCols > 0) {
-				lines.push(`cols: ${card.gridCols}`);
+				metadataLines.push(`cols: ${card.gridCols}`);
 			}
 			if (card.gridRows > 0) {
-				lines.push(`rows: ${card.gridRows}`);
+				metadataLines.push(`rows: ${card.gridRows}`);
 			}
 			if (card.gridCol > 0) {
-				lines.push(`gcol: ${card.gridCol}`);
+				metadataLines.push(`gcol: ${card.gridCol}`);
 			}
 			if (card.gridRow > 0) {
-				lines.push(`grow: ${card.gridRow}`);
+				metadataLines.push(`grow: ${card.gridRow}`);
 			}
-		if (card.weatherConfig) {
-			const wc = card.weatherConfig;
-			lines.push(`lat: ${wc.latitude}`);
-			lines.push(`lon: ${wc.longitude}`);
-			lines.push(`city: "${escapeYamlString(wc.cityName)}"`);
-		}
+			if (card.weatherConfig) {
+				const wc = card.weatherConfig;
+				metadataLines.push(`lat: ${wc.latitude}`);
+				metadataLines.push(`lon: ${wc.longitude}`);
+				metadataLines.push(`city: "${escapeYamlString(wc.cityName)}"`);
+			}
 
-		if (card.trackerConfig) {
-			const tc = card.trackerConfig;
-			lines.push(`track: ${tc.key}`);
-			lines.push(`days: ${tc.days}`);
-		}
+			if (card.trackerConfig) {
+				const tc = card.trackerConfig;
+				metadataLines.push(`track: ${tc.key}`);
+				metadataLines.push(`days: ${tc.days}`);
+			}
 
 			if (card.blockquote) {
-				lines.push(`> ${card.blockquote}`);
+				metadataLines.push(`> ${card.blockquote}`);
 			}
 
+			// Build the card as a bullet list item
+			lines.push(`- ${card.title}`);
+
+			// Indented metadata
+			for (const ml of metadataLines) {
+				lines.push(`\t- ${ml}`);
+			}
+
+			// Indented tasks
 			if (card.tasks.length > 0) {
 				for (const task of card.tasks) {
-					let taskLine = `- [${task.checked ? 'x' : ' '}] ${task.text}`;
+					let taskLine = `\t- [${task.checked ? 'x' : ' '}] ${task.text}`;
 					if (task.reminder) taskLine += ` ⏰ ${task.reminder}`;
 					lines.push(taskLine);
 				}
 			}
 
+			// Indented body
 			const bodyLines = card.body.trim();
 			if (bodyLines) {
-				if (card.tasks.length > 0 || card.blockquote || card.url || card.wikiLink) {
-					lines.push('');
+				for (const bl of bodyLines.split('\n')) {
+					lines.push(`\t- ${bl}`);
 				}
-				lines.push(bodyLines);
 			}
 
 			lines.push('');
@@ -264,7 +273,7 @@ export function generateDefaultMarkdown(): string {
 				sectionType: 'memo',
 				cards: [
 					{
-						id: 'demo-memo-1',
+						id: generateId(t('default.memoTitle', { date: dateStr }), 'Memo'),
 						title: t('default.memoTitle', { date: dateStr }),
 						type: 'generic' as CardType,
 						column: 'Memo',
@@ -286,7 +295,7 @@ export function generateDefaultMarkdown(): string {
 					gridRow: 0,
 					},
 					{
-						id: 'demo-memo-path',
+						id: generateId(t('default.memoPathTitle'), 'Memo'),
 						title: t('default.memoPathTitle'),
 						type: 'generic' as CardType,
 						column: 'Memo',
@@ -308,7 +317,7 @@ export function generateDefaultMarkdown(): string {
 					gridRow: 0,
 					},
 					{
-						id: 'demo-memo-delete',
+						id: generateId(t('default.memoDeleteTitle'), 'Memo'),
 						title: t('default.memoDeleteTitle'),
 						type: 'generic' as CardType,
 						column: 'Memo',
@@ -337,7 +346,7 @@ export function generateDefaultMarkdown(): string {
 				sectionType: 'todo',
 				cards: [
 					{
-						id: 'demo-todo-1',
+						id: generateId(t('default.todoTitle1'), 'Todo'),
 						title: t('default.todoTitle1'),
 						type: 'task' as CardType,
 						column: 'Todo',
@@ -364,7 +373,7 @@ export function generateDefaultMarkdown(): string {
 					gridRow: 0,
 					},
 					{
-						id: 'demo-todo-2',
+						id: generateId(t('default.todoTitle2'), 'Todo'),
 						title: t('default.todoTitle2'),
 						type: 'task' as CardType,
 						column: 'Todo',
@@ -398,7 +407,7 @@ export function generateDefaultMarkdown(): string {
 				sectionType: 'projects',
 				cards: [
 					{
-						id: 'demo-project-1',
+						id: generateId(t('default.projectTitle'), 'Projects'),
 						title: t('default.projectTitle'),
 						type: 'project' as CardType,
 						column: 'Projects',
@@ -427,7 +436,7 @@ export function generateDefaultMarkdown(): string {
 				sectionType: 'projects',
 				cards: [
 					{
-						id: 'demo-lib-reading',
+						id: generateId('Reading', 'Library'),
 						title: 'Reading',
 						type: 'project' as CardType,
 						column: 'Library',
@@ -449,7 +458,7 @@ export function generateDefaultMarkdown(): string {
 					gridRow: 0,
 					},
 					{
-						id: 'demo-lib-toread',
+						id: generateId('To Read', 'Library'),
 						title: 'To Read',
 						type: 'project' as CardType,
 						column: 'Library',
@@ -471,7 +480,7 @@ export function generateDefaultMarkdown(): string {
 					gridRow: 0,
 					},
 					{
-						id: 'demo-lib-done',
+						id: generateId('Done', 'Library'),
 						title: 'Done',
 						type: 'project' as CardType,
 						column: 'Library',
@@ -704,8 +713,61 @@ function splitByH2(body: string): Array<{ heading: string; content: string }> {
 }
 
 function parseCards(content: string, columnName: string): DashboardCard[] {
+	// Try new format first: bullet list items
+	const bulletCards = parseCardsFromBullets(content, columnName);
+	if (bulletCards.length > 0) return bulletCards;
+
+	// Fallback to old ### format for backward compatibility
 	const blocks = splitByH3(content);
 	return blocks.map(block => parseCard(block, columnName));
+}
+
+/**
+ * Parse cards from the new bullet-list format:
+ * - Card Title
+ *   - metadata line
+ *   - [ ] task
+ *   - body line
+ */
+function parseCardsFromBullets(content: string, columnName: string): DashboardCard[] {
+	const lines = content.split('\n');
+	const cards: DashboardCard[] = [];
+	let currentCard: { title: string; lines: string[] } | null = null;
+
+	for (const line of lines) {
+		// Top-level bullet: new card
+		if (line.startsWith('- ') && !line.startsWith('-\t') && !line.startsWith('- [') && !line.startsWith('  - ')) {
+			if (currentCard) {
+				cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName));
+			}
+			currentCard = { title: line.slice(2).trim(), lines: [] };
+		} else if (currentCard) {
+			// Indented content (tab-indented or space-indented)
+			let contentLine = line;
+			if (contentLine.startsWith('\t- [')) {
+				// Task line: keep "- [ ]" prefix, only strip the tab indent
+				contentLine = contentLine.slice(1);
+			} else if (contentLine.startsWith('\t- ')) {
+				// Regular bullet: remove tab + "- " prefix
+				contentLine = contentLine.slice(3);
+			} else if (contentLine.startsWith('  - [')) {
+				// Task line: keep "- [ ]" prefix, only strip the space indent
+				contentLine = contentLine.slice(2);
+			} else if (contentLine.startsWith('  - ')) {
+				// Regular bullet: remove spaces + "- " prefix
+				contentLine = contentLine.slice(4);
+			} else if (contentLine.startsWith('\t')) {
+				contentLine = contentLine.slice(1); // Remove tab prefix
+			}
+			currentCard.lines.push(contentLine);
+		}
+	}
+
+	if (currentCard) {
+		cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName));
+	}
+
+	return cards;
 }
 
 function splitByH3(content: string): Array<{ title: string; body: string }> {
@@ -738,7 +800,7 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 	const trackerConfig = cardType === 'tracker' ? parseTrackerConfig(metadata) : undefined;
 
 	return {
-		id: metadata.id ?? generateId(block.title, columnName),
+		id: generateId(block.title, columnName),
 		title: block.title,
 		type: cardType,
 		column: columnName,

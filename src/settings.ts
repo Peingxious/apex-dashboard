@@ -18,55 +18,6 @@ export class DashboardSettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		new Setting(containerEl)
-			.setName(t('settings.language'))
-			.setDesc(t('settings.languageDesc'))
-			.addDropdown(dropdown => dropdown
-				.addOptions({
-					en: t('settings.languageEn'),
-					zh: t('settings.languageZh'),
-				})
-				.setValue(this.plugin.settings.language)
-				.onChange(async (value) => {
-					const lang = value as Language;
-					this.plugin.settings = {
-						...this.plugin.settings,
-						language: lang,
-					};
-					setLanguage(lang);
-					await this.plugin.saveSettings();
-					this.display();
-					this.plugin.refreshAllDashboards();
-				}));
-
-		new Setting(containerEl)
-			.setName(t('settings.stylePreset'))
-			.setDesc(t('settings.stylePresetDesc'))
-			.addDropdown(dropdown => dropdown
-				.addOptions({
-					earth: t('settings.styleEarth'),
-					nordic: t('settings.styleNordic'),
-					aurora: t('settings.styleAurora'),
-					prism: t('settings.stylePrism'),
-					island: t('settings.styleIsland'),
-					tundra: t('settings.styleTundra'),
-					blossom: t('settings.styleBlossom'),
-					matcha: t('settings.styleMatcha'),
-					lilac: t('settings.styleLilac'),
-					haze: t('settings.styleHaze'),
-					ember: t('settings.styleEmber'),
-					jade: t('settings.styleJade'),
-					carbon: t('settings.styleCarbon'),
-				})
-				.setValue(this.plugin.settings.stylePreset)
-				.onChange(async (value) => {
-					this.plugin.settings = {
-						...this.plugin.settings,
-						stylePreset: value,
-					};
-					await this.plugin.saveSettings();
-					this.plugin.refreshAllDashboards();
-				}));
 
 		const recentSetting = new Setting(containerEl)
 			.setName(t('settings.recentCount') + '  ' + this.plugin.settings.recentDocCount)
@@ -138,6 +89,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 								widgetWeatherCity: value.trim(),
 							};
 							await this.plugin.saveSettings();
+							this.plugin.refreshAllDashboards();
 						});
 					this.attachCitySuggest(text.inputEl);
 				});
@@ -172,6 +124,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							widgetTrackerKey: value.trim(),
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 					}));
 
 			const suggestions = suggestTrackerKeys(this.app);
@@ -260,6 +213,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroWorkMinutes: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 						workSetting.nameEl.setText(t('settings.pomodoroWork') + '  ' + value + ' min');
 					}));
 
@@ -275,6 +229,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroShortBreakMinutes: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 						shortSetting.nameEl.setText(t('settings.pomodoroShortBreak') + '  ' + value + ' min');
 					}));
 
@@ -290,6 +245,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroLongBreakMinutes: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 						longSetting.nameEl.setText(t('settings.pomodoroLongBreak') + '  ' + value + ' min');
 					}));
 
@@ -305,6 +261,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroLongBreakInterval: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 						intervalSetting.nameEl.setText(t('settings.pomodoroInterval') + '  ' + value);
 					}));
 
@@ -319,6 +276,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroAutoStartBreak: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 					}));
 
 			new Setting(pomodoroCard)
@@ -331,6 +289,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							pomodoroSoundEnabled: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 					}));
 		}
 
@@ -377,6 +336,7 @@ export class DashboardSettingTab extends PluginSettingTab {
 							readingSoundEnabled: value,
 						};
 						await this.plugin.saveSettings();
+						this.plugin.refreshAllDashboards();
 					}));
 		}
 	}

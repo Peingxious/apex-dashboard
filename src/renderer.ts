@@ -1786,6 +1786,23 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 	setIcon(addCardBtn, 'plus');
 	addCardBtn.addEventListener('click', () => callbacks.onCardAdd(column.name));
 
+	// Delete section button
+	const deleteSectionBtn = headerActions.createEl('button', {
+		cls: 'dashboard-section-add-btn dashboard-section-delete-btn',
+		attr: { 'aria-label': t('renderer.deleteSection', { column: column.name }) },
+	});
+	setIcon(deleteSectionBtn, 'trash-2');
+	deleteSectionBtn.addEventListener('click', async (e) => {
+		e.stopPropagation();
+		const confirmed = await showConfirmDialog(app, {
+			title: t('common.confirmDelete'),
+			message: t('renderer.deleteSectionConfirm', { column: column.name }),
+		});
+		if (confirmed) {
+			callbacks.onColumnDelete(column.name);
+		}
+	});
+
 	const cardsContainer = el.createDiv({ cls: 'dashboard-section-cards' });
 
 	for (const card of column.cards) {
@@ -2453,7 +2470,19 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 				const docItem = docList.createDiv({ cls: 'dashboard-project-doc-item' });
 				docItem.setAttribute('draggable', 'true');
 				docItem.dataset.docIndex = String(idx);
-				docItem.createSpan({ text: file?.basename ?? docPath.split('/').pop() ?? docPath, cls: 'dashboard-project-doc-name' });
+				
+				// Show short name; if duplicate basenames exist, show parent folder
+				let displayName = file?.basename ?? docPath.split('/').pop() ?? docPath;
+				const basename = displayName;
+				const allFiles = getSearchableFiles(app);
+				const sameNameFiles = allFiles.filter(mf => mf.basename === basename);
+				if (sameNameFiles.length > 1) {
+					const parts = docPath.split('/');
+					if (parts.length >= 2) {
+						displayName = `${parts[parts.length - 2]}/${basename}`;
+					}
+				}
+				docItem.createSpan({ text: displayName, cls: 'dashboard-project-doc-name' });
 
 				const removeBtn = docItem.createEl('button', {
 					cls: 'dashboard-project-doc-remove',
@@ -2650,7 +2679,21 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 	} else if (fragment) {
 		displayName = `${noteName} > ${fragment}`;
 	} else {
-		displayName = noteName;
+		// Show short name; if duplicate basenames exist, show parent folder
+		const basename = noteName;
+		const allFiles = getSearchableFiles(app);
+		const sameNameFiles = allFiles.filter(mf => mf.basename === basename);
+		if (sameNameFiles.length > 1) {
+			// Show parent folder to disambiguate
+			const parts = path.split('/');
+			if (parts.length >= 2) {
+				displayName = `${parts[parts.length - 2]}/${noteName}`;
+			} else {
+				displayName = noteName;
+			}
+		} else {
+			displayName = noteName;
+		}
 	}
 
 	const link = container.createSpan({

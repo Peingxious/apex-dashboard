@@ -13,6 +13,62 @@
    THEME VARIABLE DEFINITIONS
    ================================================================= */
 
+/* ----- DEFAULT: Use Obsidian native theme colors ----- */
+.apex-dashboard-root {
+	--db-bg: var(--background-primary);
+	--db-bg-section: var(--background-secondary);
+	--db-bg-card: var(--background-primary);
+	--db-bg-card-hover: var(--background-modifier-hover);
+	--db-bg-sidebar: var(--background-secondary);
+	--db-bg-input: var(--background-modifier-form-field);
+	--db-bg-btn: var(--background-modifier-hover);
+	--db-bg-btn-hover: var(--background-modifier-active-hover);
+	--db-bg-banner: var(--background-secondary-alt);
+	--db-bg-overlay: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.2) 100%);
+	--db-bg-hover: var(--background-modifier-hover);
+	--db-bg-hover-strong: var(--background-modifier-active-hover);
+	--db-bg-add-section: var(--background-secondary);
+	--db-bg-drop-indicator: var(--background-modifier-hover);
+
+	--db-border: var(--background-modifier-border);
+	--db-border-card: var(--background-modifier-border);
+	--db-border-section: var(--background-modifier-border);
+	--db-border-sidebar: var(--background-modifier-border);
+	--db-border-input: var(--background-modifier-border);
+	--db-border-input-focus: var(--interactive-accent);
+	--db-border-btn: var(--background-modifier-border);
+	--db-border-add-section: var(--background-modifier-border);
+
+	--db-text: var(--text-normal);
+	--db-text-muted: var(--text-muted);
+	--db-text-faint: var(--text-faint);
+	--db-text-inverse: var(--text-on-accent);
+	--db-text-inverse-muted: var(--text-on-accent);
+
+	--db-accent: var(--interactive-accent);
+	--db-accent-light: var(--interactive-accent-hover);
+	--db-danger: #f43f5e;
+
+	--db-shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+	--db-shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.12);
+	--db-backdrop-blur: blur(12px);
+
+	--db-radius-sm: 8px;
+	--db-radius-md: 12px;
+	--db-radius-lg: 16px;
+
+	--db-font: var(--font-interface);
+	--db-progress-from: var(--interactive-accent);
+	--db-progress-to: var(--interactive-accent-hover);
+	--db-checkbox: var(--interactive-accent);
+	--db-quote-border: var(--interactive-accent);
+	--db-link: var(--interactive-accent);
+
+	--db-aurora-bg: var(--background-primary);
+	--db-aurora-size: 400% 400%;
+	--db-aurora-speed: 12s;
+}
+
 /* ----- 1. AURORA (极光) ----- */
 .apex-dashboard-root[data-theme="aurora"] {
 		--db-bg: #0f0a1e;
@@ -4632,6 +4688,10 @@
 	color: var(--db-text) !important;
 }
 
+.dashboard-section-delete-btn:hover {
+	color: var(--db-danger, #f43f5e) !important;
+}
+
 .dashboard-section-header-actions {
 	display: flex;
 	align-items: center;
@@ -5583,6 +5643,30 @@
 .dashboard-modal-actions button {
 	border-radius: var(--db-radius-sm, 6px);
 	font-family: var(--db-font, var(--font-interface));
+}
+
+/* Card Edit Modal */
+.dashboard-card-edit-modal .dashboard-card-edit-body .setting-item-control {
+	flex: 1;
+}
+
+.dashboard-card-edit-textarea {
+	width: 100%;
+	min-height: 120px;
+	padding: 10px 12px;
+	border-radius: var(--db-radius-sm, 8px);
+	border: 1px solid var(--db-border-input, var(--background-modifier-border));
+	background: var(--db-bg-input, var(--background-modifier-form-field));
+	color: var(--db-text, var(--text-normal));
+	font-family: var(--db-font, var(--font-interface));
+	font-size: 0.9em;
+	resize: vertical;
+	line-height: 1.6;
+}
+
+.dashboard-card-edit-textarea:focus {
+	outline: none;
+	border-color: var(--db-border-input-focus, var(--interactive-accent));
 }
 
 /* Banner Quotes List */
