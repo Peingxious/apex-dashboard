@@ -38,6 +38,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.languageZh': '中文',
 		'settings.sidebarPinnedDefault': 'Pin sidebar by default',
 		'settings.sidebarPinnedDefaultDesc': 'Keep the right sidebar always visible when opening the dashboard',
+		'settings.projectHideNestedDocs': 'Hide nested project docs',
+		'settings.projectHideNestedDocsDesc': 'Only show top-level documents in project cards; nested children are hidden but preserved',
 
 		// Style Presets
 		'settings.stylePreset': 'Style',
@@ -465,6 +467,7 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.sortModified': 'Modified',
 		'library.sortCreated': 'Created',
 		'library.viewGrid': 'Grid',
+		'library.viewMode': 'View Mode',
 		'library.viewList': 'List',
 		'library.viewTable': 'Table',
 		'library.viewKanban': 'Kanban',
@@ -489,6 +492,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.dateEnd': 'End date',
 		'library.filterActive': 'Filter active',
 		'library.filterValues': '{property}: {values}',
+		'library.sortBy': 'Sort by',
+		'library.sortDirection': 'Direction',
 	},
 	zh: {
 		// Common
@@ -517,6 +522,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.languageZh': '中文',
 		'settings.sidebarPinnedDefault': '默认钉住侧边栏',
 		'settings.sidebarPinnedDefaultDesc': '打开工作台时，右侧边栏始终保持展开状态',
+		'settings.projectHideNestedDocs': '隐藏项目嵌套文档',
+		'settings.projectHideNestedDocsDesc': '项目卡片中仅显示顶层文档，子文档隐藏但保留数据',
 
 		// Style Presets
 		'settings.stylePreset': '样式',
@@ -939,6 +946,7 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.sortModified': '修改时间',
 		'library.sortCreated': '创建时间',
 		'library.viewGrid': '网格',
+		'library.viewMode': '视图模式',
 		'library.viewList': '列表',
 		'library.viewTable': '表格',
 		'library.viewKanban': '看板',
@@ -966,6 +974,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'library.dateEnd': '结束日期',
 		'library.filterActive': '筛选已激活',
 		'library.filterValues': '{property}: {values}',
+		'library.sortBy': '排序方式',
+		'library.sortDirection': '排序方向',
 	},
 };
 

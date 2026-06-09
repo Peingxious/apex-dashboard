@@ -3,6 +3,20 @@ import type { LibraryConfig, PropertyFilter, LibraryViewMode } from "./types";
 import { extractFrontmatterProperties } from "./library-section";
 import { t } from "./i18n";
 
+// Map internal property keys to user-facing display names (using Obsidian base property naming)
+const BUILTIN_PROPERTY_NAMES: Record<string, string> = {
+    tags: t("library.tags"),
+    modified: t("library.modified"),
+    created: t("library.created"),
+    path: t("library.path"),
+    name: t("library.sortName"),
+};
+
+/** Get display name for a property key */
+function getPropertyName(key: string): string {
+    return BUILTIN_PROPERTY_NAMES[key] ?? key;
+}
+
 export class LibraryConfigModal extends Modal {
     private config: LibraryConfig;
     private onSave: (config: LibraryConfig) => void;
@@ -49,22 +63,26 @@ export class LibraryConfigModal extends Modal {
                 const filter = this.filters[i];
                 const filterRow = filtersContainer.createDiv({ cls: "dashboard-library-config-filter-row" });
 
-                // Property selector
-                const propSelect = filterRow.createEl("select", { cls: "dropdown" });
+                // Property selector — use custom class instead of Obsidian's "dropdown" (avoids diamond icon bug)
+                const propSelect = filterRow.createEl("select", { cls: "dashboard-library-config-prop-select" });
                 const propKeys = Array.from(this.availableProperties.keys());
                 for (const key of propKeys) {
-                    const option = propSelect.createEl("option", { text: key, attr: { value: key } });
+                    const option = propSelect.createEl("option", {
+                        text: getPropertyName(key),
+                        attr: { value: key },
+                    });
                     if (key === filter.property) option.selected = true;
                 }
                 propSelect.addEventListener("change", () => {
                     filter.property = propSelect.value;
                     filter.values = [];
+                    renderFilters(); // re-render to update placeholder
                 });
 
                 // Value input (comma-separated)
                 const valueInput = filterRow.createEl("input", {
                     cls: "dashboard-library-config-value-input",
-                    attr: { type: "text", placeholder: t("library.filterValues") },
+                    attr: { type: "text", placeholder: `[${getPropertyName(filter.property)}]` },
                 });
                 valueInput.value = filter.values.join(", ");
                 valueInput.addEventListener("input", () => {
@@ -97,9 +115,49 @@ export class LibraryConfigModal extends Modal {
 
         renderFilters();
 
+        // --- Quick Date Filter (compact inline row) ---
+        const dateFilterRow = filtersContainer.createDiv({ cls: "dashboard-library-config-filter-row" });
+
+        const datePropSelect = dateFilterRow.createEl("select", { cls: "dashboard-library-config-prop-select" });
+        datePropSelect.createEl("option", { text: getPropertyName("created"), value: "created" });
+        datePropSelect.createEl("option", { text: getPropertyName("modified"), value: "modified" });
+        datePropSelect.value = this.config.quickDateFilter?.property ?? "created";
+
+        const dateRangeWrap = dateFilterRow.createDiv({ cls: "dashboard-library-config-date-range" });
+        const startDateInput = dateRangeWrap.createEl("input", {
+            cls: "dashboard-library-config-date-input",
+            attr: { type: "date", placeholder: t("library.dateStart") },
+        });
+        const endDateInput = dateRangeWrap.createEl("input", {
+            cls: "dashboard-library-config-date-input",
+            attr: { type: "date", placeholder: t("library.dateEnd") },
+        });
+
+        if (this.config.quickDateFilter) {
+            startDateInput.value = this.config.quickDateFilter.start;
+            endDateInput.value = this.config.quickDateFilter.end;
+        }
+
+        const syncQuickDateFilter = () => {
+            const start = startDateInput.value;
+            const end = endDateInput.value;
+            if (start || end) {
+                this.config.quickDateFilter = {
+                    property: (datePropSelect.value as 'created' | 'modified') ?? 'created',
+                    start,
+                    end,
+                };
+            } else {
+                this.config.quickDateFilter = undefined;
+            }
+        };
+        datePropSelect.addEventListener("change", syncQuickDateFilter);
+        startDateInput.addEventListener("change", syncQuickDateFilter);
+        endDateInput.addEventListener("change", syncQuickDateFilter);
+
         // --- View Mode ---
         const viewSection = contentEl.createDiv({ cls: "dashboard-library-config-section" });
-        viewSection.createEl("h3", { text: t("library.viewGrid"), cls: "dashboard-library-config-section-title" });
+        viewSection.createEl("h3", { text: t("library.viewMode"), cls: "dashboard-library-config-section-title" });
 
         const viewModes: LibraryViewMode[] = ["grid", "list", "table", "kanban"];
         const viewIcons: Record<string, string> = { grid: "layout-grid", list: "list", table: "table", kanban: "columns" };
@@ -131,7 +189,6 @@ export class LibraryConfigModal extends Modal {
         };
         updateKanbanVisibility();
 
-        // Re-check visibility when view mode changes
         viewToggle.addEventListener("click", () => {
             setTimeout(updateKanbanVisibility, 50);
         });
@@ -142,7 +199,7 @@ export class LibraryConfigModal extends Modal {
                 dropdown.addOption("", t("library.noGroup"));
                 const propKeys = Array.from(this.availableProperties.keys());
                 for (const key of propKeys) {
-                    dropdown.addOption(key, key);
+                    dropdown.addOption(key, getPropertyName(key));
                 }
                 dropdown.setValue(this.config.kanbanGroupBy ?? "");
                 dropdown.onChange(value => {
@@ -150,21 +207,20 @@ export class LibraryConfigModal extends Modal {
                 });
             });
 
-        // --- Sort ---
-        const sortSection = contentEl.createDiv({ cls: "dashboard-library-config-section" });
-        sortSection.createEl("h3", { text: t("library.sortName"), cls: "dashboard-library-config-section-title" });
+        // --- Sort & Page Size (compact, no section headers) ---
+        const sortPageSection = contentEl.createDiv({ cls: "dashboard-library-config-section" });
 
-        new Setting(sortSection)
-            .setName(t("library.sortName"))
+        new Setting(sortPageSection)
+            .setName(t("library.sortBy"))
             .addDropdown(dropdown => {
-                dropdown.addOption("name", t("library.sortName"));
-                dropdown.addOption("modified", t("library.sortModified"));
-                dropdown.addOption("created", t("library.sortCreated"));
+                dropdown.addOption("name", getPropertyName("name"));
+                dropdown.addOption("modified", getPropertyName("modified"));
+                dropdown.addOption("created", getPropertyName("created"));
                 const propKeys = Array.from(this.availableProperties.keys()).filter(
                     k => k !== "tags" && k !== "modified" && k !== "created" && k !== "path"
                 );
                 for (const key of propKeys) {
-                    dropdown.addOption(key, key);
+                    dropdown.addOption(key, getPropertyName(key));
                 }
                 dropdown.setValue(this.config.sortBy);
                 dropdown.onChange(value => {
@@ -172,8 +228,8 @@ export class LibraryConfigModal extends Modal {
                 });
             });
 
-        new Setting(sortSection)
-            .setName(t("library.sortModified"))
+        new Setting(sortPageSection)
+            .setName(t("library.sortDirection"))
             .addToggle(toggle => {
                 toggle.setValue(this.config.sortDesc);
                 toggle.onChange(value => {
@@ -181,11 +237,7 @@ export class LibraryConfigModal extends Modal {
                 });
             });
 
-        // --- Page Size ---
-        const pageSection = contentEl.createDiv({ cls: "dashboard-library-config-section" });
-        pageSection.createEl("h3", { text: t("library.pageSize", { count: "" }).trim(), cls: "dashboard-library-config-section-title" });
-
-        new Setting(pageSection)
+        new Setting(sortPageSection)
             .setName(t("library.pageSize", { count: "" }).trim())
             .addDropdown(dropdown => {
                 dropdown.addOption("10", t("library.pageSize", { count: 10 }));

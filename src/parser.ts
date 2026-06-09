@@ -10,6 +10,7 @@ import type {
 	WeatherConfig,
 	TrackerConfig,
 	LibraryConfig,
+	ProjectDocNode,
 } from './types';
 import { parse as parseYaml } from 'yaml';
 import { t } from './i18n';
@@ -90,7 +91,6 @@ export function serialize(data: DashboardData): string {
 	lines.push('columns:');
 	for (const col of data.columns) {
 		lines.push(`  - name: ${col.name}`);
-		lines.push(`    color: "${col.color}"`);
 		if (col.sectionType) {
 			lines.push(`    type: ${col.sectionType}`);
 		}
@@ -147,28 +147,10 @@ export function serialize(data: DashboardData): string {
 			const metadataLines: string[] = [];
 
 			// type: task / type: project 不再写入 MD，这些信息记录在 columns 的 sectionType 中
+			// wikiLink / url 也作为独立字段存储，不再写入 MD 的 link 元数据行
+			// 这样避免在编辑卡片的 body 文本框中出现 "- link: [[xxx]]" 行
 
-			if (card.wikiLink) {
-				metadataLines.push(`link: [[${card.wikiLink}]]`);
-			} else if (card.url) {
-				metadataLines.push(`link: ${card.url}`);
-			}
-
-			if (card.progress >= 0 && card.type === 'project') {
-				metadataLines.push(`progress: ${card.progress}%`);
-			}
-
-			if (card.dueDate) {
-				metadataLines.push(`due: ${card.dueDate}`);
-			}
-
-			if (card.streak > 0 && card.type === 'habit') {
-				metadataLines.push(`streak: ${card.streak}`);
-			}
-
-			if (card.color) {
-				metadataLines.push(`color: ${card.color}`);
-			}
+			// progress / due / color 不再写入 MD，避免在卡片内容区出现属性行
 
 			if (card.coverImage) {
 				metadataLines.push(`cover: ${card.coverImage}`);
@@ -229,8 +211,18 @@ export function serialize(data: DashboardData): string {
 			// Indented body
 			const bodyLines = card.body.trim();
 			if (bodyLines) {
+				const isMemoOrProject = column.sectionType === 'memo' || column.sectionType === 'projects';
 				for (const bl of bodyLines.split('\n')) {
-					lines.push(`\t- ${bl}`);
+					if (bl.trim()) {
+						if (isMemoOrProject) {
+							// Project/memo body: every line gets \t prefix so the parser
+							// never misidentifies "- " body lines as new card titles.
+							// The parser strips this \t back when reading.
+							lines.push(`\t${bl}`);
+						} else {
+							lines.push(`\t- ${bl}`);
+						}
+					}
 				}
 			}
 
@@ -582,9 +574,9 @@ function parseColumnDefs(fm: Record<string, unknown>): Array<{ name: string; col
 	if (!Array.isArray(raw)) return DEFAULT_COLUMNS;
 
 	return (raw as Array<Record<string, unknown>>).map(item => ({
-			name: String(item.name ?? 'Unnamed'),
-			color: String(item.color ?? '#6366f1'),
-			sectionType: item.type ? String(item.type) : undefined,
+		name: String(item.name ?? 'Unnamed'),
+		color: String(item.color ?? '#6366f1'),
+		sectionType: item.type ? String(item.type) : undefined,
 		libraryConfig: item.library ? parseLibraryConfig(item.library as Record<string, unknown>) : undefined,
 	}));
 }
@@ -603,11 +595,12 @@ function parseColumns(body: string, defs: Array<{ name: string; color: string; s
 			const defIdx = defs.indexOf(def);
 			usedDefIndices.add(defIdx);
 		}
-		const cards = parseCards(section.content, section.heading);
+		const sectionType = resolveSectionType(section.heading, [], def?.sectionType);
+		const cards = parseCards(section.content, section.heading, sectionType);
 		return {
 			name: section.heading,
 			color: def?.color ?? '#6366f1',
-			sectionType: resolveSectionType(section.heading, cards, def?.sectionType),
+			sectionType,
 			cards,
 			libraryConfig: def?.libraryConfig,
 		};
@@ -695,14 +688,14 @@ function splitByH2(body: string): Array<{ heading: string; content: string }> {
 	return sections;
 }
 
-function parseCards(content: string, columnName: string): DashboardCard[] {
+function parseCards(content: string, columnName: string, sectionType: string): DashboardCard[] {
 	// Try new format first: bullet list items
-	const bulletCards = parseCardsFromBullets(content, columnName);
+	const bulletCards = parseCardsFromBullets(content, columnName, sectionType);
 	if (bulletCards.length > 0) return bulletCards;
 
 	// Fallback to old ### format for backward compatibility
 	const blocks = splitByH3(content);
-	return blocks.map(block => parseCard(block, columnName));
+	return blocks.map(block => parseCard(block, columnName, sectionType));
 }
 
 /**
@@ -712,44 +705,61 @@ function parseCards(content: string, columnName: string): DashboardCard[] {
  *   - [ ] task
  *   - body line
  */
-function parseCardsFromBullets(content: string, columnName: string): DashboardCard[] {
+function parseCardsFromBullets(content: string, columnName: string, sectionType: string): DashboardCard[] {
 	const lines = content.split('\n');
 	const cards: DashboardCard[] = [];
 	let currentCard: { title: string; lines: string[] } | null = null;
 
 	for (const line of lines) {
 		// Top-level bullet: new card
-		if (line.startsWith('- ') && !line.startsWith('-\t') && !line.startsWith('- [') && !line.startsWith('  - ')) {
+		// Note: - [[wiki]] titles start with '- [' so we must NOT use startsWith('- [')
+		// Only skip actual task checkbox lines: '- [x]' or '- [ ]'
+		const isTaskCheckbox = /^-\s+\[[ x]\]/.test(line);
+		if (line.startsWith('- ') && !line.startsWith('-\t') && !isTaskCheckbox && !line.startsWith('  - ')) {
+			console.log('[apex-dashboard] parseCardsFromBullets NEW CARD, line:', JSON.stringify(line), 'sectionType:', sectionType);
 			if (currentCard) {
-				cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName));
+				cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName, sectionType));
 			}
 			currentCard = { title: line.slice(2).trim(), lines: [] };
 		} else if (currentCard) {
-			// Indented content (tab-indented or space-indented)
-			let contentLine = line;
-			if (contentLine.startsWith('\t- [')) {
-				// Task line: keep "- [ ]" prefix, only strip the tab indent
-				contentLine = contentLine.slice(1);
-			} else if (contentLine.startsWith('\t- ')) {
-				// Regular bullet: remove tab + "- " prefix
-				contentLine = contentLine.slice(3);
-			} else if (contentLine.startsWith('  - [')) {
-				// Task line: keep "- [ ]" prefix, only strip the space indent
-				contentLine = contentLine.slice(2);
-			} else if (contentLine.startsWith('  - ')) {
-				// Regular bullet: remove spaces + "- " prefix
-				contentLine = contentLine.slice(4);
-			} else if (contentLine.startsWith('\t')) {
-				contentLine = contentLine.slice(1); // Remove tab prefix
+			// Preserve original line with indentation for memo/project sections
+			if (sectionType === 'memo' || sectionType === 'projects') {
+				// Strip the first \t (markdown nesting) to recover the user's original content
+				const stripped = line.startsWith('\t') ? line.slice(1) : line;
+				currentCard.lines.push(stripped);
+			} else if (sectionType === 'todo') {
+				// For todo sections: strip one level of indentation to get clean task/metadata lines
+				let contentLine = line;
+				if (contentLine.startsWith('\t')) {
+					contentLine = contentLine.slice(1);
+				} else if (contentLine.startsWith('  ')) {
+					contentLine = contentLine.slice(2);
+				}
+				currentCard.lines.push(contentLine);
+			} else {
+				// For other sections: strip first indent level
+				let contentLine = line;
+				if (contentLine.startsWith('\t- [')) {
+					contentLine = contentLine.slice(1);
+				} else if (contentLine.startsWith('\t- ')) {
+					contentLine = contentLine.slice(3);
+				} else if (contentLine.startsWith('  - [')) {
+					contentLine = contentLine.slice(2);
+				} else if (contentLine.startsWith('  - ')) {
+					contentLine = contentLine.slice(4);
+				} else if (contentLine.startsWith('\t')) {
+					contentLine = contentLine.slice(1);
+				}
+				currentCard.lines.push(contentLine);
 			}
-			currentCard.lines.push(contentLine);
 		}
 	}
 
 	if (currentCard) {
-		cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName));
+		cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName, sectionType));
 	}
 
+	console.log('[apex-dashboard] parseCardsFromBullets DONE, column:', columnName, 'sectionType:', sectionType, 'cardCount:', cards.length, 'cards:', cards.map(c => ({ id: c.id, title: c.title, type: c.type })));
 	return cards;
 }
 
@@ -776,7 +786,63 @@ function splitByH3(content: string): Array<{ title: string; body: string }> {
 	return blocks;
 }
 
-function parseCard(block: { title: string; body: string }, columnName: string): DashboardCard {
+function parseCard(block: { title: string; body: string }, columnName: string, sectionType: string): DashboardCard {
+	// For memo sections: store raw body as-is (preserving indentation)
+	if (sectionType === 'memo') {
+		const id = generateId(block.title, columnName);
+		return {
+			id,
+			title: block.title,
+			type: 'note' as CardType,
+			column: columnName,
+			body: block.body,
+			tasks: [],
+			url: '',
+			wikiLink: '',
+			progress: -1,
+			streak: 0,
+			dueDate: '',
+			blockquote: '',
+			color: '',
+			coverImage: '',
+			width: 0,
+			size: 'M' as CardSize,
+			gridCols: 0,
+			gridRows: 0,
+			gridCol: 0,
+			gridRow: 0,
+		};
+	}
+
+	// For project sections: parse nested doc links
+	if (sectionType === 'projects' || sectionType === 'notes') {
+		const projectDocs = parseProjectDocs(block.body);
+		const id = generateId(block.title, columnName);
+		return {
+			id,
+			title: block.title,
+			type: projectDocs.length > 0 ? 'project' as CardType : 'generic' as CardType,
+			column: columnName,
+			body: block.body,
+			tasks: [],
+			url: '',
+			wikiLink: '',
+			progress: -1,
+			streak: 0,
+			dueDate: '',
+			blockquote: '',
+			color: '',
+			coverImage: '',
+			width: 0,
+			size: 'M' as CardSize,
+			gridCols: 0,
+			gridRows: 0,
+			gridCol: 0,
+			gridRow: 0,
+			projectDocs,
+		};
+	}
+
 	const { metadata, tasks, blockquote, cleanBody } = extractCardParts(block.body);
 	const cardType = detectCardType(tasks, blockquote, metadata);
 	const weatherConfig = cardType === 'weather' ? parseWeatherConfig(metadata) : undefined;
@@ -806,6 +872,37 @@ function parseCard(block: { title: string; body: string }, columnName: string): 
 			weatherConfig,
 			trackerConfig,
 	};
+}
+
+function parseProjectDocs(body: string): ProjectDocNode[] {
+	const lines = body.split('\n');
+	const roots: ProjectDocNode[] = [];
+	const stack: { indent: number; nodes: ProjectDocNode[] }[] = [{ indent: -1, nodes: roots }];
+
+	for (const line of lines) {
+		// Count leading tabs to determine nesting level
+		let indent = 0;
+		let rest = line;
+		while (rest.startsWith('\t')) {
+			indent++;
+			rest = rest.slice(1);
+		}
+		// Match "- [[path]]" or "- [[path|alias]]"
+		const docMatch = rest.match(/^-\s*\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/);
+		if (!docMatch || !docMatch[1]) continue;
+
+		const path = docMatch[1].trim();
+		const node: ProjectDocNode = { path, children: [] };
+
+		// Find the right parent based on indent level
+		while (stack.length > 1 && stack[stack.length - 1]!.indent >= indent) {
+			stack.pop();
+		}
+		stack[stack.length - 1]!.nodes.push(node);
+		stack.push({ indent, nodes: node.children });
+	}
+
+	return roots;
 }
 
 function extractCardParts(body: string): {

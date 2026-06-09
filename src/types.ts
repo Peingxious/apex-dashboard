@@ -31,6 +31,7 @@ export interface DashboardSettings {
 	readingSoundEnabled: boolean;
 	taskTemplates: TaskTemplate[];
 	sidebarPinnedDefault: boolean;
+	projectHideNestedDocs: boolean;
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -64,6 +65,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	readingSoundEnabled: true,
 	taskTemplates: [],
 	sidebarPinnedDefault: true,
+	projectHideNestedDocs: true,
 };
 
 export interface QuoteItem {
@@ -135,6 +137,7 @@ export interface TaskItem {
 	text: string;
 	checked: boolean;
 	reminder?: string;
+	children?: TaskItem[];
 }
 
 export interface TaskTemplate {
@@ -169,6 +172,13 @@ export interface DashboardCard {
 	chartConfig?: never;
 	weatherConfig?: WeatherConfig;
 	trackerConfig?: TrackerConfig;
+	projectDocs?: ProjectDocNode[];
+	rawBody?: string;
+}
+
+export interface ProjectDocNode {
+	path: string;
+	children: ProjectDocNode[];
 }
 
 export type LibraryViewMode = 'grid' | 'list' | 'table' | 'kanban';
@@ -224,6 +234,8 @@ export interface RenderCallbacks {
 	onProjectDocsUpdate(card: DashboardCard, docPaths: string[]): void;
 	onProjectDocsReorder(cardId: string, fromIndex: number, toIndex: number): void;
 	onDocMoveToCard(srcCardId: string, docIndex: number, destCardId: string, destIndex: number): void;
+	onProjectDocsAdd(card: DashboardCard, docPath: string): void;
+	onProjectDocsRemove(card: DashboardCard, topIndex: number): void;
 	onMemoColorChange(card: DashboardCard, color: string): void;
 	onProjectCoverChange(card: DashboardCard, imagePath: string): void;
 	onCardTitleEdit(cardId: string, newTitle: string): void;
@@ -232,6 +244,8 @@ export interface RenderCallbacks {
 	onCardGridChange(cardId: string, gridCols: number, gridRows: number): void;
 	onCardGridMove(cardId: string, gridCol: number, gridRow: number): void;
 	onFileDrop(cardId: string, filePath: string): void;
+	onProjectItemReorder(cardId: string, fromIndex: number, toIndex: number): void;
+	onProjectItemMoveToCard(srcCardId: string, itemIndex: number, destCardId: string, destIndex: number): void;
 	onColumnRename(oldName: string, newName: string): void;
 	onColumnDelete(columnName: string): void;
 	onColumnSectionTypeChange(columnName: string, sectionType: string): void;

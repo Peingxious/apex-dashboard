@@ -5045,6 +5045,20 @@
 	line-height: 1.3;
 }
 
+/* Project title with wikiLink: show as clickable link */
+.dashboard-card-title--linked {
+	color: var(--db-accent, var(--text-accent));
+	text-decoration: underline;
+	text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+	text-underline-offset: 2px;
+	transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+
+.dashboard-card-title--linked:hover {
+	color: var(--db-text);
+	text-decoration-color: currentColor;
+}
+
 .dashboard-title-edit-input {
 	width: 100%;
 	background: var(--db-bg-input);
@@ -5111,13 +5125,6 @@
 	min-height: 0;
 	overflow-y: auto;
 	scrollbar-width: none;
-}
-
-.dashboard-card-body--doc-drop {
-	outline: 2px dashed var(--db-border-accent);
-	outline-offset: -2px;
-	border-radius: var(--db-radius-sm);
-	background: var(--db-bg-card-hover);
 }
 
 .dashboard-card--file-drop {
@@ -5346,118 +5353,107 @@
 }
 
 /* ===== Project ===== */
-.dashboard-project-docs {
+.dashboard-project-title-line {
+	font-weight: 600;
+	font-size: 0.95em;
+	line-height: 1.6;
+	display: block;
+	color: var(--db-text);
+}
+
+.dashboard-project-content-line {
+	font-size: 0.9em;
+	line-height: 1.6;
+	display: block;
+	color: var(--db-text);
+	padding-left: 16px;
+}
+
+.dashboard-project-hidden-count {
+	font-size: 0.8em;
+	color: var(--db-text-muted);
+	background: var(--background-modifier-border);
+	border-radius: 10px;
+	padding: 1px 8px;
+	line-height: 1.4;
+}
+
+.dashboard-project-child-count {
+	font-size: 0.8em;
+	color: var(--db-text-muted);
+	background: var(--background-modifier-border);
+	border-radius: 10px;
+	padding: 1px 8px;
+	margin-left: 4px;
+	line-height: 1.4;
+	flex-shrink: 0;
+}
+
+/* Draggable project item list */
+.dashboard-project-list {
 	display: flex;
 	flex-direction: column;
 	gap: 4px;
-	margin-bottom: 8px;
 }
 
-.dashboard-project-docs:empty {
-	min-height: 32px;
-}
-
-.dashboard-project-docs--drop-target {
-	min-height: 40px;
-	border: 2px dashed var(--db-border-accent);
-	border-radius: var(--db-radius-sm);
-	background: var(--db-bg-card-hover);
-}
-
-.dashboard-project-doc-item {
+.dashboard-project-item {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	padding: 2px 10px;
+	gap: 4px;
+	padding: 4px 10px;
 	border-radius: var(--db-radius-sm);
 	border: 1px solid var(--db-border-card);
 	background: var(--db-bg-card);
 	backdrop-filter: var(--db-backdrop-blur);
 	-webkit-backdrop-filter: var(--db-backdrop-blur);
-	cursor: pointer;
-	transition: background 0.15s ease, border-color 0.15s ease;
+	cursor: grab;
+	transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
-.dashboard-project-doc-item:hover {
+.dashboard-project-item:hover {
 	background: var(--db-bg-card-hover);
 }
 
-.dashboard-project-doc-item:hover .dashboard-project-doc-remove {
-	opacity: 1;
+.dashboard-project-item:active {
+	cursor: grabbing;
 }
 
-.dashboard-project-doc-name {
-	font-size: 0.95em;
-	flex: 1;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	line-height: 1.2;
+.dashboard-project-item--dragging {
+	opacity: 0.4;
 }
 
-.dashboard-project-doc-remove {
-	background: none !important;
-	border: none !important;
-	box-shadow: none !important;
+.dashboard-project-item--drag-over {
+	border-color: var(--db-accent);
+	background: var(--db-bg-drop-indicator);
+}
+
+.dashboard-project-item-handle {
+	flex-shrink: 0;
+	opacity: 0.4;
 	color: var(--db-text-muted);
-	cursor: pointer;
-	padding: 0 3px;
-	min-height: 0;
-	line-height: 1;
-	opacity: 0;
-	transition: opacity 0.15s ease, color 0.15s ease;
 	display: flex;
 	align-items: center;
 }
 
-.dashboard-project-doc-item:hover .dashboard-project-doc-remove {
-	opacity: 1;
+.dashboard-project-item:hover .dashboard-project-item-handle {
+	opacity: 0.7;
 }
 
-.dashboard-project-doc-remove:hover {
-	color: var(--db-text) !important;
-}
-
-.dashboard-project-doc-remove svg {
-	width: 14px;
-	height: 14px;
-}
-
-.dashboard-project-add-doc {
-	margin-top: 6px;
-	border-top: 1px solid var(--db-border);
-	padding-top: 6px;
-	position: relative;
-}
-
-.dashboard-project-doc-results {
-	position: relative;
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-	max-height: 150px;
-	overflow-y: auto;
-	background: var(--db-bg-card);
-	border: 1px solid var(--db-border);
-	border-radius: var(--db-radius-sm);
-	z-index: 1;
-}
-
-.dashboard-project-doc-results:empty {
-		display: none;
-	}
-
-	.dashboard-project-doc-result {
-	padding: 5px 8px;
-	font-size: 0.88em;
-	cursor: pointer;
-	color: var(--db-text-muted);
-	transition: background 0.1s ease;
-}
-
-.dashboard-project-doc-result:hover {
-	background: var(--db-bg-hover);
+.dashboard-project-item-title {
+	flex: 1;
+	font-size: 0.95em;
+	font-weight: 500;
 	color: var(--db-text);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* Project card body — file drop target */
+.dashboard-card-body--doc-drop {
+	outline: 2px dashed var(--db-accent);
+	outline-offset: -2px;
+	background: rgba(var(--color-accent-rgb, 120, 100, 255), 0.06);
 }
 
 /* ===== Progress ===== */
@@ -7978,15 +7974,6 @@
 		padding: 3px 0;
 	}
 
-	/* Project doc items: compact */
-	.dashboard-project-doc-item {
-		padding: 2px 8px;
-	}
-
-	.dashboard-project-doc-remove {
-		opacity: 1;
-	}
-
 	/* Section add button: always visible */
 	.dashboard-section-add-btn {
 		opacity: 1;
@@ -9655,18 +9642,35 @@
 
 /* ===== Library Config Modal ===== */
 .dashboard-library-config-modal {
-	padding: 0;
+	padding: 16px 20px;
+	max-width: 480px;
+}
+
+.dashboard-library-config-title {
+	font-size: 18px;
+	font-weight: 700;
+	color: var(--db-text, var(--text-normal));
+	margin-bottom: 4px;
 }
 
 .dashboard-library-config-section {
-	margin-bottom: 16px;
+	margin-bottom: 18px;
+	padding-top: 8px;
+	border-top: 1px solid var(--db-border, rgba(255,255,255,0.08));
+}
+
+.dashboard-library-config-section:first-of-type {
+	border-top: none;
+	padding-top: 0;
 }
 
 .dashboard-library-config-section-title {
 	font-size: 13px;
 	font-weight: 600;
-	color: var(--db-text, var(--text-normal));
-	margin-bottom: 8px;
+	color: var(--db-text-muted, var(--text-muted));
+	margin-bottom: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 .dashboard-library-config-filters {
@@ -9675,14 +9679,285 @@
 	gap: 8px;
 }
 
-.dashboard-library-filter-row {
+/* Filter row (used by modal) */
+.dashboard-library-config-filter-row {
 	display: flex;
-	flex-direction: column;
-	gap: 6px;
-	padding: 8px;
-	background: var(--db-bg-input, rgba(255, 255, 255, 0.05));
+	flex-direction: row;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	background: var(--db-bg-input, rgba(255, 255, 255, 0.04));
 	border-radius: var(--db-radius-sm, 6px);
-	border: 1px solid var(--db-border, rgba(255, 255, 255, 0.08));
+	border: 1px solid var(--db-border, rgba(255, 255, 255, 0.06));
+}
+
+.dashboard-library-config-filter-row select {
+	flex: 0 0 auto;
+	min-width: 120px;
+	max-width: 160px;
+	padding: 5px 8px;
+	border: 1px solid var(--db-border-input, rgba(255,255,255,0.1));
+	border-radius: var(--db-radius-sm, 4px);
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	color: var(--db-text, var(--text-normal));
+	font-size: 12px;
+	font-family: inherit;
+	outline: none;
+	cursor: pointer;
+}
+
+.dashboard-library-config-filter-row select:focus {
+	border-color: var(--interactive-accent, #8b5cf6);
+}
+
+.dashboard-library-config-value-input {
+	flex: 1;
+	min-width: 0;
+	padding: 5px 10px;
+	border: 1px solid var(--db-border-input, rgba(255,255,255,0.1));
+	border-radius: var(--db-radius-sm, 4px);
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	color: var(--db-text, var(--text-normal));
+	font-size: 12px;
+	font-family: inherit;
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.dashboard-library-config-value-input:focus {
+	border-color: var(--interactive-accent, #8b5cf6);
+}
+
+.dashboard-library-config-value-input::placeholder {
+	color: var(--text-muted);
+	opacity: 0.5;
+}
+
+/* Remove filter button */
+.dashboard-library-config-remove-btn {
+	flex-shrink: 0;
+	width: 26px;
+	height: 26px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: none;
+	border-radius: 4px;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.15s ease;
+}
+
+.dashboard-library-config-remove-btn:hover {
+	color: #ef4444;
+	background: rgba(239,68,68,0.1);
+}
+
+.dashboard-library-config-remove-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* Add filter button */
+.dashboard-library-config-add-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 7px 14px;
+	margin-top: 4px;
+	border: 1px dashed var(--db-border, rgba(255,255,255,0.15));
+	border-radius: var(--db-radius-sm, 6px);
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 12px;
+	font-family: var(--db-font, var(--font-interface));
+	cursor: pointer;
+	transition: all 0.15s ease;
+	user-select: none;
+}
+
+.dashboard-library-config-add-btn:hover {
+	border-color: var(--interactive-accent, #8b5cf6);
+	color: var(--interactive-accent, #8b5cf6);
+	background: rgba(139,92,246,0.06);
+}
+
+.dashboard-library-config-add-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+/* View mode toggle */
+.dashboard-library-config-view-toggle {
+	display: flex;
+	gap: 4px;
+	padding: 4px;
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	border-radius: var(--db-radius-sm, 8px);
+	border: 1px solid var(--db-border, rgba(255,255,255,0.08));
+}
+
+.dashboard-library-config-view-btn {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	flex: 1;
+	padding: 8px 4px;
+	border: 1px solid transparent;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 10px;
+	font-weight: 500;
+	font-family: var(--font-interface);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	user-select: none;
+	min-width: 0;
+}
+
+.dashboard-library-config-view-btn:hover {
+	background: rgba(255,255,255,0.05);
+	color: var(--text-normal);
+}
+
+.dashboard-library-config-view-btn.active {
+	background: var(--interactive-accent, #8b5cf6);
+	color: #fff;
+	border-color: var(--interactive-accent, #8b5cf6);
+	box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.dashboard-library-config-view-btn svg {
+	width: 18px;
+	height: 18px;
+	flex-shrink: 0;
+}
+
+.dashboard-library-config-view-btn span {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 100%;
+}
+
+/* Kanban section */
+.dashboard-library-config-kanban-section {
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--db-border, rgba(255,255,255,0.06));
+}
+
+/* Action buttons */
+.dashboard-library-config-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 20px;
+	padding-top: 16px;
+	border-top: 1px solid var(--db-border, rgba(255,255,255,0.08));
+}
+
+.dashboard-library-config-buttons button {
+	padding: 7px 20px;
+	border-radius: var(--db-radius-sm, 6px);
+	font-size: 13px;
+	font-weight: 500;
+	font-family: inherit;
+	cursor: pointer;
+	transition: all 0.15s ease;
+	border: 1px solid var(--db-border, rgba(255,255,255,0.12));
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	color: var(--text-normal);
+}
+
+.dashboard-library-config-buttons button:hover {
+	background: rgba(255,255,255,0.06);
+}
+
+.dashboard-library-config-buttons button.mod-cta {
+	background: var(--interactive-accent, #8b5cf6);
+	color: #fff;
+	border-color: var(--interactive-accent, #8b5cf6);
+}
+
+.dashboard-library-config-buttons button.mod-cta:hover {
+	opacity: 0.9;
+	filter: brightness(1.1);
+}
+
+/* Empty state text in filters */
+.dashboard-library-config-empty {
+	font-size: 12px;
+	color: var(--text-muted);
+	padding: 12px 4px;
+	text-align: center;
+	opacity: 0.6;
+}
+
+/* Property select (replaces Obsidian's "dropdown" class to avoid diamond icon bug) */
+.dashboard-library-config-prop-select {
+	min-width: 120px;
+	max-width: 180px;
+	padding: 5px 8px;
+	border: 1px solid var(--db-border-input, rgba(255,255,255,0.1));
+	border-radius: var(--db-radius-sm, 4px);
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	color: var(--db-text, var(--text-normal));
+	font-size: 12px;
+	font-family: inherit;
+	outline: none;
+	cursor: pointer;
+	-webkit-appearance: menulist;
+	appearance: menulist;
+}
+
+.dashboard-library-config-prop-select:focus {
+	border-color: var(--interactive-accent, #8b5cf6);
+}
+
+/* Date range container */
+.dashboard-library-config-date-range {
+	display: flex;
+	gap: 6px;
+	flex: 1;
+	align-items: center;
+}
+
+/* Date input fields */
+.dashboard-library-config-date-input {
+	flex: 1;
+	min-width: 90px;
+	max-width: 140px;
+	padding: 5px 8px;
+	border: 1px solid var(--db-border-input, rgba(255,255,255,0.12));
+	border-radius: var(--db-radius-sm, 6px);
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	color: var(--db-text, var(--text-normal));
+	font-size: 12px;
+	font-family: inherit;
+	outline: none;
+	cursor: pointer;
+	transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.dashboard-library-config-date-input:focus {
+	border-color: var(--interactive-accent, #8b5cf6);
+}
+
+/* Color scheme for date picker icon */
+.dashboard-library-config-date-input::-webkit-calendar-picker-indicator {
+	cursor: pointer;
+	opacity: 0.5;
+	filter: invert(0.7);
+	transition: opacity 0.15s ease;
+}
+
+.dashboard-library-config-date-input::-webkit-calendar-picker-indicator:hover {
+	opacity: 1;
 }
 
 .dashboard-library-filter-property {

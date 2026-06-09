@@ -2,14 +2,27 @@ import { Modal, App, Setting } from "obsidian";
 import type { DashboardCard } from "./types";
 import { t } from "./i18n";
 
+function stripBulletPrefix(text: string): string {
+	return text.split('\n').map(line => {
+		if (line.startsWith('- ')) return line.slice(2);
+		if (line.startsWith('> - ')) return '> ' + line.slice(4);
+		return line;
+	}).join('\n');
+}
+
+function addBulletPrefix(text: string): string {
+	return text.split('\n').map(line => {
+		if (!line.trim()) return line;
+		if (line.startsWith('> ')) return '> - ' + line.slice(2);
+		return '- ' + line;
+	}).join('\n');
+}
+
 export class CardEditModal extends Modal {
 	private card: DashboardCard;
 	private onSave: (updates: Partial<DashboardCard>) => void;
 	private localTitle: string;
 	private localBody: string;
-	private localDueDate: string;
-	private localColor: string;
-	private localProgress: number;
 
 	constructor(
 		app: App,
@@ -21,10 +34,7 @@ export class CardEditModal extends Modal {
 		this.card = card;
 		this.onSave = onSave;
 		this.localTitle = card.title;
-		this.localBody = card.body;
-		this.localDueDate = card.dueDate ?? '';
-		this.localColor = card.color ?? '';
-		this.localProgress = card.progress;
+		this.localBody = stripBulletPrefix(card.body);
 	}
 
 	onOpen(): void {
@@ -40,32 +50,6 @@ export class CardEditModal extends Modal {
 			.addText(text => text
 				.setValue(this.localTitle)
 				.onChange(value => this.localTitle = value));
-
-		// Due date
-		new Setting(contentEl)
-			.setName(t('renderer.dueDate'))
-			.addText(text => text
-				.setValue(this.localDueDate)
-				.setPlaceholder('YYYY-MM-DD')
-				.onChange(value => this.localDueDate = value));
-
-		// Progress (for project cards)
-		if (this.card.type === 'project') {
-			new Setting(contentEl)
-				.setName(t('renderer.progress'))
-				.addSlider(slider => slider
-					.setLimits(0, 100, 5)
-					.setValue(this.localProgress >= 0 ? this.localProgress : 0)
-					.setDynamicTooltip()
-					.onChange(value => this.localProgress = value));
-		}
-
-		// Color
-		new Setting(contentEl)
-			.setName(t('renderer.color'))
-			.addColorPicker(picker => picker
-				.setValue(this.localColor || '#6366f1')
-				.onChange(value => this.localColor = value));
 
 		// Body (text area)
 		const bodySetting = new Setting(contentEl)
@@ -105,17 +89,9 @@ export class CardEditModal extends Modal {
 		if (this.localTitle.trim() && this.localTitle !== this.card.title) {
 			updates.title = this.localTitle.trim();
 		}
-		if (this.localBody !== this.card.body) {
-			updates.body = this.localBody;
-		}
-		if (this.localDueDate !== (this.card.dueDate ?? '')) {
-			updates.dueDate = this.localDueDate;
-		}
-		if (this.localColor !== (this.card.color ?? '')) {
-			updates.color = this.localColor;
-		}
-		if (this.localProgress !== this.card.progress && this.card.type === 'project') {
-			updates.progress = this.localProgress;
+		const savedBody = addBulletPrefix(this.localBody);
+		if (savedBody !== this.card.body) {
+			updates.body = savedBody;
 		}
 
 		if (Object.keys(updates).length > 0) {

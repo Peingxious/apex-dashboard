@@ -539,13 +539,114 @@ export class SyncEngine {
 				...col,
 				cards: col.cards.map(card => {
 					if (card.id !== cardId) return card;
+					// Check if file already exists in body (as [[wiki link]] anywhere)
+					if (card.body.includes(`[[${filePath}]]`) || card.body.includes(`[[${filePath}|`)) return card;
+					// Append as depth-0 entry in hierarchical format
+					const existingBody = card.body.trim();
+					const newLine = `- [[${filePath}]]`;
+					const body = existingBody ? `${existingBody}\n${newLine}` : newLine;
+					return { ...card, body };
+				}),
+			})),
+		};
+		await this.writeToDisk();
+	}
+
+	private splitProjectSections(body: string): string[] {
+		if (!body.trim()) return [];
+		const lines = body.split('\n');
+		const sections: string[] = [];
+		let current: string[] = [];
+
+		for (const line of lines) {
+			const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
+			if (depth === 0 && current.length > 0) {
+				sections.push(current.join('\n'));
+				current = [];
+			}
+			current.push(line);
+		}
+		if (current.length > 0) {
+			sections.push(current.join('\n'));
+		}
+		return sections;
+	}
+
+	async reorderProjectItem(cardId: string, fromIndex: number, toIndex: number): Promise<void> {
+		if (!this.data) return;
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.map(col => ({
+				...col,
+				cards: col.cards.map(card => {
+					if (card.id !== cardId) return card;
+					const sections = this.splitProjectSections(card.body);
+					if (fromIndex < 0 || fromIndex >= sections.length) return card;
+					if (toIndex < 0 || toIndex >= sections.length) return card;
+					const [moved] = sections.splice(fromIndex, 1);
+					sections.splice(toIndex, 0, moved!);
+					return { ...card, body: sections.join('\n') };
+				}),
+			})),
+		};
+		await this.writeToDisk();
+	}
+
+	async moveProjectItemToCard(srcCardId: string, itemIndex: number, destCardId: string, destIndex: number): Promise<void> {
+		if (!this.data) return;
+
+		let movedSection = '';
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.map(col => ({
+				...col,
+				cards: col.cards.map(card => {
+					if (card.id !== srcCardId) return card;
+					const sections = this.splitProjectSections(card.body);
+					if (itemIndex < 0 || itemIndex >= sections.length) return card;
+					movedSection = sections[itemIndex]!;
+					sections.splice(itemIndex, 1);
+					return { ...card, body: sections.join('\n') };
+				}),
+			})),
+		};
+
+		if (!movedSection) return;
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.map(col => ({
+				...col,
+				cards: col.cards.map(card => {
+					if (card.id !== destCardId) return card;
+					const sections = this.splitProjectSections(card.body);
+					const insertIdx = Math.min(destIndex, sections.length);
+					sections.splice(insertIdx, 0, movedSection);
+					return { ...card, body: sections.join('\n') };
+				}),
+			})),
+		};
+		await this.writeToDisk();
+	}
+
+	async removeProjectDoc(cardId: string, topIndex: number): Promise<void> {
+		if (!this.data) return;
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.map(col => ({
+				...col,
+				cards: col.cards.map(card => {
+					if (card.id !== cardId) return card;
 					const paths = card.body.split('\n')
 						.map(l => l.trim())
 						.filter(l => l.startsWith('[[') && l.endsWith(']]'))
 						.map(l => l.slice(2, -2));
-					if (paths.includes(filePath)) return card;
-					paths.push(filePath);
-					const body = paths.map(p => `[[${p}]]`).join('\n');
+					if (topIndex < 0 || topIndex >= paths.length) return card;
+					const newPaths = paths.filter((_, i) => i !== topIndex);
+					const body = newPaths.map(p => `[[${p}]]`).join('\n');
 					return { ...card, body };
 				}),
 			})),

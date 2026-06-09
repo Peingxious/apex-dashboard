@@ -63,6 +63,20 @@ export class DashboardSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllDashboards();
 				}));
 
+		new Setting(containerEl)
+			.setName(t('settings.projectHideNestedDocs'))
+			.setDesc(t('settings.projectHideNestedDocsDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.projectHideNestedDocs)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						projectHideNestedDocs: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+				}));
+
 		this.renderWidgetSettings(containerEl);
 
 		this.renderLunarSettings(containerEl);

@@ -5,7 +5,6 @@ import { renderLibrarySection } from './library-section';
 import type { LibraryConfig } from './types';
 import { resolveVaultImage } from './banner';
 import { attachFileSuggest } from './file-suggest';
-import { showConfirmDialog } from './confirm-dialog';
 import { fetchWeather, getCachedWeather, getWeatherEmoji, getWeatherDescription } from './weather-service';
 import { readTrackerData } from './tracker-service';
 import type { PomodoroService } from './pomodoro-service';
@@ -43,7 +42,8 @@ function getCSSVar(name: string): string {
 }
 
 let taskDragSource: { cardId: string; taskIndex: number } | null = null;
-let docDragSource: { cardId: string; docIndex: number } | null = null;
+let projectItemDragSource: { cardId: string; itemIndex: number } | null = null;
+
 
 const VAULT_FILE_EXTS = new Set(['md', 'pdf', 'canvas', 'base', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'mp3', 'mp4', 'm4a', 'm4b', 'mov', 'mkv', 'avi']);
 
@@ -1922,28 +1922,45 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 		}
 	}, { passive: true });
 
-	const titleEl = header.createEl('h4', { text: card.title, cls: 'dashboard-card-title' });
+	console.log('[apex-dashboard] renderCard title, cardId:', card.id, 'cardType:', card.type, 'sectionType:', sectionType, 'title:', JSON.stringify(card.title), 'isProjectLike:', isProjectLike);
+	const titleEl = header.createEl('h4', { cls: 'dashboard-card-title' });
+	try {
+		renderTextWithLinks(titleEl, card.title, app);
+		console.log('[apex-dashboard] titleEl innerHTML after render:', titleEl.innerHTML, 'textContent:', titleEl.textContent, 'classList:', [...titleEl.classList]);
+		if (titleEl.querySelector('.dashboard-wikilink, .dashboard-external-link')) {
+			titleEl.addClass('dashboard-card-title--linked');
+		}
+	} catch (err) {
+		console.error('[apex-dashboard] title renderTextWithLinks FAILED:', err);
+		titleEl.setText(card.title);
+		console.log('[apex-dashboard] title fallback textContent:', titleEl.textContent);
+	}
 
 	const skipEditBtn = isMemo || isTask || (isWidget && isDashboardSection);
 
 	titleEl.addEventListener('dblclick', (e) => {
 		e.stopPropagation();
+		const originalTitle = card.title;
 		const currentTitle = titleEl.getText();
 		titleEl.empty();
 		const input = titleEl.createEl('input', {
 			cls: 'dashboard-title-edit-input',
-			attr: { type: 'text', value: currentTitle },
+			attr: { type: 'text', value: originalTitle },
 		});
 		input.focus();
 		input.select();
 
 		const finish = (save: boolean) => {
 			const newTitle = input.value.trim();
-			if (save && newTitle && newTitle !== currentTitle) {
+			if (save && newTitle && newTitle !== originalTitle) {
 				callbacks.onCardTitleEdit(card.id, newTitle);
 			} else {
 				titleEl.empty();
-				titleEl.setText(currentTitle);
+				try {
+					renderTextWithLinks(titleEl, originalTitle, app);
+				} catch {
+					titleEl.setText(originalTitle);
+				}
 			}
 		};
 
@@ -2051,13 +2068,15 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 
 	const body = el.createDiv({ cls: 'dashboard-card-body' });
 
-	// When this is a project-like card, allow dropping docs onto the card body
+	renderCardBody(body, card, columnName, sectionType, callbacks, app, data, settings);
+
+	// Allow dropping files from vault or project items onto project-like card body
 	if (isProjectLike) {
 		body.addEventListener('dragover', (e) => {
-			if (!docDragSource) return;
-			if (docDragSource.cardId === card.id) return;
 			e.preventDefault();
-			if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+			if (e.dataTransfer) {
+				e.dataTransfer.dropEffect = projectItemDragSource ? 'move' : 'copy';
+			}
 			body.addClass('dashboard-card-body--doc-drop');
 		});
 
@@ -2068,19 +2087,35 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 		});
 
 		body.addEventListener('drop', (e) => {
-			body.removeClass('dashboard-card-body--doc-drop');
-			if (!docDragSource) return;
-			if (docDragSource.cardId === card.id) return;
-			if (e.defaultPrevented) return;
 			e.preventDefault();
-			const parseDocPaths = (b: string): string[] =>
-				b.split('\n').map(l => l.trim()).filter(l => l.startsWith('[[') && l.endsWith(']]')).map(l => l.slice(2, -2));
-			const destIndex = parseDocPaths(card.body).length;
-			callbacks.onDocMoveToCard(docDragSource.cardId, docDragSource.docIndex, card.id, destIndex);
+			body.removeClass('dashboard-card-body--doc-drop');
+
+			// Project item cross-card move
+			if (projectItemDragSource) {
+				if (projectItemDragSource.cardId === card.id) return;
+				e.stopPropagation();
+				// Count depth-0 items in this card
+				const numItems = card.body
+					? card.body.split('\n').filter(l => l.trim() && (l.match(/^(\t*)/)?.[1]?.length ?? 0) === 0).length
+					: 0;
+				callbacks.onProjectItemMoveToCard(
+					projectItemDragSource.cardId,
+					projectItemDragSource.itemIndex,
+					card.id,
+					numItems,
+				);
+				return;
+			}
+
+			// File drop from vault
+			const raw = e.dataTransfer?.getData('text/plain');
+			if (!raw) return;
+			const filePath = raw.trim();
+			if (filePath) {
+				callbacks.onFileDrop(card.id, filePath);
+			}
 		});
 	}
-
-	renderCardBody(body, card, columnName, sectionType, callbacks, app, data, settings);
 
 	if (card.dueDate) {
 		const due = el.createDiv({ cls: 'dashboard-card-due' });
@@ -2256,7 +2291,11 @@ function renderTaskBody(container: HTMLElement, card: DashboardCard, callbacks: 
 					callbacks.onTaskEdit(card.id, index, newText);
 				} else {
 					label.empty();
-					label.setText(currentText);
+					try {
+						renderTextWithLinks(label, task.text, app);
+					} catch {
+						label.setText(task.text);
+					}
 				}
 				item.setAttribute('draggable', 'true');
 			};
@@ -2374,8 +2413,25 @@ function renderTaskBody(container: HTMLElement, card: DashboardCard, callbacks: 
 	}
 }
 
+function stripBulletPrefix(text: string): string {
+	return text.split('\n').map(line => {
+		if (line.startsWith('- ')) return line.slice(2);
+		if (line.startsWith('> - ')) return '> ' + line.slice(4);
+		return line;
+	}).join('\n');
+}
+
+function addBulletPrefix(text: string): string {
+	return text.split('\n').map(line => {
+		if (!line.trim()) return line;
+		if (line.startsWith('> ')) return '> - ' + line.slice(2);
+		return '- ' + line;
+	}).join('\n');
+}
+
 function renderMemoBody(container: HTMLElement, card: DashboardCard, callbacks: RenderCallbacks, app: App): void {
-	const text = [card.blockquote, card.body].filter(Boolean).join('\n');
+	const rawText = [card.blockquote, card.body].filter(Boolean).join('\n');
+	const text = stripBulletPrefix(rawText);
 	let dirty = false;
 
 	// View mode: rendered text with clickable links
@@ -2404,7 +2460,7 @@ function renderMemoBody(container: HTMLElement, card: DashboardCard, callbacks: 
 	const save = () => {
 		if (!dirty) return;
 		dirty = false;
-		const value = textarea.value;
+		const value = addBulletPrefix(textarea.value);
 		const lines = value.split('\n');
 		const quoteLines: string[] = [];
 		const bodyLines: string[] = [];
@@ -2478,178 +2534,153 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 }
 
 	function renderProjectBody(container: HTMLElement, card: DashboardCard, callbacks: RenderCallbacks, app: App): void {
-		const parseDocPaths = (body: string): string[] =>
-			body.split('\n')
-				.map(line => line.trim())
-				.filter(line => line.startsWith('[[') && line.endsWith(']]'))
-				.map(line => line.slice(2, -2));
+		// Draggable project items (todo-style):
+		//   Each depth-0 line is a draggable item showing title + child count
+		//   depth>=1 sub-items are hidden, counted as "+N"
+		//   Items can be reordered within a card or dragged between project cards
+		if (!card.body) return;
 
-		const docPaths = parseDocPaths(card.body);
+		const lines = card.body.split('\n');
 
-		const docList = container.createDiv({ cls: 'dashboard-project-docs' });
-		docList.dataset.cardId = card.id;
+		// Collect title info
+		interface TitleInfo { cleanText: string; childCount: number; }
+		const titles: TitleInfo[] = [];
 
-		// Empty list drop target so docs can be dragged in
-		docList.addEventListener('dragover', (e) => {
-			if (!docDragSource) return;
-			if (docDragSource.cardId === card.id) return;
-			e.preventDefault();
-			if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-			docList.addClass('dashboard-project-docs--drop-target');
-		});
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i]!;
+			if (!line.trim()) continue;
+			const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
+			if (depth !== 0) continue;
 
-		docList.addEventListener('dragleave', (e) => {
-			if (!docList.contains(e.relatedTarget as Node)) {
-				docList.removeClass('dashboard-project-docs--drop-target');
-			}
-		});
-
-		docList.addEventListener('drop', (e) => {
-			e.preventDefault();
-			docList.removeClass('dashboard-project-docs--drop-target');
-			if (!docDragSource) return;
-			if (docDragSource.cardId === card.id) return;
-			const destIndex = docPaths.length;
-			callbacks.onDocMoveToCard(docDragSource.cardId, docDragSource.docIndex, card.id, destIndex);
-		});
-
-		if (docPaths.length > 0) {
-
-			docPaths.forEach((docPath, idx) => {
-				const file = app.vault.getFileByPath(docPath);
-				const docItem = docList.createDiv({ cls: 'dashboard-project-doc-item' });
-				docItem.setAttribute('draggable', 'true');
-				docItem.dataset.docIndex = String(idx);
-				
-				// Show short name; if duplicate basenames exist, show parent folder
-				let displayName = file?.basename ?? docPath.split('/').pop() ?? docPath;
-				const basename = displayName;
-				const allFiles = getSearchableFiles(app);
-				const sameNameFiles = allFiles.filter(mf => mf.basename === basename);
-				if (sameNameFiles.length > 1) {
-					const parts = docPath.split('/');
-					if (parts.length >= 2) {
-						displayName = `${parts[parts.length - 2]}/${basename}`;
-					}
-				}
-				docItem.createSpan({ text: displayName, cls: 'dashboard-project-doc-name' });
-
-				const removeBtn = docItem.createEl('button', {
-					cls: 'dashboard-project-doc-remove',
-					attr: { 'aria-label': t('renderer.removeDoc') },
-				});
-				setIcon(removeBtn, 'x');
-				removeBtn.addEventListener('click', async (e) => {
-					e.stopPropagation();
-					const currentPaths = parseDocPaths(card.body);
-					const newPaths = currentPaths.filter((_, i) => i !== idx);
-					const confirmed = await showConfirmDialog(app, {
-						title: t('common.confirmDelete'),
-						message: t('common.confirmDeleteMessage'),
-					});
-					if (!confirmed) return;
-					callbacks.onProjectDocsUpdate(card, newPaths);
-				});
-
-				docItem.addEventListener('click', (e) => {
-					if ((e.target as HTMLElement).tagName === 'BUTTON') return;
-					const f = app.vault.getFileByPath(docPath);
-					if (f) {
-						app.workspace.getLeaf(false).openFile(f);
-					} else {
-						const basename = docPath.split('/').pop()?.replace(/\.md$/, '') ?? '';
-						if (basename) {
-							const found = getSearchableFiles(app).find(mf => mf.basename === basename);
-							if (found) app.workspace.getLeaf(false).openFile(found);
-						}
-					}
-				});
-
-				docItem.addEventListener('dragstart', (e) => {
-					e.stopPropagation();
-					docDragSource = { cardId: card.id, docIndex: idx };
-					docItem.addClass('dashboard-task-item--dragging');
-					if (e.dataTransfer) {
-						e.dataTransfer.effectAllowed = 'move';
-						e.dataTransfer.setData('text/plain', String(idx));
-					}
-				});
-
-				docItem.addEventListener('dragend', () => {
-					docItem.removeClass('dashboard-task-item--dragging');
-					document.querySelectorAll('.dashboard-task-item--drag-over').forEach(el => {
-						(el as HTMLElement).removeClass('dashboard-task-item--drag-over');
-					});
-					docDragSource = null;
-				});
-
-				docItem.addEventListener('dragover', (e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					if (!docDragSource) return;
-					if (docDragSource.cardId === card.id && docDragSource.docIndex === idx) return;
-					if (e.dataTransfer) {
-						e.dataTransfer.dropEffect = 'move';
-					}
-					document.querySelectorAll('.dashboard-task-item--drag-over').forEach(el => {
-						(el as HTMLElement).removeClass('dashboard-task-item--drag-over');
-					});
-					docItem.addClass('dashboard-task-item--drag-over');
-				});
-
-				docItem.addEventListener('dragleave', () => {
-					docItem.removeClass('dashboard-task-item--drag-over');
-				});
-
-				docItem.addEventListener('drop', (e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					docItem.removeClass('dashboard-task-item--drag-over');
-					if (!docDragSource) return;
-					if (docDragSource.cardId === card.id && docDragSource.docIndex === idx) return;
-
-					if (docDragSource.cardId === card.id) {
-						callbacks.onProjectDocsReorder(card.id, docDragSource.docIndex, idx);
-					} else {
-						callbacks.onDocMoveToCard(docDragSource.cardId, docDragSource.docIndex, card.id, idx);
-					}
-				});
-			});
+			let cleanText = line.replace(/^\t*/, '');
+			if (cleanText.startsWith('- ')) cleanText = cleanText.slice(2);
+			titles.push({ cleanText, childCount: 0 });
 		}
 
-		const addDocRow = container.createDiv({ cls: 'dashboard-project-add-doc' });
-		const docInput = addDocRow.createEl('input', {
-			cls: 'dashboard-task-input',
-			attr: { type: 'text', placeholder: t('renderer.addDocument') },
+		// Calculate child counts
+		{
+			let titleIdx = 0;
+			let inlineCount = 0;
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i]!;
+				if (!line.trim()) continue;
+				const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
+				if (depth === 0) {
+					if (titleIdx > 0 && titles[titleIdx - 1]) {
+						titles[titleIdx - 1]!.childCount = inlineCount;
+					}
+					titleIdx++;
+					inlineCount = 0;
+				} else if (titleIdx > 0) {
+					inlineCount++;
+				}
+			}
+			if (titleIdx > 0 && titles[titleIdx - 1]) {
+				titles[titleIdx - 1]!.childCount = inlineCount;
+			}
+		}
+
+		const list = container.createDiv({ cls: 'dashboard-project-list' });
+		list.dataset.cardId = card.id;
+
+		// Empty-list drop target for moving items in from other cards
+		list.addEventListener('dragover', (e) => {
+			if (!projectItemDragSource) return;
+			if (projectItemDragSource.cardId === card.id && titles.length > 0) return;
+			e.preventDefault();
+			if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+			list.addClass('dashboard-task-list--drop-target');
 		});
-
-		const docResults = addDocRow.createDiv({ cls: 'dashboard-project-doc-results' });
-
-		docInput.addEventListener('input', () => {
-			docResults.empty();
-			const q = docInput.value.toLowerCase().trim();
-			if (!q) return;
-
-			const currentPaths = parseDocPaths(card.body);
-			const files = getSearchableFiles(app)
-				.filter(f => !f.path.startsWith('.'))
-				.filter(f => f.path.toLowerCase().includes(q) || f.basename.toLowerCase().includes(q))
-				.filter(f => !currentPaths.includes(f.path))
-				.slice(0, 50);
-
-			for (const file of files) {
-				const item = docResults.createDiv({ cls: 'dashboard-project-doc-result' });
-				item.setText(file.basename);
-				item.addEventListener('click', () => {
-					const latestPaths = parseDocPaths(card.body);
-					const newPaths = [...latestPaths, file.path];
-					callbacks.onProjectDocsUpdate(card, newPaths);
-				});
+		list.addEventListener('dragleave', (e) => {
+			if (!list.contains(e.relatedTarget as Node)) {
+				list.removeClass('dashboard-task-list--drop-target');
 			}
 		});
+		list.addEventListener('drop', (e) => {
+			e.preventDefault();
+			list.removeClass('dashboard-task-list--drop-target');
+			if (!projectItemDragSource) return;
+			if (projectItemDragSource.cardId === card.id) return;
+			e.stopPropagation();
+			callbacks.onProjectItemMoveToCard(
+				projectItemDragSource.cardId,
+				projectItemDragSource.itemIndex,
+				card.id,
+				titles.length,
+			);
+		});
 
-		docInput.addEventListener('blur', () => {
-			setTimeout(() => docResults.empty(), 200);
+		titles.forEach((title, index) => {
+			const item = list.createDiv({ cls: 'dashboard-project-item' });
+			item.setAttribute('draggable', 'true');
+			item.dataset.itemIndex = String(index);
+			item.dataset.cardId = card.id;
+
+			// Drag handle indicator
+			const dragHandle = item.createSpan({ cls: 'dashboard-project-item-handle' });
+			setIcon(dragHandle, 'grip-vertical');
+
+			// Title text with wiki links
+			const titleSpan = item.createSpan({ cls: 'dashboard-project-item-title' });
+			renderTextWithLinks(titleSpan, title.cleanText, app);
+
+			// Child count badge
+			if (title.childCount > 0) {
+				const countEl = item.createSpan({ cls: 'dashboard-project-child-count' });
+				countEl.setText(`+${title.childCount}`);
+			}
+
+			// ----- Drag events -----
+			item.addEventListener('dragstart', (e) => {
+				projectItemDragSource = { cardId: card.id, itemIndex: index };
+				item.addClass('dashboard-project-item--dragging');
+				if (e.dataTransfer) {
+					e.dataTransfer.effectAllowed = 'move';
+					e.dataTransfer.setData('text/plain', title.cleanText);
+				}
+			});
+
+			item.addEventListener('dragend', () => {
+				item.removeClass('dashboard-project-item--dragging');
+				document.querySelectorAll('.dashboard-project-item--drag-over').forEach(el => {
+					(el as HTMLElement).removeClass('dashboard-project-item--drag-over');
+				});
+				projectItemDragSource = null;
+			});
+
+			item.addEventListener('dragover', (e) => {
+				e.preventDefault();
+				if (!projectItemDragSource) return;
+				if (projectItemDragSource.cardId === card.id && projectItemDragSource.itemIndex === index) return;
+				if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+				document.querySelectorAll('.dashboard-project-item--drag-over').forEach(el => {
+					(el as HTMLElement).removeClass('dashboard-project-item--drag-over');
+				});
+				item.addClass('dashboard-project-item--drag-over');
+			});
+
+			item.addEventListener('dragleave', () => {
+				item.removeClass('dashboard-project-item--drag-over');
+			});
+
+			item.addEventListener('drop', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				item.removeClass('dashboard-project-item--drag-over');
+				if (!projectItemDragSource) return;
+				if (projectItemDragSource.cardId === card.id && projectItemDragSource.itemIndex === index) return;
+
+				if (projectItemDragSource.cardId === card.id) {
+					callbacks.onProjectItemReorder(card.id, projectItemDragSource.itemIndex, index);
+				} else {
+					callbacks.onProjectItemMoveToCard(
+						projectItemDragSource.cardId,
+						projectItemDragSource.itemIndex,
+						card.id,
+						index,
+					);
+				}
+			});
 		});
 	}
 
@@ -2685,25 +2716,32 @@ function getSectionType(column: DashboardColumn): string {
 }
 
 function renderTextWithLinks(container: HTMLElement, text: string, app: App): void {
+	console.log('[apex-dashboard] renderTextWithLinks called, text:', JSON.stringify(text));
 	const parts = text.split(/(\[\[[^\]]+?\]\]|\[[^\]]+\]\([^)]+\))/g);
+	console.log('[apex-dashboard] renderTextWithLinks parts:', parts);
 	for (const part of parts) {
 		const wikiMatch = part.match(/^\[\[([^\]]+)\]\]$/);
 		if (wikiMatch) {
+			console.log('[apex-dashboard] renderTextWithLinks wiki match, content:', wikiMatch[1]);
 			renderWikilink(container, wikiMatch[1]!, app);
 			continue;
 		}
 		const extMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
 		if (extMatch) {
+			console.log('[apex-dashboard] renderTextWithLinks external match:', extMatch[1], extMatch[2]);
 			renderExternalLink(container, extMatch[1]!, extMatch[2]!);
 			continue;
 		}
 		if (part) {
+			console.log('[apex-dashboard] renderTextWithLinks text node:', JSON.stringify(part));
 			container.appendChild(document.createTextNode(part));
 		}
 	}
+	console.log('[apex-dashboard] renderTextWithLinks done, container innerHTML:', container.innerHTML);
 }
 
 function renderWikilink(container: HTMLElement, content: string, app: App): void {
+	console.log('[apex-dashboard] renderWikilink called, content:', JSON.stringify(content));
 	let alias: string | undefined;
 	let linkPart = content;
 
@@ -2711,6 +2749,7 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 	if (pipeIdx !== -1) {
 		alias = content.slice(pipeIdx + 1);
 		linkPart = content.slice(0, pipeIdx);
+		console.log('[apex-dashboard] renderWikilink alias detected:', alias, 'linkPart:', linkPart);
 	}
 
 	let path = linkPart;
@@ -2720,9 +2759,11 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 	if (hashIdx !== -1) {
 		path = linkPart.slice(0, hashIdx);
 		fragment = linkPart.slice(hashIdx + 1);
+		console.log('[apex-dashboard] renderWikilink fragment detected, path:', path, 'fragment:', fragment);
 	}
 
 	const noteName = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
+	console.log('[apex-dashboard] renderWikilink noteName:', noteName);
 	let displayName: string;
 	if (alias) {
 		displayName = alias;
@@ -2731,20 +2772,26 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 	} else {
 		// Show short name; if duplicate basenames exist, show parent folder
 		const basename = noteName;
-		const allFiles = getSearchableFiles(app);
-		const sameNameFiles = allFiles.filter(mf => mf.basename === basename);
-		if (sameNameFiles.length > 1) {
-			// Show parent folder to disambiguate
-			const parts = path.split('/');
-			if (parts.length >= 2) {
-				displayName = `${parts[parts.length - 2]}/${noteName}`;
+		try {
+			const allFiles = getSearchableFiles(app);
+			const sameNameFiles = allFiles.filter(mf => mf.basename === basename);
+			if (sameNameFiles.length > 1) {
+				// Show parent folder to disambiguate
+				const parts = path.split('/');
+				if (parts.length >= 2) {
+					displayName = `${parts[parts.length - 2]}/${noteName}`;
+				} else {
+					displayName = noteName;
+				}
 			} else {
 				displayName = noteName;
 			}
-		} else {
+		} catch (err) {
+			console.error('[apex-dashboard] renderWikilink getSearchableFiles FAILED:', err);
 			displayName = noteName;
 		}
 	}
+	console.log('[apex-dashboard] renderWikilink displayName:', displayName);
 
 	const link = container.createSpan({
 		cls: 'dashboard-wikilink',
@@ -2753,19 +2800,9 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 
 	link.addEventListener('click', (e) => {
 		e.stopPropagation();
-		const filePath = path.includes('.') ? path : `${path}.md`;
-		let file = app.vault.getFileByPath(filePath);
-		if (!file) {
-			const basename = path.split('/').pop()?.replace(/\.md$/, '') ?? '';
-			if (basename) {
-				file = getSearchableFiles(app).find(mf => mf.basename === basename) ?? null;
-			}
-		}
-		if (file) {
-			app.workspace.getLeaf(false).openFile(file, {
-				eState: fragment ? { line: 0 } : undefined,
-			});
-		}
+		// Use native Obsidian link resolution for proper fragment/heading navigation
+		const linkText = fragment ? `${path}#${fragment}` : path;
+		app.workspace.openLinkText(linkText, '', false, { active: true });
 	});
 }
 

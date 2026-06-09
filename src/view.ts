@@ -40,7 +40,7 @@ export class DashboardView extends ItemView {
 	private firedReminders = new Set<string>();
 	private sidebarPinned: boolean;
 	private sidebarExpanded = false;
-	private bannerCollapsed = localStorage.getItem('apex-dashboard-banner-collapsed') === 'true';
+	private bannerCollapsed = localStorage.getItem('apex-dashboard-banner-collapsed') !== 'false';
 	private pendingScrollCardId: string | null = null;
 	private pendingScrollToLastCardOfColumn: string | null = null;
 	private pomodoroService: PomodoroService | null = null;
@@ -614,7 +614,9 @@ export class DashboardView extends ItemView {
 			onMemoUpdate: (card: DashboardCard, updates: { body: string; blockquote: string }) => this.sync.updateMemoCard(card.id, updates),
 			onProjectDocsUpdate: (card: DashboardCard, docPaths: string[]) => this.sync.updateProjectDocs(card.id, docPaths),
 			onProjectDocsReorder: (cardId: string, from: number, to: number) => this.sync.reorderDocPaths(cardId, from, to),
-				onDocMoveToCard: (srcCardId: string, docIndex: number, destCardId: string, destIndex: number) => this.sync.moveDocToCard(srcCardId, docIndex, destCardId, destIndex),
+			onDocMoveToCard: (srcCardId: string, docIndex: number, destCardId: string, destIndex: number) => this.sync.moveDocToCard(srcCardId, docIndex, destCardId, destIndex),
+			onProjectDocsAdd: (card: DashboardCard, docPath: string) => this.sync.addDocToCard(card.id, docPath),
+			onProjectDocsRemove: (card: DashboardCard, topIndex: number) => this.sync.removeProjectDoc(card.id, topIndex),
 			onCardAdd: (colName: string) => {
 				const column = this.data?.columns.find(col => col.name === colName);
 				const effectiveType = column?.sectionType ?? colName.toLowerCase();
@@ -655,6 +657,8 @@ export class DashboardView extends ItemView {
 				onCardGridChange: (cardId: string, gridCols: number, gridRows: number) => this.sync.updateCardGrid(cardId, gridCols, gridRows),
 				onCardGridMove: (cardId: string, gridCol: number, gridRow: number) => this.sync.updateCardGridMove(cardId, gridCol, gridRow),
 				onFileDrop: (cardId: string, filePath: string) => this.handleFileDrop(cardId, filePath),
+				onProjectItemReorder: (cardId: string, fromIndex: number, toIndex: number) => this.sync.reorderProjectItem(cardId, fromIndex, toIndex),
+				onProjectItemMoveToCard: (srcCardId: string, itemIndex: number, destCardId: string, destIndex: number) => this.sync.moveProjectItemToCard(srcCardId, itemIndex, destCardId, destIndex),
 				onColumnRename: (oldName: string, newName: string) => this.sync.renameColumn(oldName, newName),
 			onColumnDelete: async (columnName: string) => {
 				const confirmed = await showConfirmDialog(this.app, {
