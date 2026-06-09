@@ -1773,11 +1773,73 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 			el.dispatchEvent(event);
 		});
 
+		// Delete section button for library
+		const deleteSectionBtn = headerActions.createEl('button', {
+			cls: 'dashboard-section-add-btn dashboard-section-delete-btn',
+			attr: { 'aria-label': t('renderer.deleteSection', { column: column.name }) },
+		});
+		setIcon(deleteSectionBtn, 'trash-2');
+		deleteSectionBtn.addEventListener('click', async (e) => {
+			e.stopPropagation();
+			const confirmed = await showConfirmDialog(app, {
+				title: t('common.confirmDelete'),
+				message: t('renderer.deleteSectionConfirm', { column: column.name }),
+			});
+			if (confirmed) {
+				callbacks.onColumnDelete(column.name);
+			}
+		});
+
 		renderLibrarySection(el, column, app, (config) => {
 			callbacks.onLibraryConfigChange(column.name, config);
 		});
 		return el;
 	}
+
+	// Section type dropdown selector (memo / todo / projects)
+	const typeOptions = [
+		{ value: 'memo', label: t('renderer.typeMemo'), icon: 'sticky-note' },
+		{ value: 'todo', label: t('renderer.typeTodo'), icon: 'check-square' },
+		{ value: 'projects', label: t('renderer.typeProjects'), icon: 'folder-kanban' },
+	];
+	const currentType = sectionType === 'notes' ? 'projects' : (sectionType === 'dashboard' ? 'projects' : sectionType);
+	const currentTypeObj = typeOptions.find(o => o.value === currentType) || typeOptions[2]!;
+	
+	const typeBtnWrapper = headerActions.createDiv({ cls: 'dashboard-section-type-wrapper' });
+	const typeToggleBtn = typeBtnWrapper.createEl('button', {
+		cls: 'dashboard-section-add-btn dashboard-section-type-btn',
+		attr: { 'aria-label': t('renderer.switchSectionType') },
+	});
+	setIcon(typeToggleBtn, currentTypeObj.icon as any);
+	
+	// Dropdown menu
+	const typeDropdown = typeBtnWrapper.createDiv({ cls: 'dashboard-section-type-dropdown' });
+	typeDropdown.style.display = 'none';
+	typeOptions.forEach(opt => {
+		const item = typeDropdown.createDiv({ cls: 'dashboard-section-type-dropdown-item' });
+		if (opt.value === currentType) item.addClass('active');
+		const iconSpan = item.createSpan({ cls: 'dashboard-section-type-dropdown-icon' });
+		setIcon(iconSpan, opt.icon as any);
+		item.createSpan({ text: opt.label });
+		item.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (opt.value !== currentType) {
+				callbacks.onColumnSectionTypeChange(column.name, opt.value);
+			}
+			typeDropdown.style.display = 'none';
+		});
+	});
+	
+	typeToggleBtn.addEventListener('click', (e) => {
+		e.stopPropagation();
+		const isOpen = typeDropdown.style.display === 'block';
+		typeDropdown.style.display = isOpen ? 'none' : 'block';
+	});
+	
+	// Close dropdown when clicking outside
+	document.addEventListener('click', () => {
+		typeDropdown.style.display = 'none';
+	}, { once: false });
 
 	const addCardBtn = headerActions.createEl('button', {
 		cls: 'dashboard-section-add-btn',
@@ -1837,25 +1899,13 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	const isWidget = isWeather || isTracker;
 	const isProjectLike = !isMemo && !isTask && !isWidget;
 	const isDashboardSection = sectionType === 'dashboard';
-	const showCover = isProjectLike && !isDashboardSection && sectionType !== 'notes';
 
-	if (showCover) {
-		el.addClass('dashboard-card--cover');
-	}
-
-	if (card.coverImage && showCover) {
-		const resolved = resolveVaultImage(app, card.coverImage);
-		if (resolved) {
-			const cover = el.createDiv({ cls: 'dashboard-project-cover' });
-			cover.style.backgroundImage = `url("${resolved}")`;
-			cover.setAttribute('draggable', 'true');
-		} else {
-			const cover = el.createDiv({ cls: 'dashboard-project-cover dashboard-project-cover--default' });
-			cover.setAttribute('draggable', 'true');
+	// Projects: top accent line instead of cover image
+	if (isProjectLike && !isDashboardSection && sectionType !== 'notes') {
+		const accentLine = el.createDiv({ cls: 'dashboard-project-accent-line' });
+		if (card.color) {
+			accentLine.style.backgroundColor = card.color;
 		}
-	} else if (showCover) {
-		const cover = el.createDiv({ cls: 'dashboard-project-cover dashboard-project-cover--default' });
-		cover.setAttribute('draggable', 'true');
 	}
 
 	const header = el.createDiv({ cls: 'dashboard-card-header' });

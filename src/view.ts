@@ -33,15 +33,12 @@ export class DashboardView extends ItemView {
 	private recentDocsTimer: ReturnType<typeof setTimeout> | null = null;
 	private libraryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	private readonly RECENT_DOCS_DEBOUNCE = 500;
-	private bannerQuoteIndex = 0;
 	private bannerImageIndex = 0;
-	private static readonly BANNER_QUOTE_ROTATION_MS = 60 * 60 * 1000; // 1 hour (on the hour)
 	private static readonly BANNER_IMAGE_ROTATION_MS = 30 * 60 * 1000; // 30 min (on the half)
 	private static readonly REMINDER_CHECK_MS = 60 * 1000; // 1 minute
-	private static readonly BANNER_QUOTE_OFFSET_MS = 60 * 60 * 1000; // offset by 1 hour from image
 	private reminderTimer: ReturnType<typeof setInterval> | null = null;
 	private firedReminders = new Set<string>();
-	private sidebarPinned = localStorage.getItem('apex-dashboard-sidebar-pinned') === 'true';
+	private sidebarPinned: boolean;
 	private sidebarExpanded = false;
 	private bannerCollapsed = localStorage.getItem('apex-dashboard-banner-collapsed') === 'true';
 	private pendingScrollCardId: string | null = null;
@@ -58,6 +55,9 @@ export class DashboardView extends ItemView {
 		super(leaf);
 		this.plugin = plugin;
 		this.sync = new SyncEngine(this.app, this.plugin.settings);
+		// Use saved preference, or fall back to settings default
+		const saved = localStorage.getItem('apex-dashboard-sidebar-pinned');
+		this.sidebarPinned = saved !== null ? saved === 'true' : plugin.settings.sidebarPinnedDefault;
 	}
 
 	getViewType(): string {
@@ -392,41 +392,7 @@ export class DashboardView extends ItemView {
 	}
 
 	private setupBannerRotation(container: HTMLElement, banner: BannerData): void {
-		// Quote rotation
-		const quotes = banner.quotes;
-		if (quotes && quotes.length > 1) {
-			// Offset by 1 hour so quote and image swaps don't overlap
-			const quoteIndex = Math.floor((Date.now() + DashboardView.BANNER_QUOTE_OFFSET_MS) / DashboardView.BANNER_QUOTE_ROTATION_MS) % quotes.length;
-			this.bannerQuoteIndex = quoteIndex;
-
-			const quoteEl = container.querySelector('.dashboard-banner-quote') as HTMLElement;
-			const authorEl = container.querySelector('.dashboard-banner-author') as HTMLElement;
-			if (quoteEl && authorEl) {
-				const initial = quotes[quoteIndex]!;
-				quoteEl.textContent = initial.quote;
-				authorEl.textContent = initial.author;
-
-				const rotateQuote = () => {
-					this.bannerQuoteIndex = (this.bannerQuoteIndex + 1) % quotes.length;
-					const next = quotes[this.bannerQuoteIndex]!;
-
-					quoteEl.addClass('dashboard-banner-quote--fading');
-					authorEl.addClass('dashboard-banner-author--fading');
-
-					setTimeout(() => {
-						quoteEl.textContent = next.quote;
-						authorEl.textContent = next.author;
-						quoteEl.removeClass('dashboard-banner-quote--fading');
-						authorEl.removeClass('dashboard-banner-author--fading');
-					}, 400);
-				};
-
-				const quoteTimer = setInterval(rotateQuote, DashboardView.BANNER_QUOTE_ROTATION_MS);
-				this.cleanupFns.push(() => clearInterval(quoteTimer));
-			}
-		}
-
-		// Image rotation
+		// Image rotation only
 		const images = banner.images;
 		if (images && images.length > 1) {
 			const imgIndex = Math.floor(Date.now() / DashboardView.BANNER_IMAGE_ROTATION_MS) % images.length;
@@ -699,6 +665,7 @@ export class DashboardView extends ItemView {
 					this.sync.deleteColumn(columnName);
 				}
 			},
+			onColumnSectionTypeChange: (columnName: string, sectionType: string) => this.sync.setColumnSectionType(columnName, sectionType),
 			onTaskReminderEdit: (cardId: string, taskIndex: number, reminder: string | undefined) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
 			onAddFromTemplate: (columnName: string) => this.openTemplatePicker(columnName),
 				onLibraryConfigChange: (columnName: string, config: LibraryConfig) => this.sync.updateLibraryConfig(columnName, config),

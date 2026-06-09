@@ -321,6 +321,18 @@ export class SyncEngine {
 		await this.writeToDisk();
 	}
 
+	async setColumnSectionType(columnName: string, sectionType: string): Promise<void> {
+		if (!this.data) return;
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.map(col =>
+				col.name === columnName ? { ...col, sectionType } : col
+			),
+		};
+		await this.writeToDisk();
+	}
+
 	async deleteColumn(name: string): Promise<void> {
 		if (!this.data) return;
 

@@ -30,6 +30,7 @@ export interface DashboardSettings {
 	readingEnabled: boolean;
 	readingSoundEnabled: boolean;
 	taskTemplates: TaskTemplate[];
+	sidebarPinnedDefault: boolean;
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -62,6 +63,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	readingEnabled: false,
 	readingSoundEnabled: true,
 	taskTemplates: [],
+	sidebarPinnedDefault: true,
 };
 
 export interface QuoteItem {
@@ -232,6 +234,7 @@ export interface RenderCallbacks {
 	onFileDrop(cardId: string, filePath: string): void;
 	onColumnRename(oldName: string, newName: string): void;
 	onColumnDelete(columnName: string): void;
+	onColumnSectionTypeChange(columnName: string, sectionType: string): void;
 	onTaskReminderEdit(cardId: string, taskIndex: number, reminder: string | undefined): void;
 	onAddFromTemplate(columnName: string): void;
 	onLibraryConfigChange(columnName: string, config: LibraryConfig): void;

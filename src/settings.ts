@@ -48,6 +48,21 @@ export class DashboardSettingTab extends PluginSettingTab {
 					};
 					await this.plugin.saveSettings();
 				}));
+
+		new Setting(containerEl)
+			.setName(t('settings.sidebarPinnedDefault'))
+			.setDesc(t('settings.sidebarPinnedDefaultDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.sidebarPinnedDefault)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						sidebarPinnedDefault: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+				}));
+
 		this.renderWidgetSettings(containerEl);
 
 		this.renderLunarSettings(containerEl);

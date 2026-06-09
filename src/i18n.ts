@@ -36,6 +36,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.languageDesc': 'Interface language',
 		'settings.languageEn': 'English',
 		'settings.languageZh': '中文',
+		'settings.sidebarPinnedDefault': 'Pin sidebar by default',
+		'settings.sidebarPinnedDefaultDesc': 'Keep the right sidebar always visible when opening the dashboard',
 
 		// Style Presets
 		'settings.stylePreset': 'Style',
@@ -110,8 +112,10 @@ const translations: Record<Language, Record<string, string>> = {
 		'renderer.typeNotesPlain': 'Notes (no cover)',
 		'renderer.typeTodo': 'Todo',
 		'renderer.typeMemo': 'Memo',
+		'renderer.typeProjects': 'Projects',
 		'renderer.typeDashboard': 'Dashboard',
 		'renderer.typeLibrary': 'Library',
+		'renderer.switchSectionType': 'Switch section type',
 		'renderer.editCard': 'Edit card',
 		'renderer.deleteCard': 'Delete card',
 		'renderer.moveUp': 'Move up',
@@ -511,6 +515,8 @@ const translations: Record<Language, Record<string, string>> = {
 		'settings.languageDesc': '界面语言',
 		'settings.languageEn': 'English',
 		'settings.languageZh': '中文',
+		'settings.sidebarPinnedDefault': '默认钉住侧边栏',
+		'settings.sidebarPinnedDefaultDesc': '打开工作台时，右侧边栏始终保持展开状态',
 
 		// Style Presets
 		'settings.stylePreset': '样式',
@@ -585,8 +591,10 @@ const translations: Record<Language, Record<string, string>> = {
 		'renderer.typeNotesPlain': '笔记 (无封面)',
 		'renderer.typeTodo': '待办',
 		'renderer.typeMemo': '备忘',
+		'renderer.typeProjects': '项目',
 		'renderer.typeDashboard': '仪表盘',
 		'renderer.typeLibrary': '数据库',
+		'renderer.switchSectionType': '切换分区类型',
 		'renderer.editCard': '编辑卡片',
 		'renderer.deleteCard': '删除卡片',
 		'renderer.moveUp': '上移',

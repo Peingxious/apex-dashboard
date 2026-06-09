@@ -4202,7 +4202,7 @@
 
 /* --- Expanded --- */
 .dashboard-sidebar--expanded {
-	width: 220px;
+	width: 240px;
 	opacity: 1;
 	cursor: default;
 	overflow-y: auto;
@@ -4739,6 +4739,51 @@
 	color: var(--db-accent) !important;
 	border-color: var(--db-accent) !important;
 	background: rgba(139, 92, 246, 0.08) !important;
+}
+
+.dashboard-section-type-wrapper {
+	position: relative;
+	display: inline-flex;
+}
+
+.dashboard-section-type-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	z-index: 100;
+	min-width: 140px;
+	background: var(--background-primary);
+	border: 1px solid var(--db-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+	padding: 4px;
+	margin-top: 4px;
+}
+
+.dashboard-section-type-dropdown-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.85em;
+	color: var(--text-normal);
+	transition: background 0.1s;
+}
+
+.dashboard-section-type-dropdown-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.dashboard-section-type-dropdown-item.active {
+	color: var(--db-accent);
+	background: rgba(139, 92, 246, 0.08);
+}
+
+.dashboard-section-type-dropdown-icon {
+	display: flex;
+	align-items: center;
 }
 
 .dashboard-section-confirm-btn {
@@ -5500,7 +5545,15 @@
 	pointer-events: none;
 }
 
-/* ===== Project Cover Image ===== */
+/* ===== Project Accent Line (replaces cover image) ===== */
+.dashboard-project-accent-line {
+	height: 3px;
+	background-color: var(--db-accent);
+	border-radius: var(--db-radius-md) var(--db-radius-md) 0 0;
+	margin: -16px -16px 12px -16px;
+}
+
+/* ===== Project Cover Image (deprecated, kept for backward compatibility) ===== */
 .dashboard-project-cover {
 	height: 100px;
 	background-size: cover;
@@ -7890,9 +7943,9 @@
 		pointer-events: auto;
 	}
 
-	/* Project cover: shorter */
-	.dashboard-project-cover {
-		height: 70px;
+	/* Project accent line: mobile */
+	.dashboard-project-accent-line {
+		height: 2px;
 		margin: -12px -12px 8px -12px;
 		border-radius: var(--db-radius-md) var(--db-radius-md) 0 0;
 	}

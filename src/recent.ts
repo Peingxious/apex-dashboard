@@ -69,9 +69,9 @@ function formatRelativeTime(mtime: number): string {
 	const days = Math.floor(diff / 86400000);
 
 	if (minutes < 1) return t('recent.justNow');
-	if (minutes < 60) return t('recent.minutesAgo', { n: String(minutes) });
-	if (hours < 24) return t('recent.hoursAgo', { n: String(hours) });
-	if (days < 7) return t('recent.daysAgo', { n: String(days) });
+	if (minutes < 60) return t('recent.minutesAgo', { count: minutes });
+	if (hours < 24) return t('recent.hoursAgo', { count: hours });
+	if (days < 7) return t('recent.daysAgo', { count: days });
 
 	const date = new Date(mtime);
 	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

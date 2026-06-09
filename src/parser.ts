@@ -19,8 +19,8 @@ const KNOWN_METADATA_KEYS = new Set(['link', 'progress', 'due', 'streak', 'type'
 const REMINDER_REGEX = /\s*⏰\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})\s*$/;
 
 const DEFAULT_BANNER: BannerData = {
-	quote: 'The mind is everything. What you think you become.',
-	author: 'Buddha',
+	quote: '',
+	author: '',
 	image: '',
 };
 
@@ -53,20 +53,8 @@ export function serialize(data: DashboardData): string {
 	lines.push('dashboard: true');
 
 	lines.push('banner:');
-	lines.push(`  quote: "${escapeYamlString(data.banner.quote)}"`);
-	lines.push(`  author: "${escapeYamlString(data.banner.author)}"`);
 	if (data.banner.image) {
 		lines.push(`  image: "${data.banner.image}"`);
-	}
-	if (data.banner.quoteColor) {
-		lines.push(`  quoteColor: "${data.banner.quoteColor}"`);
-	}
-	if (data.banner.quotes && data.banner.quotes.length > 0) {
-		lines.push('  quotes:');
-		for (const q of data.banner.quotes) {
-			lines.push(`    - quote: "${escapeYamlString(q.quote)}"`);
-			lines.push(`      author: "${escapeYamlString(q.author)}"`);
-		}
 	}
 	if (data.banner.images && data.banner.images.length > 0) {
 		lines.push('  images:');
@@ -158,13 +146,7 @@ export function serialize(data: DashboardData): string {
 			const cardLines: string[] = [];
 			const metadataLines: string[] = [];
 
-			if (card.type === 'task') {
-				metadataLines.push(`type: task`);
-			}
-
-			if (card.type === 'project') {
-				metadataLines.push(`type: project`);
-			}
+			// type: task / type: project 不再写入 MD，这些信息记录在 columns 的 sectionType 中
 
 			if (card.wikiLink) {
 				metadataLines.push(`link: [[${card.wikiLink}]]`);
@@ -525,30 +507,31 @@ function splitFrontmatter(markdown: string): { frontmatter: Record<string, unkno
 }
 
 function parseBanner(fm: Record<string, unknown>): BannerData {
-	const raw = fm.banner as Record<string, unknown> | undefined;
-	if (!raw) return { ...DEFAULT_BANNER };
+	const raw = fm.banner;
 
-	const quotesRaw = raw.quotes;
-	let quotes: Array<{ quote: string; author: string }> | undefined;
-	if (Array.isArray(quotesRaw)) {
-		quotes = quotesRaw.map((item: Record<string, string>) => ({
-			quote: item.quote ?? '',
-			author: item.author ?? '',
-		}));
+	// Handle plain string: banner: https://example.com/image.jpg
+	if (typeof raw === 'string' && raw.trim()) {
+		return {
+			quote: '',
+			author: '',
+			image: raw.trim(),
+		};
 	}
 
-	const imagesRaw = raw.images;
+	// Handle object: banner:\n  image: path/to/img.jpg
+	if (!raw || typeof raw !== 'object') return { ...DEFAULT_BANNER };
+	const obj = raw as Record<string, unknown>;
+
+	const imagesRaw = obj.images;
 	let images: string[] | undefined;
 	if (Array.isArray(imagesRaw)) {
 		images = (imagesRaw as unknown[]).map((item: unknown) => String(item)).filter((s: string) => s.trim());
 	}
 
 	return {
-		quote: (raw.quote as string) ?? DEFAULT_BANNER.quote,
-		author: (raw.author as string) ?? DEFAULT_BANNER.author,
-		image: (raw.image as string) ?? '',
-		quoteColor: (raw.quoteColor as string) || undefined,
-		quotes,
+		quote: '',
+		author: '',
+		image: (obj.image as string) ?? '',
 		images,
 	};
 }

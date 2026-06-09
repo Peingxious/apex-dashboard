@@ -1,4 +1,4 @@
-import { Modal, App, Setting, Notice } from "obsidian";
+import { Modal, App, Setting } from "obsidian";
 import type { DashboardCard } from "./types";
 import { t } from "./i18n";
 
@@ -10,8 +10,6 @@ export class CardEditModal extends Modal {
 	private localDueDate: string;
 	private localColor: string;
 	private localProgress: number;
-	private localWikiLink: string;
-	private localUrl: string;
 
 	constructor(
 		app: App,
@@ -27,8 +25,6 @@ export class CardEditModal extends Modal {
 		this.localDueDate = card.dueDate ?? '';
 		this.localColor = card.color ?? '';
 		this.localProgress = card.progress;
-		this.localWikiLink = card.wikiLink ?? '';
-		this.localUrl = card.url ?? '';
 	}
 
 	onOpen(): void {
@@ -44,24 +40,6 @@ export class CardEditModal extends Modal {
 			.addText(text => text
 				.setValue(this.localTitle)
 				.onChange(value => this.localTitle = value));
-
-		// Wiki Link
-		new Setting(contentEl)
-			.setName(t('renderer.wikiLink'))
-			.setDesc(t('renderer.wikiLinkDesc'))
-			.addText(text => text
-				.setValue(this.localWikiLink)
-				.setPlaceholder('[[note]] or note')
-				.onChange(value => this.localWikiLink = value));
-
-		// URL
-		new Setting(contentEl)
-			.setName(t('renderer.url'))
-			.setDesc(t('renderer.urlDesc'))
-			.addText(text => text
-				.setValue(this.localUrl)
-				.setPlaceholder('https://...')
-				.onChange(value => this.localUrl = value));
 
 		// Due date
 		new Setting(contentEl)
@@ -138,12 +116,6 @@ export class CardEditModal extends Modal {
 		}
 		if (this.localProgress !== this.card.progress && this.card.type === 'project') {
 			updates.progress = this.localProgress;
-		}
-		if (this.localWikiLink !== (this.card.wikiLink ?? '')) {
-			updates.wikiLink = this.localWikiLink;
-		}
-		if (this.localUrl !== (this.card.url ?? '')) {
-			updates.url = this.localUrl;
 		}
 
 		if (Object.keys(updates).length > 0) {
