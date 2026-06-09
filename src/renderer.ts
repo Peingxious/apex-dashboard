@@ -2697,7 +2697,22 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 				}
 			});
 		});
-	}
+
+	// Add note input row (same style as todo's add-task)
+	const addRow = container.createDiv({ cls: 'dashboard-task-add' });
+	const input = addRow.createEl('input', {
+		cls: 'dashboard-task-input',
+		attr: { type: 'text', placeholder: t('renderer.addNote') },
+	});
+	const fileSuggest = attachFileSuggest(input, app);
+	input.addEventListener('keydown', (e) => {
+		if (fileSuggest.isActive()) return;
+		if (e.key === 'Enter' && input.value.trim()) {
+			callbacks.onProjectDocsAdd(card, input.value.trim());
+			input.value = '';
+		}
+	});
+}
 
 function renderHabitBody(container: HTMLElement, card: DashboardCard): void {
 	const streakEl = container.createDiv({ cls: 'dashboard-habit-streak' });

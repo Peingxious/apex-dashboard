@@ -306,7 +306,6 @@ export default class DashboardPlugin extends Plugin {
 	private buildColumnFrontmatter(headings: string[]): string {
 		const lines: string[] = [];
 		lines.push('---');
-		lines.push('dashboard: true');
 		lines.push('columns:');
 		for (const heading of headings) {
 			// Escape quotes in heading names

@@ -38,10 +38,11 @@ export function parse(markdown: string): DashboardData {
 	const quickActions = parseQuickActions(frontmatter);
 	const quickActionOrder = parseQuickActionOrder(frontmatter);
 	const columnDefs = parseColumnDefs(frontmatter);
-	const columns = parseColumns(body, columnDefs);
+	const { columns, h1Heading } = parseColumnsWithH1(body, columnDefs);
 
 	const data: DashboardData = { banner, quickActions, columns };
 	if (quickActionOrder) data.quickActionOrder = quickActionOrder;
+	if (h1Heading) data.h1Heading = h1Heading;
 	const hiddenPresets = parseHiddenPresets(frontmatter);
 	if (hiddenPresets) data.hiddenPresets = hiddenPresets;
 	return data;
@@ -90,7 +91,7 @@ export function serialize(data: DashboardData): string {
 
 	lines.push('columns:');
 	for (const col of data.columns) {
-		lines.push(`  - name: ${col.name}`);
+		lines.push(`  - name: "${escapeYamlString(col.name)}"`);
 		if (col.sectionType) {
 			lines.push(`    type: ${col.sectionType}`);
 		}
@@ -132,6 +133,12 @@ export function serialize(data: DashboardData): string {
 
 	lines.push('---');
 	lines.push('');
+
+	// Preserve the original H1 heading line(s) (e.g. "# [[Note]] #Tag")
+	if (data.h1Heading) {
+		lines.push(data.h1Heading);
+		lines.push('');
+	}
 
 	for (const column of data.columns) {
 		lines.push(`## ${column.name}`);
@@ -658,6 +665,33 @@ function parseLibraryConfig(raw: Record<string, unknown>): LibraryConfig {
 			} : undefined,
 		};
 	}
+/** Parse columns from body while preserving any H1 heading that precedes ## sections */
+function parseColumnsWithH1(body: string, defs: Array<{ name: string; color: string; sectionType?: string; libraryConfig?: LibraryConfig }>): { columns: DashboardColumn[]; h1Heading?: string } {
+	// Extract H1 heading(s) — lines starting with # (but not ##) before the first ##
+	const lines = body.split('\n');
+	const h1Lines: string[] = [];
+	let bodyStartIdx = 0;
+	for (let i = 0; i < lines.length; i++) {
+		const trimmed = lines[i].trim();
+		if (trimmed.startsWith('## ')) { bodyStartIdx = i; break; }
+		if (/^#\s/.test(trimmed) || trimmed.startsWith('#[') || /^#[\w\u4e00-\u9fff]/.test(trimmed)) {
+			h1Lines.push(lines[i]);
+			bodyStartIdx = i + 1;
+		} else if (!trimmed && h1Lines.length === 0) {
+			// skip blank lines before H1
+			bodyStartIdx = i + 1;
+		} else if (trimmed && h1Lines.length === 0) {
+			// non-H1 non-empty content before first section — stop looking
+			bodyStartIdx = i;
+			break;
+		}
+	}
+	const h1Heading = h1Lines.length > 0 ? h1Lines.join('\n').trim() : undefined;
+	const remainingBody = lines.slice(bodyStartIdx).join('\n');
+	const columns = parseColumns(remainingBody, defs);
+	return { columns, h1Heading };
+}
+
 function splitByH2(body: string): Array<{ heading: string; content: string }> {
 	const lines = body.split('\n');
 	const sections: Array<{ heading: string; content: string }> = [];

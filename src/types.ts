@@ -213,6 +213,8 @@ export interface DashboardData {
 	quickActionOrder?: string[];
 	hiddenPresets?: string[];
 	columns: DashboardColumn[];
+	/** Preserved H1 heading line(s) from original note (e.g. "# [[Note]] #Tag") */
+	h1Heading?: string;
 }
 
 export interface RenderCallbacks {
