@@ -1,29 +1,15 @@
 # Dependencies
 node_modules
-package-lock.json
 
 # Obsidian plugin data
 data.json
+main.js
 
 # macOS
 .DS_Store
 
-# Source code
-src/
-esbuild.config.mjs
-tsconfig.json
-eslint.config.mts
-version-bump.mjs
-.npmrc
-.editorconfig
-
 # Build artifacts
 *.map
-
-# IDE
-.vscode
-.idea
-*.iml
 
 # AI / Dev helpers
 AGENTS.md
