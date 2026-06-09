@@ -1,4 +1,4 @@
-import { App, setIcon } from 'obsidian';
+import { App, Notice, setIcon } from 'obsidian';
 import type { DashboardData, DashboardColumn, DashboardCard, RenderCallbacks, TaskItem, DashboardSettings, CardSize, TrackerStyle } from './types';
 import { t, getLanguage } from './i18n';
 import { renderLibrarySection } from './library-section';
@@ -1680,6 +1680,17 @@ function saveCollapsedSections(collapsed: Set<string>): void {
 	localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]));
 }
 
+/** Check if a column is protected from deletion (main heading / has tags or links) */
+function isColumnProtected(columnName: string, data?: DashboardData): boolean {
+	if (!data) return false;
+	const idx = data.columns.findIndex(c => c.name === columnName);
+	// First column (main heading) is protected
+	if (idx === 0) return true;
+	// Columns with wiki-links [[...]] or tags # are protected
+	if (columnName.includes('[[') || columnName.includes('#')) return true;
+	return false;
+}
+
 function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app: App, data?: DashboardData, settings?: DashboardSettings): HTMLElement {
 	const el = document.createElement('div');
 	el.addClass('dashboard-section-row');
@@ -1773,22 +1784,24 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 			el.dispatchEvent(event);
 		});
 
-		// Delete section button for library
-		const deleteSectionBtn = headerActions.createEl('button', {
-			cls: 'dashboard-section-add-btn dashboard-section-delete-btn',
-			attr: { 'aria-label': t('renderer.deleteSection', { column: column.name }) },
-		});
-		setIcon(deleteSectionBtn, 'trash-2');
-		deleteSectionBtn.addEventListener('click', async (e) => {
-			e.stopPropagation();
-			const confirmed = await showConfirmDialog(app, {
-				title: t('common.confirmDelete'),
-				message: t('renderer.deleteSectionConfirm', { column: column.name }),
+		// Delete section button for library (hidden for protected columns)
+		if (!isColumnProtected(column.name, data)) {
+			const deleteSectionBtn = headerActions.createEl('button', {
+				cls: 'dashboard-section-add-btn dashboard-section-delete-btn',
+				attr: { 'aria-label': t('renderer.deleteSection', { column: column.name }) },
 			});
-			if (confirmed) {
-				callbacks.onColumnDelete(column.name);
-			}
-		});
+			setIcon(deleteSectionBtn, 'trash-2');
+			deleteSectionBtn.addEventListener('click', async (e) => {
+				e.stopPropagation();
+				const confirmed = await showConfirmDialog(app, {
+					title: t('common.confirmDelete'),
+					message: t('renderer.deleteSectionConfirm', { column: column.name }),
+				});
+				if (confirmed) {
+					callbacks.onColumnDelete(column.name);
+				}
+			});
+		}
 
 		renderLibrarySection(el, column, app, (config) => {
 			callbacks.onLibraryConfigChange(column.name, config);
@@ -1848,22 +1861,24 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 	setIcon(addCardBtn, 'plus');
 	addCardBtn.addEventListener('click', () => callbacks.onCardAdd(column.name));
 
-	// Delete section button
-	const deleteSectionBtn = headerActions.createEl('button', {
-		cls: 'dashboard-section-add-btn dashboard-section-delete-btn',
-		attr: { 'aria-label': t('renderer.deleteSection', { column: column.name }) },
-	});
-	setIcon(deleteSectionBtn, 'trash-2');
-	deleteSectionBtn.addEventListener('click', async (e) => {
-		e.stopPropagation();
-		const confirmed = await showConfirmDialog(app, {
-			title: t('common.confirmDelete'),
-			message: t('renderer.deleteSectionConfirm', { column: column.name }),
+	// Delete section button (hidden for protected columns)
+	if (!isColumnProtected(column.name, data)) {
+		const deleteSectionBtn = headerActions.createEl('button', {
+			cls: 'dashboard-section-add-btn dashboard-section-delete-btn',
+			attr: { 'aria-label': t('renderer.deleteSection', { column: column.name }) },
 		});
-		if (confirmed) {
-			callbacks.onColumnDelete(column.name);
-		}
-	});
+		setIcon(deleteSectionBtn, 'trash-2');
+		deleteSectionBtn.addEventListener('click', async (e) => {
+			e.stopPropagation();
+			const confirmed = await showConfirmDialog(app, {
+				title: t('common.confirmDelete'),
+				message: t('renderer.deleteSectionConfirm', { column: column.name }),
+			});
+			if (confirmed) {
+				callbacks.onColumnDelete(column.name);
+			}
+		});
+	}
 
 	const cardsContainer = el.createDiv({ cls: 'dashboard-section-cards' });
 

@@ -208,20 +208,13 @@ export function serialize(data: DashboardData): string {
 				}
 			}
 
-			// Indented body
+			// Indented body — always use tab-only indent (no "- " prefix)
+			// to avoid double-dash corruption on re-serialize cycles
 			const bodyLines = card.body.trim();
 			if (bodyLines) {
-				const isMemoOrProject = column.sectionType === 'memo' || column.sectionType === 'projects';
 				for (const bl of bodyLines.split('\n')) {
 					if (bl.trim()) {
-						if (isMemoOrProject) {
-							// Project/memo body: every line gets \t prefix so the parser
-							// never misidentifies "- " body lines as new card titles.
-							// The parser strips this \t back when reading.
-							lines.push(`\t${bl}`);
-						} else {
-							lines.push(`\t- ${bl}`);
-						}
+						lines.push(`\t${bl}`);
 					}
 				}
 			}

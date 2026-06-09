@@ -3,6 +3,7 @@ import { fetchHolidayData, getHolidayForDate, type HolidayInfo } from './holiday
 import { getTodayAlmanac } from './lunar-almanac';
 import { getLanguage } from './i18n';
 import type { App } from 'obsidian';
+import { setIcon } from 'obsidian';
 import { FortuneStickModal } from './fortune-stick-modal';
 
 export interface LunarWidgetData {
@@ -71,7 +72,7 @@ export function renderSidebarLunarWidget(
 
 	// Fortune stick button (top-left)
 	const fortuneBtn = widget.createDiv({ cls: 'dashboard-sidebar-lunar-fortune-btn' });
-	fortuneBtn.setText('\u{1F390}');
+	setIcon(fortuneBtn, 'wand');
 	fortuneBtn.addEventListener('click', () => {
 		if (app) {
 			const modal = new FortuneStickModal();

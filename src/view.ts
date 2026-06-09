@@ -21,6 +21,7 @@ import { PomodoroService } from './pomodoro-service';
 import { ReadingService } from './reading-service';
 import { ReminderNoticeModal } from './reminder-notice';
 import { t } from './i18n';
+import { parse } from './parser';
 
 export const DASHBOARD_VIEW_TYPE = 'apex-dashboard-view';
 
@@ -50,6 +51,12 @@ export class DashboardView extends ItemView {
 	private mobileWidgetTabsOpen: boolean = false;
 	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+	// Embedded note dashboard mode
+	private embeddedNotePath: string | null = null;
+	private embeddedData: DashboardData | null = null;
+	private embeddedDataCache = new Map<string, DashboardData>();
+	private lastEmbeddedPath: string | null = null;
 
 	constructor(leaf: WorkspaceLeaf, plugin: DashboardPlugin) {
 		super(leaf);
@@ -123,6 +130,9 @@ export class DashboardView extends ItemView {
 		this.data = data;
 		this.firedReminders.clear();
 
+		// Use embedded note data if in embedded mode
+		const activeData = this.embeddedData ?? data;
+
 		// Save scroll positions before re-render
 		const root = this.containerEl.children[1] as HTMLElement;
 		const kanbanEl = root?.querySelector('.dashboard-kanban');
@@ -150,8 +160,8 @@ export class DashboardView extends ItemView {
 
 		const bannerEl = renderBanner(
 			container,
-			data.banner,
-			() => this.openBannerEditModal(data),
+			activeData.banner,
+			() => this.openBannerEditModal(activeData),
 			this.app,
 		);
 
@@ -163,9 +173,12 @@ export class DashboardView extends ItemView {
 		this.setupBannerBehavior(bannerEl);
 
 		// Banner quote rotation
-		this.setupBannerRotation(container, data.banner);
+		this.setupBannerRotation(container, activeData.banner);
 
 		this.renderMobileWidgetBar(container);
+
+		// Navigation bar: toggle between main dashboard and note dashboard
+		this.renderViewNavBar(container);
 
 		const mainLayout = container.createDiv({ cls: 'dashboard-main' });
 
@@ -181,8 +194,9 @@ export class DashboardView extends ItemView {
 		this.setupSidebarBehavior(sidebar, container);
 
 		const kanban = mainLayout.createDiv({ cls: 'dashboard-kanban-wrapper' });
-		renderDashboard(kanban, data, this.createCallbacks(), this.app, this.plugin.settings);
-		setupDragAndDrop(kanban, this.createCallbacks(), this.cleanupFns);
+		const renderCallbacks = this.embeddedNotePath ? this.createEmbeddedCallbacks() : this.createCallbacks();
+		renderDashboard(kanban, activeData, renderCallbacks, this.app, this.plugin.settings);
+		setupDragAndDrop(kanban, renderCallbacks, this.cleanupFns);
 		// Library config event delegation
 		kanban.addEventListener('dashboard-library-config', ((e: CustomEvent) => {
 			const { columnName } = e.detail as { columnName: string };
@@ -274,6 +288,626 @@ export class DashboardView extends ItemView {
 				}
 			});
 		}
+	}
+
+	private renderViewNavBar(container: HTMLElement): void {
+		const navBar = container.createDiv({ cls: 'dashboard-view-nav-bar' });
+
+		// Left group: tabs
+		const leftGroup = navBar.createDiv({ cls: 'dashboard-view-nav-left' });
+
+		// "Main Dashboard" tab
+		const mainTab = leftGroup.createEl('button', {
+			cls: 'dashboard-view-nav-tab' + (!this.embeddedNotePath ? ' dashboard-view-nav-tab--active' : ''),
+			text: t('main.dashboard'),
+		});
+		setIcon(mainTab, 'home', 'before');
+		mainTab.addEventListener('click', () => {
+			this.exitEmbeddedMode();
+		});
+
+		// Current embedded note tab (if in embedded mode or was recently opened)
+		const activeNotePath = this.embeddedNotePath ?? this.lastEmbeddedPath;
+		if (activeNotePath) {
+			const noteName = activeNotePath.split('/').pop() ?? activeNotePath;
+			const isActive = !!this.embeddedNotePath;
+			const curTab = leftGroup.createEl('button', {
+				cls: 'dashboard-view-nav-tab' + (isActive ? ' dashboard-view-nav-tab--active' : ''),
+				text: noteName,
+				attr: { title: activeNotePath },
+			});
+			setIcon(curTab, 'file-code', 'before');
+			curTab.addEventListener('click', async () => {
+				if (!this.embeddedNotePath && this.lastEmbeddedPath) {
+					await this.reenterEmbeddedMode(this.lastEmbeddedPath);
+				} else {
+					this.app.workspace.revealLeaf(this.leaf);
+				}
+			});
+		}
+
+		// Divider
+		navBar.createDiv({ cls: 'dashboard-view-nav-divider' });
+
+		// Right group: action buttons
+		const rightGroup = navBar.createDiv({ cls: 'dashboard-view-nav-right' });
+
+		// "+ Open" button: pick a file with columns frontmatter
+		const openBtn = rightGroup.createEl('button', {
+			cls: 'dashboard-view-nav-btn',
+			text: t('noteDash.openDash'),
+		});
+		setIcon(openBtn, 'plus', 'before');
+		openBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			this.showColumnFilePicker(navBar);
+		});
+	}
+
+	/** Scan files for columns frontmatter and show picker */
+	private async showColumnFilePicker(anchorEl: HTMLElement): Promise<void> {
+		const mdFiles = this.app.vault.getMarkdownFiles();
+		const columnFiles: TFile[] = [];
+
+		for (const f of mdFiles) {
+			try {
+				const content = await this.app.vault.read(f);
+				if (content.trimStart().startsWith('---')) {
+					const endIdx = content.indexOf('---', 3);
+					if (endIdx !== -1) {
+						const yaml = content.slice(3, endIdx);
+						// Look for columns: or column: in YAML (not dashboard:)
+						if ((yaml.includes('columns:') || yaml.includes('column:')) && !yaml.includes('apex-dashboard-template')) {
+							columnFiles.push(f);
+						}
+					}
+				}
+			} catch { /* skip */ }
+		}
+
+		if (columnFiles.length === 0) {
+			new Notice(t('noteDash.noDashboardFiles'));
+			return;
+		}
+
+		// Remove existing dropdown
+		const root = this.containerEl.children[1] as HTMLElement;
+		const existing = root?.querySelector('.dashboard-nav-dropdown');
+		if (existing) existing.remove();
+
+		// Append dropdown to root (not navBar) to avoid clipping
+		const dropdown = root.createDiv({ cls: 'dashboard-nav-dropdown' });
+		dropdown.style.position = 'fixed';
+		const btnRect = (anchorEl.querySelector('.dashboard-view-nav-btn') as HTMLElement)?.getBoundingClientRect();
+		if (btnRect) {
+			dropdown.style.top = `${btnRect.bottom}px`;
+			dropdown.style.right = `${window.innerWidth - btnRect.right}px`;
+		}
+		const list = dropdown.createDiv({ cls: 'dashboard-nav-dropdown-list' });
+
+		// Search input
+		const searchRow = list.createDiv({ cls: 'dropdown-search-row' });
+		const searchInput = searchRow.createEl('input', {
+			cls: 'dropdown-search-input',
+			type: 'text',
+			placeholder: t('noteDash.searchPlaceholder'),
+		});
+
+		const titleEl = list.createEl('div', { cls: 'dropdown-title', text: t('noteDash.selectDash') + ` (${columnFiles.length})` });
+
+		const allItems: { el: HTMLElement; file: TFile }[] = [];
+
+		for (const f of columnFiles) {
+			const item = list.createEl('button', {
+				cls: 'dashboard-nav-dropdown-item',
+				text: f.basename,
+				attr: { title: f.path },
+			});
+
+			if (f.path === this.embeddedNotePath) {
+				item.addClass('dashboard-nav-dropdown-item--open');
+			}
+
+			allItems.push({ el: item, file: f });
+
+			item.addEventListener('click', async () => {
+				dropdown.remove();
+				await this.embedNoteDashboard(f.path);
+			});
+		}
+
+		// Search filter
+		searchInput.addEventListener('input', () => {
+			const q = searchInput.value.toLowerCase().trim();
+			let visibleCount = 0;
+			for (const { el, file } of allItems) {
+				const match = !q || file.basename.toLowerCase().includes(q);
+				el.style.display = match ? '' : 'none';
+				if (match) visibleCount++;
+			}
+			titleEl.textContent = q
+				? t('noteDash.selectDash') + ` (${visibleCount}/${columnFiles.length})`
+				: t('noteDash.selectDash') + ` (${columnFiles.length})`;
+		});
+
+		// Close on outside click
+		const closeOnOutside = (ev: MouseEvent) => {
+			if (!dropdown.contains(ev.target as Node)) {
+				dropdown.remove();
+				document.removeEventListener('mousedown', closeOnOutside);
+			}
+		};
+		setTimeout(() => document.addEventListener('mousedown', closeOnOutside), 0);
+	}
+
+	/** Load a note's dashboard data and render it embedded in the main view */
+	async embedNoteDashboard(notePath: string): Promise<void> {
+		const file = this.app.vault.getAbstractFileByPath(notePath);
+		if (!(file instanceof TFile)) {
+			new Notice(t('noteDash.fileNotFound'));
+			return;
+		}
+
+		try {
+			const content = await this.app.vault.read(file);
+			this.embeddedData = parse(content);
+			this.embeddedNotePath = notePath;
+			this.lastEmbeddedPath = notePath;
+			// Update cache
+			this.embeddedDataCache.set(notePath, this.embeddedData);
+
+			// Re-render with embedded data
+			const currentData = this.sync.getData();
+			if (currentData) this.render(currentData);
+
+			// Add apex-note-dashboard-root class for fixed-width card styles
+			const root = this.containerEl.children[1] as HTMLElement;
+			root?.addClass('apex-note-dashboard-root');
+		} catch (err) {
+			console.error('[apex-dashboard] Error loading note:', err);
+			new Notice(t('noteDash.loadError'));
+		}
+	}
+
+	/** Re-enter embedded mode from cached data */
+	private async reenterEmbeddedMode(notePath: string): Promise<void> {
+		let data = this.embeddedDataCache.get(notePath);
+		if (!data) {
+			// Cache miss — reload from file
+			const file = this.app.vault.getAbstractFileByPath(notePath);
+			if (!(file instanceof TFile)) return;
+			try {
+				const content = await this.app.vault.read(file);
+				data = parse(content);
+				this.embeddedDataCache.set(notePath, data);
+			} catch (err) {
+				console.error('[apex-dashboard] Error reloading note:', err);
+				new Notice(t('noteDash.loadError'));
+				return;
+			}
+		}
+		this.embeddedNotePath = notePath;
+		this.embeddedData = data;
+
+		const currentData = this.sync.getData();
+		if (currentData) this.render(currentData);
+
+		const root = this.containerEl.children[1] as HTMLElement;
+		root?.addClass('apex-note-dashboard-root');
+	}
+
+	/** Exit embedded mode, return to main dashboard (keep data cached) */
+	private exitEmbeddedMode(): void {
+		if (!this.embeddedNotePath) return;
+		this.lastEmbeddedPath = this.embeddedNotePath;
+		this.embeddedNotePath = null;
+		this.embeddedData = null;
+		// Keep cache intact — do NOT clear it
+
+		const root = this.containerEl.children[1] as HTMLElement;
+		root?.removeClass('apex-note-dashboard-root');
+
+		const currentData = this.sync.getData();
+		if (currentData) this.render(currentData);
+	}
+
+	/** Create callbacks for embedded note mode (save changes back to note) */
+	private createEmbeddedCallbacks() {
+		const self = this;
+		return {
+			onCardEdit: (card: DashboardCard) => {
+				const modal = new CardEditModal(this.app, card, (updates) => {
+					const c = self.findEmbeddedCard(card.id);
+					if (c) Object.assign(c.card, updates);
+					self.saveEmbeddedAndRefresh();
+				}, this.plugin.settings.stylePreset);
+				modal.open();
+			},
+			onCardDelete: async (cardId: string) => {
+				const confirmed = await showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				});
+				if (!confirmed) return;
+				self.deleteEmbeddedCardById(cardId);
+				await self.saveEmbeddedAndRefresh();
+			},
+			onCheckboxToggle: async (cardId: string, taskIndex: number, checked: boolean) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found && found.card.tasks[taskIndex]) {
+					found.card.tasks[taskIndex].checked = checked;
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onTaskAdd: async (cardId: string, text: string) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found) {
+					found.card.tasks.push({ text, checked: false });
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onTaskDelete: async (cardId: string, taskIndex: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found && found.card.tasks[taskIndex]) {
+					found.card.tasks.splice(taskIndex, 1);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onTaskReorder: async (cardId: string, from: number, to: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found && from !== to) {
+					const [item] = found.card.tasks.splice(from, 1);
+					found.card.tasks.splice(to, 0, item);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onTaskMoveToCard: async (srcCardId: string, taskIndex: number, destCardId: string, destIndex: number) => {
+				const srcFound = self.findEmbeddedCard(srcCardId);
+				const destFound = self.findEmbeddedCard(destCardId);
+				if (srcFound && destFound) {
+					const [task] = srcFound.card.tasks.splice(taskIndex, 1);
+					destFound.card.tasks.splice(destIndex, 0, task);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onTaskEdit: async (cardId: string, taskIndex: number, newText: string) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found && found.card.tasks[taskIndex]) {
+					found.card.tasks[taskIndex].text = newText;
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onCardAdd: async (columnName: string) => {
+				if (!self.embeddedData) return;
+				const col = self.embeddedData.columns.find(c => c.name === columnName);
+				if (!col) return;
+				const effectiveType = col.sectionType ?? col.name.toLowerCase();
+
+				if (effectiveType === 'memo' || effectiveType === 'todo') {
+					col.cards.push({
+						id: `${Date.now()}-new`,
+						title: effectiveType === 'memo' ? t('default.memoTitle', { date: '' }) : t('default.todoTitle1'),
+						type: effectiveType === 'memo' ? 'generic' : 'task',
+						column: columnName,
+						body: '',
+						tasks: effectiveType === 'todo' ? [{ text: '', checked: false }] : [],
+						url: '', wikiLink: '', progress: -1, streak: 0, dueDate: '',
+						blockquote: '', color: '', coverImage: '', width: 0, size: 'M',
+						gridCols: 0, gridRows: 0, gridCol: 0, gridRow: 0,
+					});
+					await self.saveEmbeddedAndRefresh();
+				} else {
+					self.openEmbeddedProjectSearch(columnName);
+				}
+			},
+			onColumnAdd: async (name: string, sectionType?: string) => {
+				if (!self.embeddedData) return;
+				self.embeddedData.columns.push({
+					name,
+					color: '#6366f1',
+					sectionType: sectionType || 'project',
+					cards: [],
+				});
+				await self.saveEmbeddedAndRefresh();
+			},
+			onBannerEdit: () => self.openEmbeddedBannerEditModal(),
+			onQuickActionAdd: () => self.openEmbeddedAddActionModal(),
+			onQuickActionRemove: async (index: number) => {
+				const confirmed = await showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('common.confirmDeleteMessage'),
+				});
+				if (confirmed && self.embeddedData) {
+					self.embeddedData.quickActions.splice(index, 1);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onMoveCard: async (cardId: string, targetColumn: string, targetIndex: number) => {
+				if (!self.embeddedData) return;
+				let movedCard: DashboardCard | null = null;
+				for (const col of self.embeddedData.columns) {
+					const idx = col.cards.findIndex(c => c.id === cardId);
+					if (idx !== -1) { [movedCard] = col.cards.splice(idx, 1); break; }
+				}
+				if (!movedCard) return;
+				const destCol = self.embeddedData.columns.find(c => c.name === targetColumn);
+				if (destCol) {
+					movedCard.column = targetColumn;
+					destCol.cards.splice(targetIndex, 0, movedCard);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onMemoUpdate: async (card: DashboardCard, updates: { body: string; blockquote: string }) => {
+				const found = self.findEmbeddedCard(card.id);
+				if (found) {
+					found.card.body = updates.body;
+					found.card.blockquote = updates.blockquote;
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onProjectDocsUpdate: async (card: DashboardCard, docPaths: string[]) => {
+				const found = self.findEmbeddedCard(card.id);
+				if (found) {
+					found.card.projectDocs = docPaths.map(p => ({ path: p, children: [] }));
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onProjectDocsReorder: async (cardId: string, from: number, to: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found?.card.projectDocs) {
+					const [item] = found.card.projectDocs.splice(from, 1);
+					found.card.projectDocs.splice(to, 0, item);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onDocMoveToCard: async (srcCardId: string, docIndex: number, destCardId: string, destIndex: number) => {
+				const srcFound = self.findEmbeddedCard(srcCardId);
+				const destFound = self.findEmbeddedCard(destCardId);
+				if (srcFound?.card.projectDocs && destFound) {
+					const [doc] = srcFound.card.projectDocs.splice(docIndex, 1);
+					if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
+					destFound.card.projectDocs.splice(destIndex, 0, doc);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onProjectDocsAdd: async (card: DashboardCard, docPath: string) => {
+				const found = self.findEmbeddedCard(card.id);
+				if (found) {
+					if (!found.card.projectDocs) found.card.projectDocs = [];
+					found.card.projectDocs.push({ path: docPath, children: [] });
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onProjectDocsRemove: async (card: DashboardCard, topIndex: number) => {
+				const found = self.findEmbeddedCard(card.id);
+				if (found?.card.projectDocs) {
+					found.card.projectDocs.splice(topIndex, 1);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onMemoColorChange: async (card: DashboardCard, color: string) => {
+				const found = self.findEmbeddedCard(card.id);
+				if (found) { found.card.color = color; await self.saveEmbeddedAndRefresh(); }
+			},
+			onProjectCoverChange: async (card: DashboardCard, imagePath: string) => {
+				const found = self.findEmbeddedCard(card.id);
+				if (found) { found.card.coverImage = imagePath; await self.saveEmbeddedAndRefresh(); }
+			},
+			onCardTitleEdit: async (cardId: string, newTitle: string) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found) { found.card.title = newTitle; await self.saveEmbeddedAndRefresh(); }
+			},
+			onCardWidthChange: async (cardId: string, width: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found) { found.card.width = width; await self.saveEmbeddedAndRefresh(); }
+			},
+			onCardSizeChange: async (cardId: string, size: string) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found) { found.card.size = size as import('./types').CardSize; await self.saveEmbeddedAndRefresh(); }
+			},
+			onCardGridChange: async (cardId: string, gridCols: number, gridRows: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found) { found.card.gridCols = gridCols; found.card.gridRows = gridRows; await self.saveEmbeddedAndRefresh(); }
+			},
+			onCardGridMove: async (cardId: string, gridCol: number, gridRow: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found) { found.card.gridCol = gridCol; found.card.gridRow = gridRow; await self.saveEmbeddedAndRefresh(); }
+			},
+			onFileDrop: async (cardId: string, filePath: string) => {
+				if (!self.embeddedData) return;
+				const found = self.findEmbeddedCard(cardId);
+				if (!found) return;
+				const col = self.embeddedData.columns.find(c => c.name === found.card.column);
+				const sectionType = col?.sectionType ?? col?.name.toLowerCase() ?? '';
+				const cardType = found.card.type;
+				if (cardType === 'weather' || cardType === 'tracker') return;
+				if (sectionType === 'todo') {
+					found.card.tasks.push({ text: `[[${filePath}]]`, checked: false });
+				} else if (sectionType === 'memo') {
+					found.card.body += (found.card.body ? '\n' : '') + `[[${filePath}]]`;
+				} else {
+					if (!found.card.projectDocs) found.card.projectDocs = [];
+					found.card.projectDocs.push({ path: filePath, children: [] });
+				}
+				await self.saveEmbeddedAndRefresh();
+			},
+			onProjectItemReorder: async (cardId: string, fromIndex: number, toIndex: number) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found?.card.projectDocs) {
+					const [item] = found.card.projectDocs.splice(fromIndex, 1);
+					found.card.projectDocs.splice(toIndex, 0, item);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onProjectItemMoveToCard: async (srcCardId: string, itemIndex: number, destCardId: string, destIndex: number) => {
+				const srcFound = self.findEmbeddedCard(srcCardId);
+				const destFound = self.findEmbeddedCard(destCardId);
+				if (srcFound?.card.projectDocs && destFound) {
+					const [item] = srcFound.card.projectDocs.splice(itemIndex, 1);
+					if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
+					destFound.card.projectDocs.splice(destIndex, 0, item);
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onColumnRename: async (oldName: string, newName: string) => {
+				const col = self.embeddedData?.columns.find(c => c.name === oldName);
+				if (col) { col.name = newName; await self.saveEmbeddedAndRefresh(); }
+			},
+			onColumnDelete: async (columnName: string) => {
+				// Protect first column and columns with tags/links
+				if (self.embeddedData) {
+					const idx = self.embeddedData.columns.findIndex(c => c.name === columnName);
+					if (idx === 0 || columnName.includes('[[') || columnName.includes('#')) {
+						new Notice(t('error.cannotDeleteMainColumn'));
+						return;
+					}
+				}
+				const confirmed = await showConfirmDialog(this.app, {
+					title: t('common.confirmDelete'),
+					message: t('renderer.deleteSectionConfirm', { column: columnName }),
+				});
+				if (confirmed && self.embeddedData) {
+					const idx = self.embeddedData.columns.findIndex(c => c.name === columnName);
+					if (idx !== -1) { self.embeddedData.columns.splice(idx, 1); await self.saveEmbeddedAndRefresh(); }
+				}
+			},
+			onColumnSectionTypeChange: async (columnName: string, sectionType: string) => {
+				const col = self.embeddedData?.columns.find(c => c.name === columnName);
+				if (col) { col.sectionType = sectionType; await self.saveEmbeddedAndRefresh(); }
+			},
+			onTaskReminderEdit: async (cardId: string, taskIndex: number, reminder: string | undefined) => {
+				const found = self.findEmbeddedCard(cardId);
+				if (found && found.card.tasks[taskIndex]) {
+					found.card.tasks[taskIndex].reminder = reminder;
+					await self.saveEmbeddedAndRefresh();
+				}
+			},
+			onAddFromTemplate: (columnName: string) => self.openEmbeddedTemplatePicker(columnName),
+			onLibraryConfigChange: (columnName: string) => self.openEmbeddedLibraryConfigModal(columnName),
+		};
+	}
+
+	// --- Embedded mode helpers ---
+
+	private findEmbeddedCard(cardId: string): { col: import('./types').DashboardColumn; card: DashboardCard } | null {
+		if (!this.embeddedData) return null;
+		for (const col of this.embeddedData.columns) {
+			const card = col.cards.find(c => c.id === cardId);
+			if (card) return { col, card };
+		}
+		return null;
+	}
+
+	private deleteEmbeddedCardById(cardId: string): void {
+		if (!this.embeddedData) return;
+		for (const col of this.embeddedData.columns) {
+			const idx = col.cards.findIndex(c => c.id === cardId);
+			if (idx !== -1) { col.cards.splice(idx, 1); break; }
+		}
+	}
+
+	private async saveEmbeddedAndRefresh(): Promise<void> {
+		if (!this.embeddedData || !this.embeddedNotePath) return;
+		const { serialize } = await import('./parser');
+		const newContent = serialize(this.embeddedData);
+		this.embeddedDataCache.set(this.embeddedNotePath, this.embeddedData);
+		const file = this.app.vault.getAbstractFileByPath(this.embeddedNotePath);
+		if (file instanceof TFile) {
+			try {
+				await this.app.vault.modify(file, newContent);
+			} catch (e) {
+				console.error('[apex-dashboard] Error saving embedded note:', e);
+				new Notice(t('noteDash.saveError'));
+			}
+		}
+		// Re-render
+		const currentData = this.sync.getData();
+		if (currentData) this.render(currentData);
+	}
+
+	private openEmbeddedBannerEditModal(): void {
+		if (!this.embeddedData) return;
+		const modal = new BannerEditModal(this.app, this.embeddedData.banner, async (updates) => {
+			Object.assign(this.embeddedData!.banner, updates);
+			await this.saveEmbeddedAndRefresh();
+		}, this.plugin.settings.stylePreset);
+		modal.open();
+	}
+
+	private openEmbeddedAddActionModal(): void {
+		const modal = new AddActionModal(this.app, async (action) => {
+			if (!this.embeddedData) return;
+			if (!this.embeddedData.quickActions) this.embeddedData.quickActions = [];
+			this.embeddedData.quickActions.push(action);
+			await this.saveEmbeddedAndRefresh();
+		});
+		modal.open();
+	}
+
+	private openEmbeddedProjectSearch(colName: string): void {
+		const modal = new DocSearchModal(this.app, async (link) => {
+			if (!this.embeddedData) return;
+			const col = this.embeddedData.columns.find(c => c.name === colName);
+			if (!col) return;
+			col.cards.push({
+				id: `${Date.now()}-project`,
+				title: link.name,
+				type: 'project',
+				column: colName,
+				body: `[[${link.path}]]`,
+				tasks: [], url: '', wikiLink: '', progress: -1, streak: 0, dueDate: '',
+				blockquote: '', color: '', coverImage: '', width: 0, size: 'M',
+				projectDocs: [{ path: link.path, children: [] }],
+				gridCols: 0, gridRows: 0, gridCol: 0, gridRow: 0,
+			});
+			this.saveEmbeddedAndRefresh();
+		});
+		modal.open();
+	}
+
+	private openEmbeddedTemplatePicker(colName: string): void {
+		const modal = new TemplatePickerModal(
+			this.app,
+			this.plugin,
+			async (template) => {
+				if (!this.embeddedData) return;
+				const col = this.embeddedData.columns.find(c => c.name === colName);
+				if (!col) return;
+				col.cards.push({
+					id: `${Date.now()}-template`,
+					title: template.name,
+					type: 'task',
+					column: colName,
+					body: '',
+					tasks: template.tasks.map(text => ({ text, checked: false })),
+					url: '', wikiLink: '', progress: -1, streak: 0, dueDate: '',
+					blockquote: '', color: '', coverImage: '', width: 0, size: 'M',
+					gridCols: 0, gridRows: 0, gridCol: 0, gridRow: 0,
+				});
+				this.saveEmbeddedAndRefresh();
+			},
+			this.plugin.settings.stylePreset,
+		);
+		modal.open();
+	}
+
+	private openEmbeddedLibraryConfigModal(colName: string): void {
+		const column = this.embeddedData?.columns.find(col => col.name === colName);
+		const existingConfig = column?.libraryConfig ?? {
+			filters: [],
+			viewMode: 'grid' as const,
+			sortBy: 'modified',
+			sortDesc: true,
+		};
+		const modal = new LibraryConfigModal(
+			this.app,
+			existingConfig,
+			async (config) => {
+				const col = this.embeddedData?.columns.find(c => c.name === colName);
+				if (col) { col.libraryConfig = config; this.saveEmbeddedAndRefresh(); }
+			},
+		);
+		modal.open();
 	}
 
 	private renderMobileWidgetBar(container: HTMLElement): void {
@@ -661,6 +1295,14 @@ export class DashboardView extends ItemView {
 				onProjectItemMoveToCard: (srcCardId: string, itemIndex: number, destCardId: string, destIndex: number) => this.sync.moveProjectItemToCard(srcCardId, itemIndex, destCardId, destIndex),
 				onColumnRename: (oldName: string, newName: string) => this.sync.renameColumn(oldName, newName),
 			onColumnDelete: async (columnName: string) => {
+				// Protect first column and columns with tags/links
+				if (this.data) {
+					const idx = this.data.columns.findIndex(c => c.name === columnName);
+					if (idx === 0 || columnName.includes('[[') || columnName.includes('#')) {
+						new Notice(t('error.cannotDeleteMainColumn'));
+						return;
+					}
+				}
 				const confirmed = await showConfirmDialog(this.app, {
 					title: t('common.confirmDelete'),
 					message: t('renderer.deleteSectionConfirm', { column: columnName }),

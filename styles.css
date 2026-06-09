@@ -1731,6 +1731,243 @@
 	}
 }
 
+/* ===== View Navigation Bar (toggle between main/note dashboard) ===== */
+.dashboard-view-nav-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 5px 12px;
+	background: var(--db-bg);
+	border-bottom: 1px solid var(--db-border);
+	flex-shrink: 0;
+	min-height: 34px;
+	position: relative;
+}
+
+.dashboard-view-nav-left {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex: 1;
+	min-width: 0;
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+
+.dashboard-view-nav-left::-webkit-scrollbar { display: none; }
+
+.dashboard-view-nav-type-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 11px;
+	color: var(--db-text-faint);
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+	flex-shrink: 0;
+	padding-right: 4px;
+}
+
+.dashboard-view-nav-tab {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 10px;
+	font-size: 12px;
+	line-height: 20px;
+	border-radius: 6px;
+	color: var(--db-text-faint);
+	background: transparent;
+	border: 1px solid transparent;
+	cursor: pointer;
+	white-space: nowrap;
+	max-width: 150px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+}
+
+.dashboard-view-nav-tab:hover {
+	color: var(--db-text);
+	background: var(--db-bg-hover);
+	border-color: var(--db-border);
+}
+
+.dashboard-view-nav-tab--active {
+	color: var(--db-accent-text, var(--text-accent));
+	background: var(--db-accent-bg, var(--background-modifier-border-focus));
+	border-color: var(--db-accent-bg, var(--background-modifier-border-focus));
+	font-weight: 500;
+	pointer-events: none;
+}
+
+.dashboard-view-nav-divider {
+	width: 1px;
+	height: 18px;
+	background: var(--db-border);
+	flex-shrink: 0;
+	margin: 0 4px;
+}
+
+.dashboard-view-nav-right {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	flex-shrink: 0;
+}
+
+.dashboard-view-nav-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 10px;
+	font-size: 12px;
+	line-height: 20px;
+	border-radius: 6px;
+	color: var(--db-text-faint);
+	background: transparent;
+	border: 1px solid var(--db-border);
+	cursor: pointer;
+	white-space: nowrap;
+	transition: all 0.15s ease;
+}
+
+.dashboard-view-nav-btn:hover {
+	color: var(--db-text);
+	background: var(--bg-hover);
+	border-color: var(--text-faint);
+}
+
+/* Dashboard file picker dropdown */
+.dashboard-nav-dropdown {
+	position: absolute;
+	top: 100%;
+	right: 12px;
+	z-index: 100;
+	min-width: 200px;
+	max-width: 300px;
+	max-height: 320px;
+	background: color-mix(in srgb, var(--background-primary) 95%, white);
+	border: 1px solid var(--modal-border-color, var(--border));
+	border-radius: 8px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.15);
+	backdrop-filter: blur(16px);
+	-webkit-backdrop-filter: blur(16px);
+	overflow: hidden;
+	animation: navDropdownIn 0.12s ease-out;
+}
+
+@keyframes navDropdownIn {
+	from { opacity: 0; transform: translateY(-4px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.dashboard-nav-dropdown-list {
+	padding: 4px;
+	max-height: 320px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.dropdown-search-row {
+	padding: 4px 4px 6px;
+}
+
+.dropdown-search-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 5px 10px;
+	font-size: 12px;
+	line-height: 20px;
+	border-radius: 6px;
+	border: 1px solid var(--db-border);
+	color: var(--db-text);
+	background: var(--db-bg-input, var(--background-modifier-form-field));
+	outline: none;
+	transition: border-color 0.15s ease;
+}
+
+.dropdown-search-input:focus {
+	border-color: var(--db-border-input-focus);
+}
+
+.dropdown-search-input::placeholder {
+	color: var(--text-faint);
+}
+
+.dropdown-title {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--text-faint);
+	padding: 6px 10px 4px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.dashboard-nav-dropdown-item {
+	display: block;
+	width: 100%;
+	text-align: left;
+	padding: 7px 10px;
+	font-size: 13px;
+	color: var(--text-normal);
+	background: transparent;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: background 0.12s ease;
+}
+
+.dashboard-nav-dropdown-item:hover {
+	background: var(--background-modifier-hover);
+}
+
+.dashboard-nav-dropdown-item--open {
+	color: var(--text-accent);
+	position: relative;
+}
+
+.dashboard-nav-dropdown-item--open::after {
+	content: '✓';
+	float: right;
+	font-size: 11px;
+	margin-left: 8px;
+}
+
+/* ===== Note Dashboard embedded in main view: fill available space ===== */
+.apex-note-dashboard-root .dashboard-section-cards > .dashboard-card {
+	flex: 0 0 280px !important;
+	min-width: 240px !important;
+	max-width: 400px !important;
+}
+
+.apex-note-dashboard-root .dashboard-section-row[data-section-type="memo"] .dashboard-section-cards > .dashboard-card,
+.apex-note-dashboard-root .dashboard-section-row[data-section-type="todo"] .dashboard-section-cards > .dashboard-card {
+	flex: 0 0 260px !important;
+	max-width: 360px !important;
+}
+
+.apex-note-dashboard-root .dashboard-section-row[data-section-type="projects"] .dashboard-section-cards > .dashboard-card {
+	flex: 0 0 280px !important;
+	max-width: 400px !important;
+}
+
+.apex-note-dashboard-root .dashboard-section-row[data-section-type="notes"] .dashboard-section-cards > .dashboard-card {
+	flex: 0 0 220px !important;
+	max-width: calc(25% - 10px) !important;
+}
+
+/* Embedded mode: kanban fills all available space */
+.apex-note-dashboard-root .dashboard-kanban-wrapper {
+	flex: 1;
+	overflow-y: auto;
+}
+
 /* ===== File Suggest Dropdown ===== */
 .dashboard-file-suggest {
 	background: color-mix(in srgb, var(--db-bg-sidebar) 92%, transparent);
@@ -9958,6 +10195,117 @@
 
 .dashboard-library-config-date-input::-webkit-calendar-picker-indicator:hover {
 	opacity: 1;
+}
+
+/* ===== Shared Sidebar View ===== */
+.apex-dashboard-sidebar-root {
+	height: 100%;
+	overflow: hidden;
+}
+
+.dashboard-sidebar-dash-btn,
+.dashboard-sidebar-overlay-btn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: 100%;
+	padding: 8px 10px;
+	border: none;
+	border-radius: var(--db-radius-sm, 6px);
+	background: transparent;
+	color: var(--text-muted);
+	font-size: 12px;
+	font-family: var(--font-interface);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	text-align: left;
+}
+
+.dashboard-sidebar-dash-btn:hover,
+.dashboard-sidebar-overlay-btn:hover {
+	background: rgba(255, 255, 255, 0.06);
+	color: var(--text-normal);
+}
+
+.dashboard-sidebar-dash-btn svg,
+.dashboard-sidebar-overlay-btn svg {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+}
+
+.dashboard-sidebar-section {
+	padding: 4px 8px;
+}
+
+/* ===== Dashboard Overlay Mode ===== */
+.apex-dashboard-overlay-root {
+	height: 100%;
+	overflow: hidden;
+	background: var(--bg-primary, var(--background-primary));
+}
+
+.dashboard-overlay {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+}
+
+.dashboard-overlay-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 14px;
+	border-bottom: 1px solid var(--db-border, rgba(255, 255, 255, 0.08));
+	background: var(--bg-surface-secondary, var(--background-secondary));
+	flex-shrink: 0;
+}
+
+.dashboard-overlay-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--db-text, var(--text-normal));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.dashboard-overlay-exit-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border: none;
+	border-radius: 6px;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.15s ease;
+	flex-shrink: 0;
+}
+
+.dashboard-overlay-exit-btn:hover {
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--text-normal);
+}
+
+.dashboard-overlay-exit-btn svg {
+	width: 16px;
+	height: 16px;
+}
+
+.dashboard-overlay-kanban {
+	flex: 1;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding: 12px;
+}
+
+.dashboard-overlay-kanban .dashboard-kanban {
+	display: flex;
+	gap: 12px;
+	height: 100%;
 }
 
 .dashboard-library-filter-property {
