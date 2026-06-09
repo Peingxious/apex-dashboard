@@ -205,23 +205,33 @@ export class NoteDashboardView extends ItemView {
 	private renderViewNavBar(container: HTMLElement): void {
 		const navBar = container.createDiv({ cls: 'dashboard-view-nav-bar' });
 
-		// Left side: current file label + open tabs list
+		// Left side: recent dashboard files + current file tabs
 		const leftGroup = navBar.createDiv({ cls: 'dashboard-view-nav-left' });
 
-		// "Note Dashboard" indicator (current view type)
-		const typeLabel = leftGroup.createSpan({ cls: 'dashboard-view-nav-type-label' });
-		typeLabel.setText(t('noteDash.viewName'));
-		setIcon(typeLabel, 'layoutDashboard', 'before');
+		// Home icon / dashboard indicator
+		const homeBtn = leftGroup.createEl('button', {
+			cls: 'dashboard-view-nav-home',
+			attr: { title: t('main.dashboard') },
+		});
+		setIcon(homeBtn, 'home');
+		homeBtn.addEventListener('click', () => {
+			this.plugin.activateView();
+		});
 
-		// Current note name
-		if (this.notePath) {
-			const curTab = leftGroup.createEl('button', {
-				cls: 'dashboard-view-nav-tab dashboard-view-nav-tab--active',
-				text: this.notePath.split('/').pop() ?? this.notePath,
-				attr: { title: this.notePath },
+		// Recent dashboard files from persisted settings
+		const recentFiles = this.plugin.settings.recentDashboardFiles || [];
+		for (const path of recentFiles) {
+			if (!path) continue;
+			const name = path.split('/').pop() ?? path;
+			const isActive = path === this.notePath;
+			const tab = leftGroup.createEl('button', {
+				cls: 'dashboard-view-nav-tab' + (isActive ? ' dashboard-view-nav-tab--active' : ''),
+				text: name,
+				attr: { title: path },
 			});
-			curTab.addEventListener('click', () => {
-				this.app.workspace.revealLeaf(this.leaf);
+			tab.addEventListener('click', async () => {
+				if (isActive) return;
+				await this.plugin.openNoteAsDashboard(path);
 			});
 		}
 
@@ -253,29 +263,12 @@ export class NoteDashboardView extends ItemView {
 			this.plugin.activateView();
 		});
 
-		// List other open note-dashboard leaves as quick-switch tabs
-		const otherLeaves = this.app.workspace.getLeavesOfType(NOTE_DASHBOARD_VIEW_TYPE).filter(
-			l => l !== this.leaf
-		);
-		if (otherLeaves.length > 0) {
-			for (const leaf of otherLeaves) {
-				const state = leaf.getViewState() as { state?: { notePath?: string } };
-				const path = state?.state?.notePath;
-				if (!path) continue;
 
-				const name = path.split('/').pop() ?? path;
-				const tab = leftGroup.createEl('button', {
-					cls: 'dashboard-view-nav-tab',
-					text: name,
-					attr: { title: path },
-				});
-				tab.addEventListener('click', () => this.app.workspace.revealLeaf(leaf));
-			}
-		}
+		// List other open note-dashboard leaves as quick-switch tabs (replaced by persisted recentFiles)
 	}
 
 	private async showDashboardFilePicker(anchorEl: HTMLElement): Promise<void> {
-		// Find all markdown files with dashboard: true frontmatter
+		// Find all markdown files with columns frontmatter
 		const mdFiles = this.app.vault.getMarkdownFiles();
 		const dashFiles: TFile[] = [];
 
@@ -286,7 +279,7 @@ export class NoteDashboardView extends ItemView {
 					const endIdx = content.indexOf('---', 3);
 					if (endIdx !== -1) {
 						const yaml = content.slice(3, endIdx);
-						if (yaml.includes('dashboard:') && yaml.includes('true')) {
+						if (yaml.includes('columns:')) {
 							dashFiles.push(f);
 						}
 					}
@@ -450,6 +443,23 @@ export class NoteDashboardView extends ItemView {
 					found.card.tasks[taskIndex].text = newText;
 					await this.saveAndRefresh();
 				}
+			},
+			onProjectGroupAdd: async (columnName: string, title: string) => {
+				if (!this.data) return;
+				const col = this.data.columns.find(c => c.name === columnName);
+				if (!col) return;
+				col.cards.push({
+					id: `${Date.now()}-project`,
+					title,
+					type: 'project',
+					column: columnName,
+					body: '',
+					tasks: [], url: '', wikiLink: '', progress: -1, streak: 0, dueDate: '',
+					blockquote: '', color: '', coverImage: '', width: 0, size: 'M',
+					projectDocs: [],
+					gridCols: 0, gridRows: 0, gridCol: 0, gridRow: 0,
+				});
+				await this.saveAndRefresh();
 			},
 			onCardAdd: async (columnName: string) => {
 				if (!this.data) return;

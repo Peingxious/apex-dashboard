@@ -8403,7 +8403,6 @@ function parse(markdown) {
 function serialize(data) {
   const lines = [];
   lines.push("---");
-  lines.push("dashboard: true");
   lines.push("banner:");
   if (data.banner.image) {
     lines.push(`  image: "${data.banner.image}"`);
@@ -9309,7 +9308,7 @@ __export(main_exports, {
   default: () => DashboardPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian20 = require("obsidian");
+var import_obsidian21 = require("obsidian");
 
 // src/types.ts
 var DEFAULT_SETTINGS = {
@@ -9343,7 +9342,8 @@ var DEFAULT_SETTINGS = {
   readingSoundEnabled: true,
   taskTemplates: [],
   sidebarPinnedDefault: true,
-  projectHideNestedDocs: true
+  projectHideNestedDocs: true,
+  recentDashboardFiles: []
 };
 var PRESET_ACTIONS = [
   { name: "New Journal", icon: "calendar-plus", type: "command", target: "daily-notes" },
@@ -9351,7 +9351,7 @@ var PRESET_ACTIONS = [
 ];
 
 // src/view.ts
-var import_obsidian16 = require("obsidian");
+var import_obsidian17 = require("obsidian");
 
 // src/sync.ts
 var import_obsidian = require("obsidian");
@@ -10105,7 +10105,7 @@ function simpleHash(str) {
 }
 
 // src/renderer.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 init_i18n();
 
 // src/library-section.ts
@@ -10946,14 +10946,126 @@ function renderKanbanView(container, results, app, config) {
 }
 
 // src/file-suggest.ts
-function attachFileSuggest(_el) {
+var import_obsidian3 = require("obsidian");
+function attachFileSuggest(el, app) {
+  let active = false;
+  const input = el;
+  let modal = null;
+  input.addEventListener("input", () => {
+    if (!input.value.trim()) {
+      close();
+      return;
+    }
+    open();
+  });
+  input.addEventListener("focus", () => {
+    if (input.value.trim()) open();
+  });
+  input.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (active) close();
+    }, 150);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (!modal || !active) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      modal.selectNext();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      modal.selectPrev();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      close();
+      input.blur();
+    }
+  });
+  function open() {
+    close();
+    active = true;
+    modal = new FileSuggestModal(app, (path) => {
+      input.value = path.split("/").pop()?.replace(/\.md$/, "") ?? path;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      close();
+      input.focus();
+    });
+    modal.open(input.value);
+    positionDropdown();
+  }
+  function close() {
+    if (modal) {
+      modal.close();
+      modal = null;
+    }
+    active = false;
+  }
+  function positionDropdown() {
+    if (!modal) return;
+    const container = modal.containerEl.querySelector(".modal-container");
+    if (!container) return;
+    const rect = input.getBoundingClientRect();
+    container.style.position = "fixed";
+    container.style.top = `${rect.bottom + 4}px`;
+    container.style.left = `${rect.left}px`;
+    container.style.width = `${Math.max(rect.width, 280)}px`;
+    container.style.maxHeight = "260px";
+    container.style.zIndex = "10000";
+  }
   return {
-    isActive: () => false
+    isActive: () => active,
+    close
   };
 }
+var FileSuggestModal = class extends import_obsidian3.FuzzySuggestModal {
+  onSelect;
+  queryValue = "";
+  constructor(app, onSelect) {
+    super(app);
+    this.onSelect = onSelect;
+    this.setPlaceholder("Search files...");
+  }
+  open(query) {
+    this.queryValue = query ?? "";
+    super.open();
+    setTimeout(() => {
+      const inp = this.inputEl?.querySelector("input");
+      if (inp && this.queryValue) {
+        inp.value = this.queryValue;
+        inp.dispatchEvent(new Event("input"));
+      }
+    }, 50);
+  }
+  getItems() {
+    return this.app.vault.getMarkdownFiles();
+  }
+  getItemText(item) {
+    return item.basename;
+  }
+  onChooseItem(item) {
+    this.onSelect(item.path);
+  }
+  selectNext() {
+    const results = this.resultContainerEl.querySelectorAll(".suggestion-item");
+    const current = this.resultContainerEl.querySelector(".is-selected");
+    const idx = current ? [...results].indexOf(current) : -1;
+    const nextIdx = Math.min(idx + 1, results.length - 1);
+    results[nextIdx]?.classList.add("is-selected");
+    current?.classList.remove("is-selected");
+    results[nextIdx]?.scrollIntoView({ block: "nearest" });
+  }
+  selectPrev() {
+    const results = this.resultContainerEl.querySelectorAll(".suggestion-item");
+    const current = this.resultContainerEl.querySelector(".is-selected");
+    const idx = current ? [...results].indexOf(current) : 0;
+    const prevIdx = Math.max(idx - 1, 0);
+    results[prevIdx]?.classList.add("is-selected");
+    current?.classList.remove("is-selected");
+    results[prevIdx]?.scrollIntoView({ block: "nearest" });
+  }
+};
 
 // src/weather-service.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 init_i18n();
 var CACHE_TTL = 30 * 60 * 1e3;
 var weatherCache = /* @__PURE__ */ new Map();
@@ -10999,7 +11111,7 @@ async function fetchFromOpenMeteoArchive(config) {
 }
 async function fetchFromOpenMeteoBase(base, config) {
   const url = `${base}/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5`;
-  const resp = await (0, import_obsidian3.requestUrl)({ url });
+  const resp = await (0, import_obsidian4.requestUrl)({ url });
   const json = resp.json;
   const current = json.current;
   const daily = json.daily;
@@ -11023,7 +11135,7 @@ async function fetchFromOpenMeteoBase(base, config) {
 }
 async function fetchFromMetNo(config) {
   const url = `https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${config.latitude}&lon=${config.longitude}`;
-  const resp = await (0, import_obsidian3.requestUrl)({ url, headers: { "User-Agent": "obsidian-dashboard" } });
+  const resp = await (0, import_obsidian4.requestUrl)({ url, headers: { "User-Agent": "obsidian-dashboard" } });
   const json = resp.json;
   const timeseries = json.properties?.timeseries;
   if (!Array.isArray(timeseries) || timeseries.length === 0) {
@@ -11118,7 +11230,7 @@ function metNoDaytimeCode(codes) {
 }
 async function fetchFromWttr(config) {
   const url = `https://wttr.in/${config.latitude},${config.longitude}?format=j1`;
-  const resp = await (0, import_obsidian3.requestUrl)({ url });
+  const resp = await (0, import_obsidian4.requestUrl)({ url });
   const json = resp.json;
   const current = json.current_condition?.[0];
   if (!current) {
@@ -11255,7 +11367,7 @@ async function geocodeCity(query) {
   const lang = getLanguage();
   const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=5&language=${lang === "zh" ? "zh" : "en"}`;
   try {
-    const resp = await (0, import_obsidian3.requestUrl)({ url });
+    const resp = await (0, import_obsidian4.requestUrl)({ url });
     const json = resp.json;
     if (!json.results) return [];
     return json.results.map((r) => ({
@@ -23006,7 +23118,7 @@ function getTodayAlmanac() {
 
 // src/lunar-widget.ts
 init_i18n();
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/fortune-stick.ts
 var FORTUNE_CATEGORIES = [];
@@ -23187,7 +23299,7 @@ function renderSidebarLunarWidget(container, holidayData, app) {
   const isZh = lang === "zh";
   const widget = container.createDiv({ cls: "dashboard-sidebar-widget dashboard-sidebar-lunar" });
   const fortuneBtn = widget.createDiv({ cls: "dashboard-sidebar-lunar-fortune-btn" });
-  (0, import_obsidian4.setIcon)(fortuneBtn, "wand");
+  (0, import_obsidian5.setIcon)(fortuneBtn, "wand");
   fortuneBtn.addEventListener("click", () => {
     if (app) {
       const modal = new FortuneStickModal();
@@ -23245,9 +23357,9 @@ async function loadHolidayData2() {
 }
 
 // src/countdown-modal.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 init_i18n();
-var CountdownSettingsModal = class extends import_obsidian5.Modal {
+var CountdownSettingsModal = class extends import_obsidian6.Modal {
   settings;
   onSave;
   localSettings;
@@ -23266,18 +23378,18 @@ var CountdownSettingsModal = class extends import_obsidian5.Modal {
     const hasTime = dateStr.includes("T");
     const datePart = hasTime ? dateStr.split("T")[0] : dateStr;
     const timePart = hasTime ? dateStr.split("T")[1].substring(0, 5) : "00:00";
-    new import_obsidian5.Setting(contentEl).setName(t("countdown.targetDate")).setDesc(t("countdown.targetDate")).addText((text) => text.setValue(datePart).setPlaceholder("YYYY-MM-DD").onChange((value) => {
+    new import_obsidian6.Setting(contentEl).setName(t("countdown.targetDate")).setDesc(t("countdown.targetDate")).addText((text) => text.setValue(datePart).setPlaceholder("YYYY-MM-DD").onChange((value) => {
       const time = this.localSettings.countdownTargetDate.includes("T") ? this.localSettings.countdownTargetDate.split("T")[1].substring(0, 5) : "00:00";
       this.localSettings.countdownTargetDate = value ? `${value}T${time}` : "";
     }));
-    new import_obsidian5.Setting(contentEl).setName(t("countdown.targetTime")).setDesc(t("countdown.targetTime")).addText((text) => text.setValue(timePart).setPlaceholder("HH:MM").onChange((value) => {
+    new import_obsidian6.Setting(contentEl).setName(t("countdown.targetTime")).setDesc(t("countdown.targetTime")).addText((text) => text.setValue(timePart).setPlaceholder("HH:MM").onChange((value) => {
       const date = this.localSettings.countdownTargetDate.includes("T") ? this.localSettings.countdownTargetDate.split("T")[0] : this.localSettings.countdownTargetDate || (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       this.localSettings.countdownTargetDate = `${date}T${value || "00:00"}`;
     }));
-    new import_obsidian5.Setting(contentEl).setName(t("countdown.displayMode")).addDropdown((dropdown) => dropdown.addOption("days", t("countdown.days")).addOption("hours", t("countdown.hours")).addOption("minutes", t("countdown.minutes")).setValue(this.localSettings.countdownDisplayMode).onChange((value) => {
+    new import_obsidian6.Setting(contentEl).setName(t("countdown.displayMode")).addDropdown((dropdown) => dropdown.addOption("days", t("countdown.days")).addOption("hours", t("countdown.hours")).addOption("minutes", t("countdown.minutes")).setValue(this.localSettings.countdownDisplayMode).onChange((value) => {
       this.localSettings.countdownDisplayMode = value;
     }));
-    new import_obsidian5.Setting(contentEl).setName(t("countdown.reminderDays")).setDesc(t("countdown.reminderDaysDesc")).addText((text) => {
+    new import_obsidian6.Setting(contentEl).setName(t("countdown.reminderDays")).setDesc(t("countdown.reminderDaysDesc")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.min = "0";
       text.setValue(String(this.localSettings.countdownReminderDays)).onChange((value) => {
@@ -23286,7 +23398,7 @@ var CountdownSettingsModal = class extends import_obsidian5.Modal {
       });
       return text;
     });
-    new import_obsidian5.Setting(contentEl).setName(t("countdown.label")).setDesc(t("countdown.labelPlaceholder")).addText((text) => text.setValue(this.localSettings.countdownLabel).setPlaceholder(t("countdown.labelPlaceholder")).onChange((value) => {
+    new import_obsidian6.Setting(contentEl).setName(t("countdown.label")).setDesc(t("countdown.labelPlaceholder")).addText((text) => text.setValue(this.localSettings.countdownLabel).setPlaceholder(t("countdown.labelPlaceholder")).onChange((value) => {
       this.localSettings.countdownLabel = value;
     }));
     const buttonContainer = contentEl.createDiv({ cls: "dashboard-countdown-settings-buttons" });
@@ -35898,7 +36010,7 @@ function renderSidebarPomodoro(container, service, settings) {
   const currentActivity = service.getActivity();
   const { activityTrigger, updateActivityDisplay } = createActivitySelector(topRow, service, currentActivity);
   const statsBtn = topRow.createDiv({ cls: "dashboard-sidebar-pomodoro-stats-btn" });
-  (0, import_obsidian6.setIcon)(statsBtn, "bar-chart-2");
+  (0, import_obsidian7.setIcon)(statsBtn, "bar-chart-2");
   const ringWrap = widget.createDiv({ cls: "dashboard-sidebar-pomodoro-ring-wrap" });
   const svgSize = 72;
   const strokeWidth = 6;
@@ -36076,7 +36188,7 @@ function renderSidebarCountdown(container, settings, app) {
     cls: "dashboard-sidebar-countdown-settings-btn",
     attr: { "aria-label": t("countdown.settingsTitle") }
   });
-  (0, import_obsidian6.setIcon)(settingsBtn, "settings");
+  (0, import_obsidian7.setIcon)(settingsBtn, "settings");
   settingsBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     const modal = new CountdownSettingsModal(app, settings, async (updates) => {
@@ -36150,7 +36262,7 @@ function showPomodoroStats(doc, service) {
   const header = modal.createDiv({ cls: "dashboard-pomodoro-stats-header" });
   header.createDiv({ cls: "dashboard-pomodoro-stats-header-title", text: t("pomodoro.statsTitle") });
   const closeBtn = header.createDiv({ cls: "dashboard-pomodoro-stats-close" });
-  (0, import_obsidian6.setIcon)(closeBtn, "x");
+  (0, import_obsidian7.setIcon)(closeBtn, "x");
   closeBtn.addEventListener("click", () => close());
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
@@ -36323,9 +36435,9 @@ function renderSidebarReading(container, service) {
   titleRow.createDiv({ cls: "dashboard-reading-title", text: t("reading.title") });
   titleRow.createDiv({ cls: "dashboard-reading-title-spacer" });
   const addBtn = titleRow.createDiv({ cls: "dashboard-reading-add-btn" });
-  (0, import_obsidian6.setIcon)(addBtn, "plus");
+  (0, import_obsidian7.setIcon)(addBtn, "plus");
   const statsBtn = titleRow.createDiv({ cls: "dashboard-reading-stats-btn" });
-  (0, import_obsidian6.setIcon)(statsBtn, "bar-chart-2");
+  (0, import_obsidian7.setIcon)(statsBtn, "bar-chart-2");
   const scrollArea = widget.createDiv({ cls: "dashboard-reading-scroll" });
   const state = service.getState();
   const activeBooks = service.getActiveBooks();
@@ -36367,14 +36479,14 @@ function renderSidebarReading(container, service) {
     const actions = timerRow.createDiv({ cls: "dashboard-reading-book-card-actions" });
     if (isRunning) {
       const pauseBtn = actions.createDiv({ cls: "dashboard-reading-book-card-btn dashboard-reading-book-card-btn--pause" });
-      (0, import_obsidian6.setIcon)(pauseBtn, "pause");
+      (0, import_obsidian7.setIcon)(pauseBtn, "pause");
       pauseBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         service.pause();
         refreshCards();
       });
       const stopBtn = actions.createDiv({ cls: "dashboard-reading-book-card-btn dashboard-reading-book-card-btn--stop" });
-      (0, import_obsidian6.setIcon)(stopBtn, "square");
+      (0, import_obsidian7.setIcon)(stopBtn, "square");
       stopBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         service.pause();
@@ -36382,21 +36494,21 @@ function renderSidebarReading(container, service) {
       });
     } else if (isActive && state.status === "paused") {
       const resumeBtn = actions.createDiv({ cls: "dashboard-reading-book-card-btn dashboard-reading-book-card-btn--play" });
-      (0, import_obsidian6.setIcon)(resumeBtn, "play");
+      (0, import_obsidian7.setIcon)(resumeBtn, "play");
       resumeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         service.resume();
         refreshCards();
       });
       const stopBtn = actions.createDiv({ cls: "dashboard-reading-book-card-btn dashboard-reading-book-card-btn--stop" });
-      (0, import_obsidian6.setIcon)(stopBtn, "square");
+      (0, import_obsidian7.setIcon)(stopBtn, "square");
       stopBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         showEndModal(book);
       });
     } else {
       const playBtn = actions.createDiv({ cls: "dashboard-reading-book-card-btn dashboard-reading-book-card-btn--play" });
-      (0, import_obsidian6.setIcon)(playBtn, "play");
+      (0, import_obsidian7.setIcon)(playBtn, "play");
       playBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         service.startReading(book);
@@ -36417,13 +36529,13 @@ function renderSidebarReading(container, service) {
       });
     }
     const editBtn = card.createDiv({ cls: "dashboard-reading-book-card-action dashboard-reading-book-card-edit" });
-    (0, import_obsidian6.setIcon)(editBtn, "pencil");
+    (0, import_obsidian7.setIcon)(editBtn, "pencil");
     editBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       openEditBookInfo(widget.ownerDocument, service, book, () => refreshCards());
     });
     const removeBtn = card.createDiv({ cls: "dashboard-reading-book-card-action dashboard-reading-book-card-remove" });
-    (0, import_obsidian6.setIcon)(removeBtn, "x");
+    (0, import_obsidian7.setIcon)(removeBtn, "x");
     removeBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       service.removeActiveBook(book.title).then(() => refreshCards());
@@ -36472,7 +36584,7 @@ function openEndReadingModal(doc, service, book, elapsedSeconds, onDone) {
   const header = modal.createDiv({ cls: "dashboard-reading-end-header" });
   header.createDiv({ cls: "dashboard-reading-end-title", text: t("reading.endTitle") });
   const closeBtn = header.createDiv({ cls: "dashboard-reading-end-close" });
-  (0, import_obsidian6.setIcon)(closeBtn, "x");
+  (0, import_obsidian7.setIcon)(closeBtn, "x");
   closeBtn.addEventListener("click", close);
   const body = modal.createDiv({ cls: "dashboard-reading-end-body" });
   const dateRow = body.createDiv({ cls: "dashboard-reading-end-row" });
@@ -36609,7 +36721,7 @@ function openEditBookInfo(doc, service, book, onDone) {
   const header = modal.createDiv({ cls: "dashboard-reading-end-header" });
   header.createDiv({ cls: "dashboard-reading-end-title", text: t("reading.editTitle") });
   const closeBtn = header.createDiv({ cls: "dashboard-reading-end-close" });
-  (0, import_obsidian6.setIcon)(closeBtn, "x");
+  (0, import_obsidian7.setIcon)(closeBtn, "x");
   closeBtn.addEventListener("click", close);
   const body = modal.createDiv({ cls: "dashboard-reading-end-body" });
   body.createDiv({ cls: "dashboard-reading-end-label", text: t("reading.editBookName") });
@@ -36685,7 +36797,7 @@ function openBookSearch(doc, service, onSelect) {
   const header = modal.createDiv({ cls: "dashboard-reading-book-header" });
   header.createDiv({ cls: "dashboard-reading-book-header-title", text: t("reading.selectBook") });
   const closeBtn = header.createDiv({ cls: "dashboard-reading-book-close" });
-  (0, import_obsidian6.setIcon)(closeBtn, "x");
+  (0, import_obsidian7.setIcon)(closeBtn, "x");
   closeBtn.addEventListener("click", close);
   const inputArea = modal.createDiv({ cls: "dashboard-reading-book-input-area" });
   const input = inputArea.createEl("input", {
@@ -36790,7 +36902,7 @@ function showReadingStats(doc, service) {
   const header = modal.createDiv({ cls: "dashboard-pomodoro-stats-header" });
   header.createDiv({ cls: "dashboard-pomodoro-stats-header-title", text: t("reading.statsTitle") });
   const closeBtn = header.createDiv({ cls: "dashboard-pomodoro-stats-close" });
-  (0, import_obsidian6.setIcon)(closeBtn, "x");
+  (0, import_obsidian7.setIcon)(closeBtn, "x");
   closeBtn.addEventListener("click", close);
   const content = modal.createDiv({ cls: "dashboard-reading-stats-content" });
   function renderContent() {
@@ -36849,7 +36961,7 @@ function showReadingStats(doc, service) {
         meta.createDiv({ cls: "dashboard-reading-book-list-duration", text: formatReadingDuration(book.totalSeconds) });
         meta.createDiv({ cls: "dashboard-reading-book-list-sessions", text: t("reading.times", { count: book.sessions }) });
         const del = meta.createDiv({ cls: "dashboard-reading-stats-record-del" });
-        (0, import_obsidian6.setIcon)(del, "trash-2");
+        (0, import_obsidian7.setIcon)(del, "trash-2");
         del.addEventListener("click", async (e) => {
           e.stopPropagation();
           await service.deleteBookRecords(book.title);
@@ -36877,7 +36989,7 @@ function showReadingStats(doc, service) {
         row.createDiv({ cls: "dashboard-reading-stats-record-book", text: rec.bookTitle });
         row.createDiv({ cls: "dashboard-reading-stats-record-dur", text: formatReadingDuration(rec.durationSeconds) });
         const del = row.createDiv({ cls: "dashboard-reading-stats-record-del" });
-        (0, import_obsidian6.setIcon)(del, "trash-2");
+        (0, import_obsidian7.setIcon)(del, "trash-2");
         del.addEventListener("click", async (e) => {
           e.stopPropagation();
           await service.deleteRecord(rec.timestamp);
@@ -36936,7 +37048,7 @@ function renderDashboard(container, data, callbacks, app, settings) {
       cls: "dashboard-section-confirm-btn",
       attr: { "aria-label": t("common.save") }
     });
-    (0, import_obsidian6.setIcon)(confirmBtn, "check");
+    (0, import_obsidian7.setIcon)(confirmBtn, "check");
     confirmBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -37064,7 +37176,7 @@ function renderSection(column, callbacks, app, data, settings) {
       cls: "dashboard-section-add-btn",
       attr: { "aria-label": t("template.addFromTemplate") }
     });
-    (0, import_obsidian6.setIcon)(templateBtn, "layout-template");
+    (0, import_obsidian7.setIcon)(templateBtn, "layout-template");
     templateBtn.addEventListener("click", () => callbacks.onAddFromTemplate(column.name));
   }
   if (sectionType === "library") {
@@ -37072,7 +37184,7 @@ function renderSection(column, callbacks, app, data, settings) {
       cls: "dashboard-section-add-btn",
       attr: { "aria-label": t("library.configure") }
     });
-    (0, import_obsidian6.setIcon)(configBtn, "settings");
+    (0, import_obsidian7.setIcon)(configBtn, "settings");
     configBtn.addEventListener("click", () => {
       const event = new CustomEvent("dashboard-library-config", { detail: { columnName: column.name }, bubbles: true });
       el.dispatchEvent(event);
@@ -37082,7 +37194,7 @@ function renderSection(column, callbacks, app, data, settings) {
         cls: "dashboard-section-add-btn dashboard-section-delete-btn",
         attr: { "aria-label": t("renderer.deleteSection", { column: column.name }) }
       });
-      (0, import_obsidian6.setIcon)(deleteSectionBtn, "trash-2");
+      (0, import_obsidian7.setIcon)(deleteSectionBtn, "trash-2");
       deleteSectionBtn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const confirmed = await showConfirmDialog(app, {
@@ -37111,14 +37223,14 @@ function renderSection(column, callbacks, app, data, settings) {
     cls: "dashboard-section-add-btn dashboard-section-type-btn",
     attr: { "aria-label": t("renderer.switchSectionType") }
   });
-  (0, import_obsidian6.setIcon)(typeToggleBtn, currentTypeObj.icon);
+  (0, import_obsidian7.setIcon)(typeToggleBtn, currentTypeObj.icon);
   const typeDropdown = typeBtnWrapper.createDiv({ cls: "dashboard-section-type-dropdown" });
   typeDropdown.style.display = "none";
   typeOptions.forEach((opt) => {
     const item = typeDropdown.createDiv({ cls: "dashboard-section-type-dropdown-item" });
     if (opt.value === currentType) item.addClass("active");
     const iconSpan = item.createSpan({ cls: "dashboard-section-type-dropdown-icon" });
-    (0, import_obsidian6.setIcon)(iconSpan, opt.icon);
+    (0, import_obsidian7.setIcon)(iconSpan, opt.icon);
     item.createSpan({ text: opt.label });
     item.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -37136,18 +37248,68 @@ function renderSection(column, callbacks, app, data, settings) {
   document.addEventListener("click", () => {
     typeDropdown.style.display = "none";
   }, { once: false });
-  const addCardBtn = headerActions.createEl("button", {
-    cls: "dashboard-section-add-btn",
-    attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) }
-  });
-  (0, import_obsidian6.setIcon)(addCardBtn, "plus");
-  addCardBtn.addEventListener("click", () => callbacks.onCardAdd(column.name));
+  const isProjectSection = getSectionType(column) === "projects";
+  if (isProjectSection) {
+    let addInputVisible = false;
+    let addInputEl = null;
+    const addCardBtn = headerActions.createEl("button", {
+      cls: "dashboard-section-add-btn",
+      attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) }
+    });
+    (0, import_obsidian7.setIcon)(addCardBtn, "plus");
+    addCardBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (addInputVisible && addInputEl) {
+        addInputEl.focus();
+        return;
+      }
+      addInputVisible = true;
+      const existing = addCardBtn.parentElement.querySelector(".dashboard-section-add-input");
+      if (existing) existing.remove();
+      const wrapper = addCardBtn.parentElement.createDiv({ cls: "dashboard-section-add-input" });
+      addInputEl = wrapper.createEl("input", {
+        cls: "dashboard-task-input",
+        attr: { type: "text", placeholder: t("renderer.addGroup") }
+      });
+      addInputEl.focus();
+      const finishAdd = () => {
+        const val = addInputEl?.value.trim();
+        if (val) {
+          callbacks.onProjectGroupAdd(column.name, val);
+        }
+        wrapper.remove();
+        addInputVisible = false;
+        addInputEl = null;
+      };
+      addInputEl.addEventListener("keydown", (ke) => {
+        if (ke.key === "Enter") {
+          ke.preventDefault();
+          finishAdd();
+        } else if (ke.key === "Escape") {
+          ke.preventDefault();
+          wrapper.remove();
+          addInputVisible = false;
+          addInputEl = null;
+        }
+      });
+      addInputEl.addEventListener("blur", () => {
+        setTimeout(finishAdd, 100);
+      });
+    });
+  } else {
+    const addCardBtn = headerActions.createEl("button", {
+      cls: "dashboard-section-add-btn",
+      attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) }
+    });
+    (0, import_obsidian7.setIcon)(addCardBtn, "plus");
+    addCardBtn.addEventListener("click", () => callbacks.onCardAdd(column.name));
+  }
   if (!isColumnProtected(column.name, data)) {
     const deleteSectionBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn dashboard-section-delete-btn",
       attr: { "aria-label": t("renderer.deleteSection", { column: column.name }) }
     });
-    (0, import_obsidian6.setIcon)(deleteSectionBtn, "trash-2");
+    (0, import_obsidian7.setIcon)(deleteSectionBtn, "trash-2");
     deleteSectionBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       const confirmed = await showConfirmDialog(app, {
@@ -37286,7 +37448,7 @@ function renderCard(card, columnName, sectionType, callbacks, app, data, setting
       cls: "dashboard-card-btn dashboard-card-btn--color",
       attr: { "aria-label": t("renderer.setMemoColor") }
     });
-    (0, import_obsidian6.setIcon)(colorBtn, "palette");
+    (0, import_obsidian7.setIcon)(colorBtn, "palette");
     if (card.color) {
       colorBtn.style.color = card.color;
     }
@@ -37320,7 +37482,7 @@ function renderCard(card, columnName, sectionType, callbacks, app, data, setting
       cls: "dashboard-card-btn",
       attr: { "aria-label": t("renderer.editCard") }
     });
-    (0, import_obsidian6.setIcon)(editBtn, "pencil");
+    (0, import_obsidian7.setIcon)(editBtn, "pencil");
     editBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       callbacks.onCardEdit(card);
@@ -37330,7 +37492,7 @@ function renderCard(card, columnName, sectionType, callbacks, app, data, setting
     cls: "dashboard-card-btn dashboard-card-btn--danger",
     attr: { "aria-label": t("renderer.deleteCard") }
   });
-  (0, import_obsidian6.setIcon)(deleteBtn, "trash-2");
+  (0, import_obsidian7.setIcon)(deleteBtn, "trash-2");
   deleteBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     callbacks.onCardDelete(card.id);
@@ -37541,7 +37703,7 @@ function renderTaskBody(container, card, callbacks, app) {
       cls: "dashboard-task-delete",
       attr: { "aria-label": t("renderer.deleteTask") }
     });
-    (0, import_obsidian6.setIcon)(delBtn, "x");
+    (0, import_obsidian7.setIcon)(delBtn, "x");
     delBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       callbacks.onTaskDelete(card.id, index2);
@@ -37772,7 +37934,7 @@ function renderProjectBody(container, card, callbacks, app) {
     item.dataset.itemIndex = String(index2);
     item.dataset.cardId = card.id;
     const dragHandle = item.createSpan({ cls: "dashboard-project-item-handle" });
-    (0, import_obsidian6.setIcon)(dragHandle, "grip-vertical");
+    (0, import_obsidian7.setIcon)(dragHandle, "grip-vertical");
     const titleSpan = item.createSpan({ cls: "dashboard-project-item-title" });
     renderTextWithLinks(titleSpan, title.cleanText, app);
     if (title.childCount > 0) {
@@ -37780,6 +37942,7 @@ function renderProjectBody(container, card, callbacks, app) {
       countEl.setText(`+${title.childCount}`);
     }
     item.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
       projectItemDragSource = { cardId: card.id, itemIndex: index2 };
       item.addClass("dashboard-project-item--dragging");
       if (e.dataTransfer) {
@@ -37967,13 +38130,13 @@ function createReminderButton(taskItem, cardId, taskIndex, task, callbacks) {
   btn.addClass("dashboard-task-reminder-btn");
   if (task.reminder) {
     btn.addClass("dashboard-task-reminder-btn--active");
-    (0, import_obsidian6.setIcon)(btn, "bell-ring");
+    (0, import_obsidian7.setIcon)(btn, "bell-ring");
     btn.setAttribute("aria-label", t("reminder.editReminder"));
     if (!task.checked && isReminderOverdue(task.reminder)) {
       btn.addClass("dashboard-task-reminder-btn--overdue");
     }
   } else {
-    (0, import_obsidian6.setIcon)(btn, "bell");
+    (0, import_obsidian7.setIcon)(btn, "bell");
     btn.setAttribute("aria-label", t("reminder.setReminder"));
   }
   btn.addEventListener("click", (e) => {
@@ -38395,7 +38558,7 @@ function renderTrackerHeatmap(el, data, minVal, maxVal, size, accentColor) {
 }
 
 // src/banner.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 init_i18n();
 function resolveVaultImage(app, path) {
   if (!path) return null;
@@ -38431,7 +38594,7 @@ function renderBanner(container, banner, onEdit, app) {
   });
   return bannerEl;
 }
-var BannerEditModal = class extends import_obsidian7.Modal {
+var BannerEditModal = class extends import_obsidian8.Modal {
   banner;
   onSave;
   localImages;
@@ -38446,7 +38609,7 @@ var BannerEditModal = class extends import_obsidian7.Modal {
     contentEl.empty();
     contentEl.addClass("dashboard-banner-edit-modal");
     contentEl.createEl("h2", { text: t("banner.editTitle") });
-    new import_obsidian7.Setting(contentEl).setName(t("banner.image")).setDesc(t("banner.imageDesc")).addText((text) => {
+    new import_obsidian8.Setting(contentEl).setName(t("banner.image")).setDesc(t("banner.imageDesc")).addText((text) => {
       text.setValue(this.banner.image || "").setPlaceholder(t("banner.imagePlaceholder")).onChange((val) => this.banner.image = val);
     });
     contentEl.createEl("h3", { text: t("banner.rotationImages") });
@@ -38548,7 +38711,7 @@ function formatRelativeTime(mtime) {
 }
 
 // src/quick-actions.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 init_i18n();
 function actionKey(action, isPreset) {
   return isPreset ? `p:${action.target}` : `c:${action.target}`;
@@ -38583,7 +38746,7 @@ function renderQuickActions(container, actions, onExecute, _onRemove, onAdd, ini
       attr: { "aria-label": "Toggle pin" }
     });
     const updatePinIcon = () => {
-      (0, import_obsidian8.setIcon)(pinBtn, pinned ? "pin" : "pin-off");
+      (0, import_obsidian9.setIcon)(pinBtn, pinned ? "pin" : "pin-off");
       pinBtn.toggleClass("dashboard-qa-pin-btn--active", pinned);
     };
     updatePinIcon();
@@ -38598,7 +38761,7 @@ function renderQuickActions(container, actions, onExecute, _onRemove, onAdd, ini
     cls: "dashboard-qa-add-btn",
     attr: { "aria-label": t("quickActions.addAction") }
   });
-  (0, import_obsidian8.setIcon)(addBtn, "plus");
+  (0, import_obsidian9.setIcon)(addBtn, "plus");
   addBtn.addEventListener("click", onAdd);
   const list = section.createDiv({ cls: "dashboard-qa-list" });
   const ordered = buildOrderedActions(actions, order, hiddenPresets);
@@ -38657,7 +38820,7 @@ function renderQuickActions(container, actions, onExecute, _onRemove, onAdd, ini
       attr: { draggable: "true", "data-qa-key": key }
     });
     const iconEl = item.createSpan({ cls: "dashboard-qa-icon" });
-    (0, import_obsidian8.setIcon)(iconEl, action.icon);
+    (0, import_obsidian9.setIcon)(iconEl, action.icon);
     item.createSpan({ text: action.name, cls: "dashboard-qa-name" });
     item.setAttribute("title", action.name);
     const removeHandler = onRemoveByKey ?? ((k) => {
@@ -38670,7 +38833,7 @@ function renderQuickActions(container, actions, onExecute, _onRemove, onAdd, ini
       cls: "dashboard-qa-remove",
       attr: { "aria-label": t("common.remove", { name: action.name }) }
     });
-    (0, import_obsidian8.setIcon)(removeBtn, "x");
+    (0, import_obsidian9.setIcon)(removeBtn, "x");
     removeBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       removeHandler(key);
@@ -38684,7 +38847,7 @@ function renderQuickActions(container, actions, onExecute, _onRemove, onAdd, ini
     item.addEventListener("drop", onDrop);
   }
 }
-var AddActionModal = class extends import_obsidian8.Modal {
+var AddActionModal = class extends import_obsidian9.Modal {
   onSelect;
   activeTab = "file";
   constructor(app, onSelect) {
@@ -38793,7 +38956,7 @@ var AddActionModal = class extends import_obsidian8.Modal {
     contentEl.empty();
   }
 };
-var DocSearchModal = class extends import_obsidian8.Modal {
+var DocSearchModal = class extends import_obsidian9.Modal {
   onSelect;
   constructor(app, onSelect) {
     super(app);
@@ -38844,7 +39007,7 @@ function setupDragAndDrop(container) {
 }
 
 // src/card-edit-modal.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 init_i18n();
 function stripBulletPrefix2(text) {
   return text.split("\n").map((line) => {
@@ -38860,7 +39023,7 @@ function addBulletPrefix2(text) {
     return "- " + line;
   }).join("\n");
 }
-var CardEditModal = class extends import_obsidian9.Modal {
+var CardEditModal = class extends import_obsidian10.Modal {
   card;
   onSave;
   localTitle;
@@ -38877,8 +39040,8 @@ var CardEditModal = class extends import_obsidian9.Modal {
     contentEl.empty();
     contentEl.addClass("dashboard-card-edit-modal");
     contentEl.createEl("h2", { text: t("renderer.editCard") });
-    new import_obsidian9.Setting(contentEl).setName(t("renderer.cardTitle")).addText((text) => text.setValue(this.localTitle).onChange((value) => this.localTitle = value));
-    const bodySetting = new import_obsidian9.Setting(contentEl).setName(t("renderer.body")).setClass("dashboard-card-edit-body");
+    new import_obsidian10.Setting(contentEl).setName(t("renderer.cardTitle")).addText((text) => text.setValue(this.localTitle).onChange((value) => this.localTitle = value));
+    const bodySetting = new import_obsidian10.Setting(contentEl).setName(t("renderer.body")).setClass("dashboard-card-edit-body");
     bodySetting.controlEl.empty();
     const textarea = bodySetting.controlEl.createEl("textarea", {
       cls: "dashboard-card-edit-textarea",
@@ -38970,8 +39133,8 @@ function showConfirmDialog2(_app, options) {
 }
 
 // src/widget-type-modal.ts
-var import_obsidian10 = require("obsidian");
-var WidgetTypeModal = class extends import_obsidian10.Modal {
+var import_obsidian11 = require("obsidian");
+var WidgetTypeModal = class extends import_obsidian11.Modal {
   constructor(app) {
     super(app);
   }
@@ -38982,8 +39145,8 @@ var WidgetTypeModal = class extends import_obsidian10.Modal {
 };
 
 // src/weather-config-modal.ts
-var import_obsidian11 = require("obsidian");
-var WeatherConfigModal = class extends import_obsidian11.Modal {
+var import_obsidian12 = require("obsidian");
+var WeatherConfigModal = class extends import_obsidian12.Modal {
   constructor(app) {
     super(app);
   }
@@ -38994,7 +39157,7 @@ var WeatherConfigModal = class extends import_obsidian11.Modal {
 };
 
 // src/library-config-modal.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 init_i18n();
 var BUILTIN_PROPERTY_NAMES = {
   tags: t("library.tags"),
@@ -39006,7 +39169,7 @@ var BUILTIN_PROPERTY_NAMES = {
 function getPropertyName(key) {
   return BUILTIN_PROPERTY_NAMES[key] ?? key;
 }
-var LibraryConfigModal = class extends import_obsidian12.Modal {
+var LibraryConfigModal = class extends import_obsidian13.Modal {
   config;
   onSave;
   filters;
@@ -39060,7 +39223,7 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
           filter.values = valueInput.value.split(",").map((s) => s.trim()).filter(Boolean);
         });
         const removeBtn = filterRow.createDiv({ cls: "dashboard-library-config-remove-btn" });
-        (0, import_obsidian12.setIcon)(removeBtn, "trash-2");
+        (0, import_obsidian13.setIcon)(removeBtn, "trash-2");
         removeBtn.title = t("library.removeFilter");
         removeBtn.addEventListener("click", () => {
           this.filters.splice(i, 1);
@@ -39068,7 +39231,7 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
         });
       }
       const addBtn = filtersContainer.createDiv({ cls: "dashboard-library-config-add-btn" });
-      (0, import_obsidian12.setIcon)(addBtn, "plus");
+      (0, import_obsidian13.setIcon)(addBtn, "plus");
       addBtn.createSpan({ text: t("library.addFilter") });
       addBtn.addEventListener("click", () => {
         const firstProp = Array.from(this.availableProperties.keys())[0] ?? "tags";
@@ -39126,7 +39289,7 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
       const btn = viewToggle.createDiv({
         cls: "dashboard-library-config-view-btn" + (mode === this.config.viewMode ? " active" : "")
       });
-      (0, import_obsidian12.setIcon)(btn, viewIcons[mode] ?? "file");
+      (0, import_obsidian13.setIcon)(btn, viewIcons[mode] ?? "file");
       btn.createSpan({ text: viewLabels[mode] ?? mode });
       btn.addEventListener("click", () => {
         viewToggle.querySelectorAll(".dashboard-library-config-view-btn").forEach((b) => b.removeClass("active"));
@@ -39142,7 +39305,7 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
     viewToggle.addEventListener("click", () => {
       setTimeout(updateKanbanVisibility, 50);
     });
-    new import_obsidian12.Setting(kanbanSection).setName(t("library.kanbanGroupBy")).addDropdown((dropdown) => {
+    new import_obsidian13.Setting(kanbanSection).setName(t("library.kanbanGroupBy")).addDropdown((dropdown) => {
       dropdown.addOption("", t("library.noGroup"));
       const propKeys = Array.from(this.availableProperties.keys());
       for (const key of propKeys) {
@@ -39154,7 +39317,7 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
       });
     });
     const sortPageSection = contentEl.createDiv({ cls: "dashboard-library-config-section" });
-    new import_obsidian12.Setting(sortPageSection).setName(t("library.sortBy")).addDropdown((dropdown) => {
+    new import_obsidian13.Setting(sortPageSection).setName(t("library.sortBy")).addDropdown((dropdown) => {
       dropdown.addOption("name", getPropertyName("name"));
       dropdown.addOption("modified", getPropertyName("modified"));
       dropdown.addOption("created", getPropertyName("created"));
@@ -39169,13 +39332,13 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
         this.config.sortBy = value;
       });
     });
-    new import_obsidian12.Setting(sortPageSection).setName(t("library.sortDirection")).addToggle((toggle) => {
+    new import_obsidian13.Setting(sortPageSection).setName(t("library.sortDirection")).addToggle((toggle) => {
       toggle.setValue(this.config.sortDesc);
       toggle.onChange((value) => {
         this.config.sortDesc = value;
       });
     });
-    new import_obsidian12.Setting(sortPageSection).setName(t("library.pageSize", { count: "" }).trim()).addDropdown((dropdown) => {
+    new import_obsidian13.Setting(sortPageSection).setName(t("library.pageSize", { count: "" }).trim()).addDropdown((dropdown) => {
       dropdown.addOption("10", t("library.pageSize", { count: 10 }));
       dropdown.addOption("20", t("library.pageSize", { count: 20 }));
       dropdown.addOption("50", t("library.pageSize", { count: 50 }));
@@ -39201,9 +39364,9 @@ var LibraryConfigModal = class extends import_obsidian12.Modal {
 };
 
 // src/tracker-config-modal.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 init_i18n();
-var TrackerConfigModal = class extends import_obsidian13.Modal {
+var TrackerConfigModal = class extends import_obsidian14.Modal {
   onSave;
   theme;
   keyValue = "";
@@ -39307,9 +39470,9 @@ var TrackerConfigModal = class extends import_obsidian13.Modal {
 };
 
 // src/template-modal.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 init_i18n();
-var TemplatePickerModal = class extends import_obsidian14.Modal {
+var TemplatePickerModal = class extends import_obsidian15.Modal {
   plugin;
   onSelect;
   theme;
@@ -39451,7 +39614,7 @@ var TemplatePickerModal = class extends import_obsidian14.Modal {
             cls: "template-modal-manage-edit",
             attr: { "aria-label": t("template.edit") }
           });
-          (0, import_obsidian14.setIcon)(editBtn, "pencil");
+          (0, import_obsidian15.setIcon)(editBtn, "pencil");
           editBtn.addEventListener("click", () => {
             this.editingTemplate = { ...tmpl, tasks: [...tmpl.tasks] };
             this.render();
@@ -39460,7 +39623,7 @@ var TemplatePickerModal = class extends import_obsidian14.Modal {
             cls: "template-modal-manage-delete",
             attr: { "aria-label": t("template.delete") }
           });
-          (0, import_obsidian14.setIcon)(deleteBtn, "trash-2");
+          (0, import_obsidian15.setIcon)(deleteBtn, "trash-2");
           const tmplId = tmpl.id;
           deleteBtn.addEventListener("click", async () => {
             const confirmed = await showConfirmDialog2(this.app, {
@@ -39528,7 +39691,7 @@ var TemplatePickerModal = class extends import_obsidian14.Modal {
           cls: "template-modal-task-remove",
           attr: { "aria-label": t("template.delete") }
         });
-        (0, import_obsidian14.setIcon)(removeBtn, "x");
+        (0, import_obsidian15.setIcon)(removeBtn, "x");
         removeBtn.addEventListener("click", () => {
           const newTasks = editing.tasks.filter((_, idx) => idx !== taskIndex);
           editing.tasks = newTasks.length === 0 ? [""] : newTasks;
@@ -39857,8 +40020,8 @@ var ReadingService = class {
 };
 
 // src/reminder-notice.ts
-var import_obsidian15 = require("obsidian");
-var ReminderNoticeModal = class extends import_obsidian15.Modal {
+var import_obsidian16 = require("obsidian");
+var ReminderNoticeModal = class extends import_obsidian16.Modal {
   constructor(app) {
     super(app);
   }
@@ -39872,7 +40035,7 @@ var ReminderNoticeModal = class extends import_obsidian15.Modal {
 init_i18n();
 init_parser();
 var DASHBOARD_VIEW_TYPE = "apex-dashboard-view";
-var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
+var DashboardView = class _DashboardView extends import_obsidian17.ItemView {
   plugin;
   sync;
   data = null;
@@ -40065,7 +40228,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       cls: "dashboard-mobile-action-btn",
       attr: { "aria-label": t("mobile.quickActions") }
     });
-    (0, import_obsidian16.setIcon)(linksBtn, "zap");
+    (0, import_obsidian17.setIcon)(linksBtn, "zap");
     linksBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.openMobileDrawer("quickActions");
@@ -40074,7 +40237,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       cls: "dashboard-mobile-action-btn",
       attr: { "aria-label": t("mobile.recent") }
     });
-    (0, import_obsidian16.setIcon)(recentBtn, "clock");
+    (0, import_obsidian17.setIcon)(recentBtn, "clock");
     recentBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.openMobileDrawer("recent");
@@ -40100,7 +40263,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       cls: "dashboard-view-nav-tab" + (!this.embeddedNotePath ? " dashboard-view-nav-tab--active" : ""),
       text: t("main.dashboard")
     });
-    (0, import_obsidian16.setIcon)(mainTab, "home", "before");
+    (0, import_obsidian17.setIcon)(mainTab, "home", "before");
     mainTab.addEventListener("click", () => {
       this.exitEmbeddedMode();
     });
@@ -40113,7 +40276,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
         text: noteName,
         attr: { title: activeNotePath }
       });
-      (0, import_obsidian16.setIcon)(curTab, "file-code", "before");
+      (0, import_obsidian17.setIcon)(curTab, "file-code", "before");
       curTab.addEventListener("click", async () => {
         if (!this.embeddedNotePath && this.lastEmbeddedPath) {
           await this.reenterEmbeddedMode(this.lastEmbeddedPath);
@@ -40128,7 +40291,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       cls: "dashboard-view-nav-btn",
       text: t("noteDash.openDash")
     });
-    (0, import_obsidian16.setIcon)(openBtn, "plus", "before");
+    (0, import_obsidian17.setIcon)(openBtn, "plus", "before");
     openBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.showColumnFilePicker(navBar);
@@ -40154,7 +40317,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       }
     }
     if (columnFiles.length === 0) {
-      new import_obsidian16.Notice(t("noteDash.noDashboardFiles"));
+      new import_obsidian17.Notice(t("noteDash.noDashboardFiles"));
       return;
     }
     const root = this.containerEl.children[1];
@@ -40212,8 +40375,8 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
   /** Load a note's dashboard data and render it embedded in the main view */
   async embedNoteDashboard(notePath) {
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    if (!(file instanceof import_obsidian16.TFile)) {
-      new import_obsidian16.Notice(t("noteDash.fileNotFound"));
+    if (!(file instanceof import_obsidian17.TFile)) {
+      new import_obsidian17.Notice(t("noteDash.fileNotFound"));
       return;
     }
     try {
@@ -40228,7 +40391,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       root?.addClass("apex-note-dashboard-root");
     } catch (err) {
       console.error("[apex-dashboard] Error loading note:", err);
-      new import_obsidian16.Notice(t("noteDash.loadError"));
+      new import_obsidian17.Notice(t("noteDash.loadError"));
     }
   }
   /** Re-enter embedded mode from cached data */
@@ -40236,14 +40399,14 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
     let data = this.embeddedDataCache.get(notePath);
     if (!data) {
       const file = this.app.vault.getAbstractFileByPath(notePath);
-      if (!(file instanceof import_obsidian16.TFile)) return;
+      if (!(file instanceof import_obsidian17.TFile)) return;
       try {
         const content = await this.app.vault.read(file);
         data = parse(content);
         this.embeddedDataCache.set(notePath, data);
       } catch (err) {
         console.error("[apex-dashboard] Error reloading note:", err);
-        new import_obsidian16.Notice(t("noteDash.loadError"));
+        new import_obsidian17.Notice(t("noteDash.loadError"));
         return;
       }
     }
@@ -40550,7 +40713,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
         if (self.embeddedData) {
           const idx = self.embeddedData.columns.findIndex((c) => c.name === columnName);
           if (idx === 0 || columnName.includes("[[") || columnName.includes("#")) {
-            new import_obsidian16.Notice(t("error.cannotDeleteMainColumn"));
+            new import_obsidian17.Notice(t("error.cannotDeleteMainColumn"));
             return;
           }
         }
@@ -40579,6 +40742,34 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
           found.card.tasks[taskIndex].reminder = reminder;
           await self.saveEmbeddedAndRefresh();
         }
+      },
+      onProjectGroupAdd: async (columnName, title) => {
+        const col = self.embeddedData?.columns.find((c) => c.name === columnName);
+        if (!col) return;
+        col.cards.push({
+          id: `${Date.now()}-project`,
+          title,
+          type: "project",
+          column: columnName,
+          body: "",
+          tasks: [],
+          url: "",
+          wikiLink: "",
+          progress: -1,
+          streak: 0,
+          dueDate: "",
+          blockquote: "",
+          color: "",
+          coverImage: "",
+          width: 0,
+          size: "M",
+          projectDocs: [],
+          gridCols: 0,
+          gridRows: 0,
+          gridCol: 0,
+          gridRow: 0
+        });
+        await self.saveEmbeddedAndRefresh();
       },
       onAddFromTemplate: (columnName) => self.openEmbeddedTemplatePicker(columnName),
       onLibraryConfigChange: (columnName) => self.openEmbeddedLibraryConfigModal(columnName)
@@ -40609,12 +40800,12 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
     const newContent = serialize2(this.embeddedData);
     this.embeddedDataCache.set(this.embeddedNotePath, this.embeddedData);
     const file = this.app.vault.getAbstractFileByPath(this.embeddedNotePath);
-    if (file instanceof import_obsidian16.TFile) {
+    if (file instanceof import_obsidian17.TFile) {
       try {
         await this.app.vault.modify(file, newContent);
       } catch (e) {
         console.error("[apex-dashboard] Error saving embedded note:", e);
-        new import_obsidian16.Notice(t("noteDash.saveError"));
+        new import_obsidian17.Notice(t("noteDash.saveError"));
       }
     }
     const currentData = this.sync.getData();
@@ -40752,7 +40943,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
         cls: "dashboard-mobile-widget-btn",
         attr: { "aria-label": w.label }
       });
-      (0, import_obsidian16.setIcon)(btn, w.icon);
+      (0, import_obsidian17.setIcon)(btn, w.icon);
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         if (this.mobileWidgetExpanded === w.key) {
@@ -40796,7 +40987,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       cls: "dashboard-banner-pin-btn",
       attr: { "aria-label": "Toggle banner" }
     });
-    (0, import_obsidian16.setIcon)(pinBtn, "bookmark");
+    (0, import_obsidian17.setIcon)(pinBtn, "bookmark");
     pinBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (window.innerWidth <= 640) return;
@@ -40994,7 +41185,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
         });
         if (!confirmed) return;
         this.sync.deleteCard(cardId);
-        new import_obsidian16.Notice(t("card.deleted"));
+        new import_obsidian17.Notice(t("card.deleted"));
       },
       onCheckboxToggle: (cardId, idx, checked) => this.sync.toggleTask(cardId, idx, checked),
       onTaskAdd: (cardId, text) => this.sync.addTask(cardId, text),
@@ -41062,7 +41253,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
         if (this.data) {
           const idx = this.data.columns.findIndex((c) => c.name === columnName);
           if (idx === 0 || columnName.includes("[[") || columnName.includes("#")) {
-            new import_obsidian16.Notice(t("error.cannotDeleteMainColumn"));
+            new import_obsidian17.Notice(t("error.cannotDeleteMainColumn"));
             return;
           }
         }
@@ -41076,6 +41267,33 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
       },
       onColumnSectionTypeChange: (columnName, sectionType) => this.sync.setColumnSectionType(columnName, sectionType),
       onTaskReminderEdit: (cardId, taskIndex, reminder) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
+      onProjectGroupAdd: async (columnName, title) => {
+        const column = this.data?.columns.find((c) => c.name === columnName);
+        if (!column) return;
+        this.sync.addCard(columnName, {
+          id: `${Date.now()}-project`,
+          title,
+          type: "project",
+          column: columnName,
+          body: "",
+          tasks: [],
+          url: "",
+          wikiLink: "",
+          progress: -1,
+          streak: 0,
+          dueDate: "",
+          blockquote: "",
+          color: "",
+          coverImage: "",
+          width: 0,
+          size: "M",
+          projectDocs: [],
+          gridCols: 0,
+          gridRows: 0,
+          gridCol: 0,
+          gridRow: 0
+        });
+      },
       onAddFromTemplate: (columnName) => this.openTemplatePicker(columnName),
       onLibraryConfigChange: (columnName, config) => this.sync.updateLibraryConfig(columnName, config)
     };
@@ -41254,7 +41472,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
     };
     const createRef = events.on("create", handler);
     const modifyRef = events.on("modify", (file) => {
-      if (file instanceof import_obsidian16.TFile && file.extension === "md") {
+      if (file instanceof import_obsidian17.TFile && file.extension === "md") {
         handler();
       }
     });
@@ -41381,7 +41599,7 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
           if (daysLeft >= 0 && daysLeft <= this.plugin.settings.countdownReminderDays) {
             this.firedReminders.add(ckKey);
             const label = this.plugin.settings.countdownLabel || this.plugin.settings.countdownTargetDate;
-            new import_obsidian16.Notice(t("countdown.reminderNotice", { label, days: String(daysLeft) }));
+            new import_obsidian17.Notice(t("countdown.reminderNotice", { label, days: String(daysLeft) }));
           }
         }
       }
@@ -41407,9 +41625,9 @@ var DashboardView = class _DashboardView extends import_obsidian16.ItemView {
 };
 
 // src/settings.ts
-var import_obsidian17 = require("obsidian");
+var import_obsidian18 = require("obsidian");
 init_i18n();
-var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
+var DashboardSettingTab = class extends import_obsidian18.PluginSettingTab {
   plugin;
   constructor(app, plugin) {
     super(app, plugin);
@@ -41418,7 +41636,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    const recentSetting = new import_obsidian17.Setting(containerEl).setName(t("settings.recentCount") + "  " + this.plugin.settings.recentDocCount).setDesc(t("settings.recentCountDesc")).addSlider((slider) => slider.setLimits(3, 15, 1).setValue(this.plugin.settings.recentDocCount).setDynamicTooltip().onChange(async (value) => {
+    const recentSetting = new import_obsidian18.Setting(containerEl).setName(t("settings.recentCount") + "  " + this.plugin.settings.recentDocCount).setDesc(t("settings.recentCountDesc")).addSlider((slider) => slider.setLimits(3, 15, 1).setValue(this.plugin.settings.recentDocCount).setDynamicTooltip().onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         recentDocCount: value
@@ -41426,14 +41644,14 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       await this.plugin.saveSettings();
       recentSetting.nameEl.setText(t("settings.recentCount") + "  " + value);
     }));
-    new import_obsidian17.Setting(containerEl).setName(t("settings.dashboardFile")).setDesc(t("settings.dashboardFileDesc")).addText((text) => text.setPlaceholder("dashboard or path/to/dashboard").setValue(this.plugin.settings.dashboardFile).onChange(async (value) => {
+    new import_obsidian18.Setting(containerEl).setName(t("settings.dashboardFile")).setDesc(t("settings.dashboardFileDesc")).addText((text) => text.setPlaceholder("dashboard or path/to/dashboard").setValue(this.plugin.settings.dashboardFile).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         dashboardFile: value.trim() || DEFAULT_SETTINGS.dashboardFile
       };
       await this.plugin.saveSettings();
     }));
-    new import_obsidian17.Setting(containerEl).setName(t("settings.sidebarPinnedDefault")).setDesc(t("settings.sidebarPinnedDefaultDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.sidebarPinnedDefault).onChange(async (value) => {
+    new import_obsidian18.Setting(containerEl).setName(t("settings.sidebarPinnedDefault")).setDesc(t("settings.sidebarPinnedDefaultDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.sidebarPinnedDefault).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         sidebarPinnedDefault: value
@@ -41441,7 +41659,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       await this.plugin.saveSettings();
       this.plugin.refreshAllDashboards();
     }));
-    new import_obsidian17.Setting(containerEl).setName(t("settings.projectHideNestedDocs")).setDesc(t("settings.projectHideNestedDocsDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.projectHideNestedDocs).onChange(async (value) => {
+    new import_obsidian18.Setting(containerEl).setName(t("settings.projectHideNestedDocs")).setDesc(t("settings.projectHideNestedDocsDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.projectHideNestedDocs).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         projectHideNestedDocs: value
@@ -41456,7 +41674,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
   renderWidgetSettings(containerEl) {
     containerEl.createEl("h3", { text: t("settings.widgetTheme"), cls: "dashboard-settings-section-title" });
     const weatherCard = containerEl.createDiv({ cls: "dashboard-widget-settings-card" });
-    new import_obsidian17.Setting(weatherCard).setName(t("settings.widgetWeatherEnabled")).setDesc(t("settings.widgetWeatherEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.widgetWeatherEnabled).onChange(async (value) => {
+    new import_obsidian18.Setting(weatherCard).setName(t("settings.widgetWeatherEnabled")).setDesc(t("settings.widgetWeatherEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.widgetWeatherEnabled).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         widgetWeatherEnabled: value
@@ -41466,7 +41684,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       this.display();
     }));
     if (this.plugin.settings.widgetWeatherEnabled) {
-      new import_obsidian17.Setting(weatherCard).setName(t("settings.widgetWeatherCity")).setDesc(t("settings.widgetWeatherCityDesc")).addText((text) => {
+      new import_obsidian18.Setting(weatherCard).setName(t("settings.widgetWeatherCity")).setDesc(t("settings.widgetWeatherCityDesc")).addText((text) => {
         text.setPlaceholder(t("settings.widgetWeatherCityPlaceholder")).setValue(this.plugin.settings.widgetWeatherCity).onChange(async (value) => {
           this.plugin.settings = {
             ...this.plugin.settings,
@@ -41479,7 +41697,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       });
     }
     const heatmapCard = containerEl.createDiv({ cls: "dashboard-widget-settings-card" });
-    new import_obsidian17.Setting(heatmapCard).setName(t("settings.widgetHeatmapEnabled")).setDesc(t("settings.widgetHeatmapEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.widgetHeatmapEnabled).onChange(async (value) => {
+    new import_obsidian18.Setting(heatmapCard).setName(t("settings.widgetHeatmapEnabled")).setDesc(t("settings.widgetHeatmapEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.widgetHeatmapEnabled).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         widgetHeatmapEnabled: value
@@ -41489,7 +41707,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       this.display();
     }));
     if (this.plugin.settings.widgetHeatmapEnabled) {
-      const trackerKeySetting = new import_obsidian17.Setting(heatmapCard).setName(t("settings.widgetTrackerKey")).addText((text) => text.setPlaceholder(t("settings.widgetTrackerKeyPlaceholder")).setValue(this.plugin.settings.widgetTrackerKey).onChange(async (value) => {
+      const trackerKeySetting = new import_obsidian18.Setting(heatmapCard).setName(t("settings.widgetTrackerKey")).addText((text) => text.setPlaceholder(t("settings.widgetTrackerKeyPlaceholder")).setValue(this.plugin.settings.widgetTrackerKey).onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           widgetTrackerKey: value.trim()
@@ -41514,7 +41732,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
           });
         }
       }
-      new import_obsidian17.Setting(heatmapCard).setName(t("settings.widgetTrackerDays")).addDropdown((dropdown) => dropdown.addOptions({
+      new import_obsidian18.Setting(heatmapCard).setName(t("settings.widgetTrackerDays")).addDropdown((dropdown) => dropdown.addOptions({
         "30": t("settings.days30"),
         "90": t("settings.days90"),
         "180": t("settings.days180"),
@@ -41526,7 +41744,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
         };
         await this.plugin.saveSettings();
       }));
-      new import_obsidian17.Setting(heatmapCard).setName(t("settings.widgetTrackerSummary")).addDropdown((dropdown) => dropdown.addOptions({
+      new import_obsidian18.Setting(heatmapCard).setName(t("settings.widgetTrackerSummary")).addDropdown((dropdown) => dropdown.addOptions({
         "streak": t("settings.summaryStreak"),
         "rate": t("settings.summaryRate"),
         "both": t("settings.summaryBoth"),
@@ -41541,7 +41759,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       }));
     }
     const pomodoroCard = containerEl.createDiv({ cls: "dashboard-widget-settings-card" });
-    new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroEnabled")).setDesc(t("settings.pomodoroEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.pomodoroEnabled).onChange(async (value) => {
+    new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroEnabled")).setDesc(t("settings.pomodoroEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.pomodoroEnabled).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         pomodoroEnabled: value
@@ -41551,7 +41769,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       this.display();
     }));
     if (this.plugin.settings.pomodoroEnabled) {
-      const workSetting = new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroWork") + "  " + this.plugin.settings.pomodoroWorkMinutes + " min").addSlider((slider) => slider.setLimits(15, 60, 5).setValue(this.plugin.settings.pomodoroWorkMinutes).setDynamicTooltip().onChange(async (value) => {
+      const workSetting = new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroWork") + "  " + this.plugin.settings.pomodoroWorkMinutes + " min").addSlider((slider) => slider.setLimits(15, 60, 5).setValue(this.plugin.settings.pomodoroWorkMinutes).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           pomodoroWorkMinutes: value
@@ -41560,7 +41778,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
         this.plugin.refreshAllDashboards();
         workSetting.nameEl.setText(t("settings.pomodoroWork") + "  " + value + " min");
       }));
-      const shortSetting = new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroShortBreak") + "  " + this.plugin.settings.pomodoroShortBreakMinutes + " min").addSlider((slider) => slider.setLimits(1, 15, 1).setValue(this.plugin.settings.pomodoroShortBreakMinutes).setDynamicTooltip().onChange(async (value) => {
+      const shortSetting = new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroShortBreak") + "  " + this.plugin.settings.pomodoroShortBreakMinutes + " min").addSlider((slider) => slider.setLimits(1, 15, 1).setValue(this.plugin.settings.pomodoroShortBreakMinutes).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           pomodoroShortBreakMinutes: value
@@ -41569,7 +41787,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
         this.plugin.refreshAllDashboards();
         shortSetting.nameEl.setText(t("settings.pomodoroShortBreak") + "  " + value + " min");
       }));
-      const longSetting = new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroLongBreak") + "  " + this.plugin.settings.pomodoroLongBreakMinutes + " min").addSlider((slider) => slider.setLimits(5, 30, 5).setValue(this.plugin.settings.pomodoroLongBreakMinutes).setDynamicTooltip().onChange(async (value) => {
+      const longSetting = new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroLongBreak") + "  " + this.plugin.settings.pomodoroLongBreakMinutes + " min").addSlider((slider) => slider.setLimits(5, 30, 5).setValue(this.plugin.settings.pomodoroLongBreakMinutes).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           pomodoroLongBreakMinutes: value
@@ -41578,7 +41796,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
         this.plugin.refreshAllDashboards();
         longSetting.nameEl.setText(t("settings.pomodoroLongBreak") + "  " + value + " min");
       }));
-      const intervalSetting = new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroInterval") + "  " + this.plugin.settings.pomodoroLongBreakInterval).addSlider((slider) => slider.setLimits(2, 6, 1).setValue(this.plugin.settings.pomodoroLongBreakInterval).setDynamicTooltip().onChange(async (value) => {
+      const intervalSetting = new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroInterval") + "  " + this.plugin.settings.pomodoroLongBreakInterval).addSlider((slider) => slider.setLimits(2, 6, 1).setValue(this.plugin.settings.pomodoroLongBreakInterval).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           pomodoroLongBreakInterval: value
@@ -41587,7 +41805,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
         this.plugin.refreshAllDashboards();
         intervalSetting.nameEl.setText(t("settings.pomodoroInterval") + "  " + value);
       }));
-      new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroAutoStart")).setDesc(t("settings.pomodoroAutoStartDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.pomodoroAutoStartBreak).onChange(async (value) => {
+      new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroAutoStart")).setDesc(t("settings.pomodoroAutoStartDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.pomodoroAutoStartBreak).onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           pomodoroAutoStartBreak: value
@@ -41595,7 +41813,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
         await this.plugin.saveSettings();
         this.plugin.refreshAllDashboards();
       }));
-      new import_obsidian17.Setting(pomodoroCard).setName(t("settings.pomodoroSound")).addToggle((toggle) => toggle.setValue(this.plugin.settings.pomodoroSoundEnabled).onChange(async (value) => {
+      new import_obsidian18.Setting(pomodoroCard).setName(t("settings.pomodoroSound")).addToggle((toggle) => toggle.setValue(this.plugin.settings.pomodoroSoundEnabled).onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           pomodoroSoundEnabled: value
@@ -41605,7 +41823,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       }));
     }
     const countdownCard = containerEl.createDiv({ cls: "dashboard-widget-settings-card" });
-    new import_obsidian17.Setting(countdownCard).setName(t("settings.countdownEnabled")).setDesc(t("settings.countdownEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.countdownEnabled).onChange(async (value) => {
+    new import_obsidian18.Setting(countdownCard).setName(t("settings.countdownEnabled")).setDesc(t("settings.countdownEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.countdownEnabled).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         countdownEnabled: value
@@ -41614,7 +41832,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       this.plugin.refreshAllDashboards();
     }));
     const readingCard = containerEl.createDiv({ cls: "dashboard-widget-settings-card" });
-    new import_obsidian17.Setting(readingCard).setName(t("settings.readingEnabled")).setDesc(t("settings.readingEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.readingEnabled).onChange(async (value) => {
+    new import_obsidian18.Setting(readingCard).setName(t("settings.readingEnabled")).setDesc(t("settings.readingEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.readingEnabled).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         readingEnabled: value
@@ -41623,7 +41841,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
       this.plugin.refreshAllDashboards();
     }));
     if (this.plugin.settings.readingEnabled) {
-      new import_obsidian17.Setting(readingCard).setName(t("settings.readingSound")).addToggle((toggle) => toggle.setValue(this.plugin.settings.readingSoundEnabled).onChange(async (value) => {
+      new import_obsidian18.Setting(readingCard).setName(t("settings.readingSound")).addToggle((toggle) => toggle.setValue(this.plugin.settings.readingSoundEnabled).onChange(async (value) => {
         this.plugin.settings = {
           ...this.plugin.settings,
           readingSoundEnabled: value
@@ -41636,7 +41854,7 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
   renderLunarSettings(containerEl) {
     containerEl.createEl("h3", { text: t("settings.widgetLunar"), cls: "dashboard-settings-section-title" });
     const lunarCard = containerEl.createDiv({ cls: "dashboard-widget-settings-card" });
-    new import_obsidian17.Setting(lunarCard).setName(t("settings.widgetLunarEnabled")).setDesc(t("settings.widgetLunarEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.widgetLunarEnabled).onChange(async (value) => {
+    new import_obsidian18.Setting(lunarCard).setName(t("settings.widgetLunarEnabled")).setDesc(t("settings.widgetLunarEnabledDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.widgetLunarEnabled).onChange(async (value) => {
       this.plugin.settings = {
         ...this.plugin.settings,
         widgetLunarEnabled: value
@@ -41721,11 +41939,11 @@ var DashboardSettingTab = class extends import_obsidian17.PluginSettingTab {
 };
 
 // src/sidebar-view.ts
-var import_obsidian18 = require("obsidian");
+var import_obsidian19 = require("obsidian");
 init_i18n();
 init_parser();
 var SIDEBAR_VIEW_TYPE = "apex-dashboard-sidebar";
-var SidebarView = class extends import_obsidian18.ItemView {
+var SidebarView = class extends import_obsidian19.ItemView {
   plugin;
   sync;
   data = null;
@@ -41798,8 +42016,8 @@ var SidebarView = class extends import_obsidian18.ItemView {
   async showOverlayForNote(notePath) {
     this.overlayNotePath = notePath;
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    if (!(file instanceof import_obsidian18.TFile) || !file.path.endsWith(".md")) {
-      new import_obsidian18.Notice("Cannot read this file as markdown");
+    if (!(file instanceof import_obsidian19.TFile) || !file.path.endsWith(".md")) {
+      new import_obsidian19.Notice("Cannot read this file as markdown");
       this.exitOverlayMode();
       return;
     }
@@ -41808,15 +42026,15 @@ var SidebarView = class extends import_obsidian18.ItemView {
       const parsedData = parse(content);
       if (parsedData.columns && parsedData.columns.length > 0) {
         this.data = parsedData;
-        new import_obsidian18.Notice(t("sidebar.overlayActive", { note: notePath.split("/").pop() ?? "" }));
+        new import_obsidian19.Notice(t("sidebar.overlayActive", { note: notePath.split("/").pop() ?? "" }));
       } else {
-        new import_obsidian18.Notice('This note has no dashboard columns. Run "Convert Note Headings to Dashboard Columns" first.');
+        new import_obsidian19.Notice('This note has no dashboard columns. Run "Convert Note Headings to Dashboard Columns" first.');
         this.exitOverlayMode();
         return;
       }
     } catch (err) {
       console.error("[apex-dashboard] Error parsing note for overlay:", err);
-      new import_obsidian18.Notice("Error reading note content");
+      new import_obsidian19.Notice("Error reading note content");
       this.exitOverlayMode();
       return;
     }
@@ -41831,7 +42049,7 @@ var SidebarView = class extends import_obsidian18.ItemView {
       text: t("sidebar.overlayTitle", { note: this.overlayNotePath?.split("/").pop() ?? "" })
     });
     const exitBtn = header.createEl("button", { cls: "dashboard-overlay-exit-btn" });
-    (0, import_obsidian18.setIcon)(exitBtn, "x");
+    (0, import_obsidian19.setIcon)(exitBtn, "x");
     exitBtn.title = t("sidebar.exitOverlay");
     exitBtn.addEventListener("click", () => this.exitOverlayMode());
     const kanban = overlayEl.createDiv({ cls: "dashboard-overlay-kanban" });
@@ -41921,6 +42139,8 @@ var SidebarView = class extends import_obsidian18.ItemView {
       },
       onTaskReminderEdit: () => {
       },
+      onProjectGroupAdd: () => {
+      },
       onAddFromTemplate: () => {
       },
       onLibraryConfigChange: () => {
@@ -41947,14 +42167,14 @@ var SidebarView = class extends import_obsidian18.ItemView {
     async function saveAndRefresh() {
       if (!self.data || !self.overlayNotePath) return;
       const file = self.app.vault.getAbstractFileByPath(self.overlayNotePath);
-      if (!(file instanceof import_obsidian18.TFile)) return;
+      if (!(file instanceof import_obsidian19.TFile)) return;
       try {
         const newContent = serialize(self.data);
         await self.app.vault.modify(file, newContent);
         self.render();
       } catch (e) {
         console.error("[apex-dashboard] Error saving overlay note:", e);
-        new import_obsidian18.Notice("Error saving changes");
+        new import_obsidian19.Notice("Error saving changes");
       }
     }
     return {
@@ -42170,7 +42390,7 @@ var SidebarView = class extends import_obsidian18.ItemView {
         if (self.data) {
           const idx2 = self.data.columns.findIndex((c) => c.name === columnName);
           if (idx2 === 0 || columnName.includes("[[") || columnName.includes("#")) {
-            new import_obsidian18.Notice(t("error.cannotDeleteMainColumn"));
+            new import_obsidian19.Notice(t("error.cannotDeleteMainColumn"));
             return;
           }
         }
@@ -42195,6 +42415,8 @@ var SidebarView = class extends import_obsidian18.ItemView {
           await saveAndRefresh();
         }
       },
+      onProjectGroupAdd: () => {
+      },
       onAddFromTemplate: () => {
       },
       onLibraryConfigChange: () => {
@@ -42210,11 +42432,11 @@ var SidebarView = class extends import_obsidian18.ItemView {
 };
 
 // src/note-dashboard-view.ts
-var import_obsidian19 = require("obsidian");
+var import_obsidian20 = require("obsidian");
 init_parser();
 init_i18n();
 var NOTE_DASHBOARD_VIEW_TYPE = "apex-note-dashboard-view";
-var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemView {
+var NoteDashboardView = class _NoteDashboardView extends import_obsidian20.ItemView {
   plugin;
   data = null;
   notePath = null;
@@ -42269,8 +42491,8 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
   async loadNoteData() {
     if (!this.notePath) return;
     const file = this.app.vault.getAbstractFileByPath(this.notePath);
-    if (!(file instanceof import_obsidian19.TFile)) {
-      new import_obsidian19.Notice(t("noteDash.fileNotFound"));
+    if (!(file instanceof import_obsidian20.TFile)) {
+      new import_obsidian20.Notice(t("noteDash.fileNotFound"));
       return;
     }
     try {
@@ -42280,20 +42502,20 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
       this.registerVaultListeners();
     } catch (err) {
       console.error("[apex-dashboard] Error loading note:", err);
-      new import_obsidian19.Notice(t("noteDash.loadError"));
+      new import_obsidian20.Notice(t("noteDash.loadError"));
     }
   }
   /** Save current data back to the note file */
   async saveToNote() {
     if (!this.data || !this.notePath) return;
     const file = this.app.vault.getAbstractFileByPath(this.notePath);
-    if (!(file instanceof import_obsidian19.TFile)) return;
+    if (!(file instanceof import_obsidian20.TFile)) return;
     try {
       const newContent = serialize(this.data);
       await this.app.vault.modify(file, newContent);
     } catch (e) {
       console.error("[apex-dashboard] Error saving note:", e);
-      new import_obsidian19.Notice(t("noteDash.saveError"));
+      new import_obsidian20.Notice(t("noteDash.saveError"));
     }
   }
   render() {
@@ -42359,17 +42581,27 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
   renderViewNavBar(container) {
     const navBar = container.createDiv({ cls: "dashboard-view-nav-bar" });
     const leftGroup = navBar.createDiv({ cls: "dashboard-view-nav-left" });
-    const typeLabel = leftGroup.createSpan({ cls: "dashboard-view-nav-type-label" });
-    typeLabel.setText(t("noteDash.viewName"));
-    (0, import_obsidian19.setIcon)(typeLabel, "layoutDashboard", "before");
-    if (this.notePath) {
-      const curTab = leftGroup.createEl("button", {
-        cls: "dashboard-view-nav-tab dashboard-view-nav-tab--active",
-        text: this.notePath.split("/").pop() ?? this.notePath,
-        attr: { title: this.notePath }
+    const homeBtn = leftGroup.createEl("button", {
+      cls: "dashboard-view-nav-home",
+      attr: { title: t("main.dashboard") }
+    });
+    (0, import_obsidian20.setIcon)(homeBtn, "home");
+    homeBtn.addEventListener("click", () => {
+      this.plugin.activateView();
+    });
+    const recentFiles = this.plugin.settings.recentDashboardFiles || [];
+    for (const path of recentFiles) {
+      if (!path) continue;
+      const name = path.split("/").pop() ?? path;
+      const isActive = path === this.notePath;
+      const tab = leftGroup.createEl("button", {
+        cls: "dashboard-view-nav-tab" + (isActive ? " dashboard-view-nav-tab--active" : ""),
+        text: name,
+        attr: { title: path }
       });
-      curTab.addEventListener("click", () => {
-        this.app.workspace.revealLeaf(this.leaf);
+      tab.addEventListener("click", async () => {
+        if (isActive) return;
+        await this.plugin.openNoteAsDashboard(path);
       });
     }
     navBar.createDiv({ cls: "dashboard-view-nav-divider" });
@@ -42378,7 +42610,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
       cls: "dashboard-view-nav-btn",
       text: t("noteDash.openDash")
     });
-    (0, import_obsidian19.setIcon)(openBtn, "plus", "before");
+    (0, import_obsidian20.setIcon)(openBtn, "plus", "before");
     openBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.showDashboardFilePicker(navBar);
@@ -42387,27 +42619,10 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
       cls: "dashboard-view-nav-btn",
       text: t("main.dashboard")
     });
-    (0, import_obsidian19.setIcon)(mainBtn, "home", "before");
+    (0, import_obsidian20.setIcon)(mainBtn, "home", "before");
     mainBtn.addEventListener("click", () => {
       this.plugin.activateView();
     });
-    const otherLeaves = this.app.workspace.getLeavesOfType(NOTE_DASHBOARD_VIEW_TYPE).filter(
-      (l) => l !== this.leaf
-    );
-    if (otherLeaves.length > 0) {
-      for (const leaf of otherLeaves) {
-        const state = leaf.getViewState();
-        const path = state?.state?.notePath;
-        if (!path) continue;
-        const name = path.split("/").pop() ?? path;
-        const tab = leftGroup.createEl("button", {
-          cls: "dashboard-view-nav-tab",
-          text: name,
-          attr: { title: path }
-        });
-        tab.addEventListener("click", () => this.app.workspace.revealLeaf(leaf));
-      }
-    }
   }
   async showDashboardFilePicker(anchorEl) {
     const mdFiles = this.app.vault.getMarkdownFiles();
@@ -42419,7 +42634,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
           const endIdx = content.indexOf("---", 3);
           if (endIdx !== -1) {
             const yaml = content.slice(3, endIdx);
-            if (yaml.includes("dashboard:") && yaml.includes("true")) {
+            if (yaml.includes("columns:")) {
               dashFiles.push(f);
             }
           }
@@ -42428,7 +42643,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
       }
     }
     if (dashFiles.length === 0) {
-      new import_obsidian19.Notice(t("noteDash.noDashboardFiles"));
+      new import_obsidian20.Notice(t("noteDash.noDashboardFiles"));
       return;
     }
     const existing = anchorEl.closest(".apex-note-dashboard-root")?.querySelector(".dashboard-nav-dropdown");
@@ -42465,7 +42680,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
       cls: "dashboard-banner-pin-btn",
       attr: { "aria-label": "Toggle banner" }
     });
-    (0, import_obsidian19.setIcon)(pinBtn, "bookmark");
+    (0, import_obsidian20.setIcon)(pinBtn, "bookmark");
     pinBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       this.bannerCollapsed = !this.bannerCollapsed;
@@ -42561,6 +42776,35 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
           found.card.tasks[taskIndex].text = newText;
           await this.saveAndRefresh();
         }
+      },
+      onProjectGroupAdd: async (columnName, title) => {
+        if (!this.data) return;
+        const col = this.data.columns.find((c) => c.name === columnName);
+        if (!col) return;
+        col.cards.push({
+          id: `${Date.now()}-project`,
+          title,
+          type: "project",
+          column: columnName,
+          body: "",
+          tasks: [],
+          url: "",
+          wikiLink: "",
+          progress: -1,
+          streak: 0,
+          dueDate: "",
+          blockquote: "",
+          color: "",
+          coverImage: "",
+          width: 0,
+          size: "M",
+          projectDocs: [],
+          gridCols: 0,
+          gridRows: 0,
+          gridCol: 0,
+          gridRow: 0
+        });
+        await this.saveAndRefresh();
       },
       onCardAdd: async (columnName) => {
         if (!this.data) return;
@@ -42784,7 +43028,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
         if (this.data) {
           const idx = this.data.columns.findIndex((c) => c.name === columnName);
           if (idx === 0 || columnName.includes("[[") || columnName.includes("#")) {
-            new import_obsidian19.Notice(t("error.cannotDeleteMainColumn"));
+            new import_obsidian20.Notice(t("error.cannotDeleteMainColumn"));
             return;
           }
         }
@@ -43083,7 +43327,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
       }
     };
     const modifyRef = events.on("modify", (file) => {
-      if (file instanceof import_obsidian19.TFile && file.path === this.notePath) {
+      if (file instanceof import_obsidian20.TFile && file.path === this.notePath) {
         setTimeout(() => this.loadNoteData(), 300);
       }
     });
@@ -43112,7 +43356,7 @@ var NoteDashboardView = class _NoteDashboardView extends import_obsidian19.ItemV
 
 // src/main.ts
 init_i18n();
-var DashboardPlugin = class extends import_obsidian20.Plugin {
+var DashboardPlugin = class extends import_obsidian21.Plugin {
   settings;
   async onload() {
     await this.loadSettings();
@@ -43141,7 +43385,7 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
       if (file.type !== "markdown" || !file.state?.file) return;
       const notePath = file.state.file;
       const tfile = this.app.vault.getAbstractFileByPath(notePath);
-      if (!(tfile instanceof import_obsidian20.TFile)) return;
+      if (!(tfile instanceof import_obsidian21.TFile)) return;
       const isDashboardNote = await this.isDashboardNote(notePath);
       if (isDashboardNote && leaf.getViewType() !== NOTE_DASHBOARD_VIEW_TYPE) {
         await this.openNoteAsDashboard(notePath);
@@ -43223,7 +43467,7 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
    * Returns 'zh' for Chinese, 'en' for everything else.
    */
   detectSystemLanguage() {
-    const obsidianLocale = import_obsidian20.moment.locale();
+    const obsidianLocale = import_obsidian21.moment.locale();
     if (obsidianLocale && obsidianLocale.startsWith("zh")) {
       return "zh";
     }
@@ -43298,21 +43542,21 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
    */
   async convertNoteToDashboard(notePath) {
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    if (!(file instanceof import_obsidian20.TFile) || !file.path.endsWith(".md")) {
-      new import_obsidian20.Notice("Only markdown files can be converted to dashboard");
+    if (!(file instanceof import_obsidian21.TFile) || !file.path.endsWith(".md")) {
+      new import_obsidian21.Notice("Only markdown files can be converted to dashboard");
       return;
     }
     const content = await this.app.vault.read(file);
     const noteName = file.basename;
     const headings = this.extractH2Headings(content, noteName);
     if (headings.length === 0) {
-      new import_obsidian20.Notice(t("sidebar.noHeadings"));
+      new import_obsidian21.Notice(t("sidebar.noHeadings"));
       return;
     }
     const newFrontmatter = this.buildColumnFrontmatter(headings);
     const newContent = this.injectFrontmatter(content, newFrontmatter);
     await this.app.vault.modify(file, newContent);
-    new import_obsidian20.Notice(t("sidebar.converted", { count: headings.length }));
+    new import_obsidian21.Notice(t("sidebar.converted", { count: headings.length }));
     this.refreshAllDashboards();
   }
   /**
@@ -43351,7 +43595,6 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
     for (const heading of headings) {
       const escaped = heading.replace(/"/g, '\\"');
       lines.push(`  - name: "${escaped}"`);
-      lines.push("    type: project");
     }
     lines.push("---");
     return lines.join("\n");
@@ -43375,29 +43618,29 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
    */
   async restoreNoteFromDashboard(notePath) {
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    if (!(file instanceof import_obsidian20.TFile) || !file.path.endsWith(".md")) {
-      new import_obsidian20.Notice(t("sidebar.noFrontmatter"));
+    if (!(file instanceof import_obsidian21.TFile) || !file.path.endsWith(".md")) {
+      new import_obsidian21.Notice(t("sidebar.noFrontmatter"));
       return;
     }
     const content = await this.app.vault.read(file);
     const trimmed = content.trim();
     if (!trimmed.startsWith("---")) {
-      new import_obsidian20.Notice(t("sidebar.noFrontmatter"));
+      new import_obsidian21.Notice(t("sidebar.noFrontmatter"));
       return;
     }
     const endIdx = trimmed.indexOf("---", 3);
     if (endIdx === -1) {
-      new import_obsidian20.Notice(t("sidebar.noFrontmatter"));
+      new import_obsidian21.Notice(t("sidebar.noFrontmatter"));
       return;
     }
     const frontmatterBlock = trimmed.slice(0, endIdx + 3);
     const body = trimmed.slice(endIdx + 3).trim();
     if (!frontmatterBlock.includes("dashboard:") && !frontmatterBlock.includes("columns:")) {
-      new import_obsidian20.Notice(t("sidebar.noFrontmatter"));
+      new import_obsidian21.Notice(t("sidebar.noFrontmatter"));
       return;
     }
     await this.app.vault.modify(file, body);
-    new import_obsidian20.Notice(t("sidebar.restored"));
+    new import_obsidian21.Notice(t("sidebar.restored"));
     this.refreshAllDashboards();
     const leaves = this.app.workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE);
     for (const leaf of leaves) {
@@ -43416,11 +43659,11 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
     }
   }
   /**
-   * Check if a markdown file has dashboard: true frontmatter.
+   * Check if a markdown file has columns frontmatter (identifies as dashboard note).
    */
   async isDashboardNote(notePath) {
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    if (!(file instanceof import_obsidian20.TFile) || !file.path.endsWith(".md")) return false;
+    if (!(file instanceof import_obsidian21.TFile) || !file.path.endsWith(".md")) return false;
     try {
       const content = await this.app.vault.read(file);
       const trimmed = content.trimStart();
@@ -43428,7 +43671,7 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
       const endIdx = trimmed.indexOf("---", 3);
       if (endIdx === -1) return false;
       const yaml = trimmed.slice(3, endIdx);
-      return yaml.includes("dashboard:") && yaml.includes("true");
+      return yaml.includes("columns:");
     } catch {
       return false;
     }
@@ -43439,6 +43682,11 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
    */
   async openNoteAsDashboard(notePath) {
     const { workspace } = this.app;
+    const recent = this.settings.recentDashboardFiles || [];
+    const filtered = recent.filter((p) => p !== notePath);
+    filtered.unshift(notePath);
+    this.settings.recentDashboardFiles = filtered.slice(0, 10);
+    await this.saveSettings();
     const existingLeaves = workspace.getLeavesOfType(NOTE_DASHBOARD_VIEW_TYPE);
     for (const leaf2 of existingLeaves) {
       const state = leaf2.getViewState();
@@ -43479,21 +43727,21 @@ var DashboardPlugin = class extends import_obsidian20.Plugin {
    */
   async convertNoteToDashboardPage(notePath) {
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    if (!(file instanceof import_obsidian20.TFile) || !file.path.endsWith(".md")) {
-      new import_obsidian20.Notice(t("noteDash.onlyMarkdown"));
+    if (!(file instanceof import_obsidian21.TFile) || !file.path.endsWith(".md")) {
+      new import_obsidian21.Notice(t("noteDash.onlyMarkdown"));
       return;
     }
     const content = await this.app.vault.read(file);
     const noteName = file.basename;
     const headings = this.extractH2Headings(content, noteName);
     if (headings.length === 0) {
-      new import_obsidian20.Notice(t("sidebar.noHeadings"));
+      new import_obsidian21.Notice(t("sidebar.noHeadings"));
       return;
     }
     const newFrontmatter = this.buildColumnFrontmatter(headings);
     const newContent = this.injectFrontmatter(content, newFrontmatter);
     await this.app.vault.modify(file, newContent);
-    new import_obsidian20.Notice(t("sidebar.converted", { count: headings.length }));
+    new import_obsidian21.Notice(t("sidebar.converted", { count: headings.length }));
     await this.openNoteAsDashboard(notePath);
   }
 };

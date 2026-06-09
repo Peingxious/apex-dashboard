@@ -1854,12 +1854,68 @@ function renderSection(column: DashboardColumn, callbacks: RenderCallbacks, app:
 		typeDropdown.style.display = 'none';
 	}, { once: false });
 
-	const addCardBtn = headerActions.createEl('button', {
-		cls: 'dashboard-section-add-btn',
-		attr: { 'aria-label': t('renderer.addCardTo', { column: column.name }) },
-	});
-	setIcon(addCardBtn, 'plus');
-	addCardBtn.addEventListener('click', () => callbacks.onCardAdd(column.name));
+	// Add card button: inline text input for projects, click callback for others
+	const isProjectSection = getSectionType(column) === 'projects';
+	if (isProjectSection) {
+		let addInputVisible = false;
+		let addInputEl: HTMLInputElement | null = null;
+
+		const addCardBtn = headerActions.createEl('button', {
+			cls: 'dashboard-section-add-btn',
+			attr: { 'aria-label': t('renderer.addCardTo', { column: column.name }) },
+		});
+		setIcon(addCardBtn, 'plus');
+		addCardBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			if (addInputVisible && addInputEl) {
+				addInputEl.focus();
+				return;
+			}
+			addInputVisible = true;
+			// Remove existing input if any
+			const existing = addCardBtn.parentElement!.querySelector('.dashboard-section-add-input');
+			if (existing) existing.remove();
+
+			const wrapper = addCardBtn.parentElement!.createDiv({ cls: 'dashboard-section-add-input' });
+			addInputEl = wrapper.createEl('input', {
+				cls: 'dashboard-task-input',
+				attr: { type: 'text', placeholder: t('renderer.addGroup') },
+			});
+			addInputEl.focus();
+
+			const finishAdd = () => {
+				const val = addInputEl?.value.trim();
+				if (val) {
+					callbacks.onProjectGroupAdd(column.name, val);
+				}
+				wrapper.remove();
+				addInputVisible = false;
+				addInputEl = null;
+			};
+
+			addInputEl.addEventListener('keydown', (ke: KeyboardEvent) => {
+				if (ke.key === 'Enter') {
+					ke.preventDefault();
+					finishAdd();
+				} else if (ke.key === 'Escape') {
+					ke.preventDefault();
+					wrapper.remove();
+					addInputVisible = false;
+					addInputEl = null;
+				}
+			});
+			addInputEl.addEventListener('blur', () => {
+				setTimeout(finishAdd, 100);
+			});
+		});
+	} else {
+		const addCardBtn = headerActions.createEl('button', {
+			cls: 'dashboard-section-add-btn',
+			attr: { 'aria-label': t('renderer.addCardTo', { column: column.name }) },
+		});
+		setIcon(addCardBtn, 'plus');
+		addCardBtn.addEventListener('click', () => callbacks.onCardAdd(column.name));
+	}
 
 	// Delete section button (hidden for protected columns)
 	if (!isColumnProtected(column.name, data)) {
@@ -2647,6 +2703,7 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 
 			// ----- Drag events -----
 			item.addEventListener('dragstart', (e) => {
+				e.stopPropagation();
 				projectItemDragSource = { cardId: card.id, itemIndex: index };
 				item.addClass('dashboard-project-item--dragging');
 				if (e.dataTransfer) {
@@ -2698,7 +2755,7 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 			});
 		});
 
-	// Add note input row (same style as todo's add-task)
+	// Add note input row (inline, with file search suggest - same style as todo's add-task)
 	const addRow = container.createDiv({ cls: 'dashboard-task-add' });
 	const input = addRow.createEl('input', {
 		cls: 'dashboard-task-input',

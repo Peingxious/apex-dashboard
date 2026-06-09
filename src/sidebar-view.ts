@@ -213,6 +213,7 @@ export class SidebarView extends ItemView {
 			onColumnDelete: () => {},
 			onColumnSectionTypeChange: () => {},
 			onTaskReminderEdit: () => {},
+			onProjectGroupAdd: () => {},
 			onAddFromTemplate: () => {},
 			onLibraryConfigChange: () => {},
 		};
@@ -442,12 +443,13 @@ export class SidebarView extends ItemView {
 					await saveAndRefresh();
 				}
 			},
-			onAddFromTemplate: () => {},
-			onLibraryConfigChange: () => {},
-		};
-	}
+		onProjectGroupAdd: () => {},
+		onAddFromTemplate: () => {},
+		onLibraryConfigChange: () => {},
+	};
+}
 
-	/** Exit overlay mode and return to normal sidebar */
+/** Exit overlay mode and return to normal sidebar */
 	exitOverlayMode(): void {
 		this.overlayNotePath = null;
 		this.data = null;

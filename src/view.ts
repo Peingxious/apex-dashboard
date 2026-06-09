@@ -782,10 +782,26 @@ export class DashboardView extends ItemView {
 					await self.saveEmbeddedAndRefresh();
 				}
 			},
+		onProjectGroupAdd: async (columnName: string, title: string) => {
+				const col = self.embeddedData?.columns.find(c => c.name === columnName);
+				if (!col) return;
+				col.cards.push({
+					id: `${Date.now()}-project`,
+					title,
+					type: 'project',
+					column: columnName,
+					body: '',
+					tasks: [], url: '', wikiLink: '', progress: -1, streak: 0, dueDate: '',
+					blockquote: '', color: '', coverImage: '', width: 0, size: 'M',
+					projectDocs: [],
+					gridCols: 0, gridRows: 0, gridCol: 0, gridRow: 0,
+				});
+				await self.saveEmbeddedAndRefresh();
+			},
 			onAddFromTemplate: (columnName: string) => self.openEmbeddedTemplatePicker(columnName),
 			onLibraryConfigChange: (columnName: string) => self.openEmbeddedLibraryConfigModal(columnName),
-		};
-	}
+	};
+}
 
 	// --- Embedded mode helpers ---
 
@@ -1313,10 +1329,25 @@ export class DashboardView extends ItemView {
 			},
 			onColumnSectionTypeChange: (columnName: string, sectionType: string) => this.sync.setColumnSectionType(columnName, sectionType),
 			onTaskReminderEdit: (cardId: string, taskIndex: number, reminder: string | undefined) => this.sync.editTaskReminder(cardId, taskIndex, reminder),
+		onProjectGroupAdd: async (columnName: string, title: string) => {
+				const column = this.data?.columns.find(c => c.name === columnName);
+				if (!column) return;
+				this.sync.addCard(columnName, {
+					id: `${Date.now()}-project`,
+					title,
+					type: 'project',
+					column: columnName,
+					body: '',
+					tasks: [], url: '', wikiLink: '', progress: -1, streak: 0, dueDate: '',
+					blockquote: '', color: '', coverImage: '', width: 0, size: 'M',
+					projectDocs: [],
+					gridCols: 0, gridRows: 0, gridCol: 0, gridRow: 0,
+				});
+			},
 			onAddFromTemplate: (columnName: string) => this.openTemplatePicker(columnName),
-				onLibraryConfigChange: (columnName: string, config: LibraryConfig) => this.sync.updateLibraryConfig(columnName, config),
-		};
-	}
+			onLibraryConfigChange: (columnName: string, config: LibraryConfig) => this.sync.updateLibraryConfig(columnName, config),
+	};
+}
 
 	private handleFileDrop(cardId: string, filePath: string): void {
 		if (!this.data) return;

@@ -36,7 +36,7 @@ export default class DashboardPlugin extends Plugin {
 			(leaf) => new SidebarView(leaf, this)
 		);
 
-		// Register the note-level dashboard view (any note with dashboard: true frontmatter)
+		// Register the note-level dashboard view (any note with columns frontmatter)
 		this.registerView(
 			NOTE_DASHBOARD_VIEW_TYPE,
 			(leaf) => new NoteDashboardView(leaf, this)
@@ -53,7 +53,7 @@ export default class DashboardPlugin extends Plugin {
 			const tfile = this.app.vault.getAbstractFileByPath(notePath);
 			if (!(tfile instanceof TFile)) return;
 
-			// Check if this note has dashboard: true frontmatter
+			// Check if this note has columns frontmatter (dashboard note)
 			const isDashboardNote = await this.isDashboardNote(notePath);
 			if (isDashboardNote && leaf.getViewType() !== NOTE_DASHBOARD_VIEW_TYPE) {
 				// Open in note dashboard view instead
@@ -311,7 +311,6 @@ export default class DashboardPlugin extends Plugin {
 			// Escape quotes in heading names
 			const escaped = heading.replace(/"/g, '\\"');
 			lines.push(`  - name: "${escaped}"`);
-			lines.push('    type: project');
 		}
 		lines.push('---');
 		return lines.join('\n');
@@ -398,7 +397,7 @@ export default class DashboardPlugin extends Plugin {
 	}
 
 	/**
-	 * Check if a markdown file has dashboard: true frontmatter.
+	 * Check if a markdown file has columns frontmatter (identifies as dashboard note).
 	 */
 	async isDashboardNote(notePath: string): Promise<boolean> {
 		const file = this.app.vault.getAbstractFileByPath(notePath);
@@ -413,7 +412,7 @@ export default class DashboardPlugin extends Plugin {
 			if (endIdx === -1) return false;
 
 			const yaml = trimmed.slice(3, endIdx);
-			return yaml.includes('dashboard:') && yaml.includes('true');
+			return yaml.includes('columns:');
 		} catch {
 			return false;
 		}
@@ -425,6 +424,13 @@ export default class DashboardPlugin extends Plugin {
 	 */
 	async openNoteAsDashboard(notePath: string): Promise<void> {
 		const { workspace } = this.app;
+
+		// Record to recent dashboard files (persisted in settings)
+		const recent = this.settings.recentDashboardFiles || [];
+		const filtered = recent.filter(p => p !== notePath);
+		filtered.unshift(notePath);
+		this.settings.recentDashboardFiles = filtered.slice(0, 10); // keep max 10
+		await this.saveSettings();
 
 		// Check if already open in a note-dashboard view
 		const existingLeaves = workspace.getLeavesOfType(NOTE_DASHBOARD_VIEW_TYPE);

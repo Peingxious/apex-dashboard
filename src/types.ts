@@ -32,6 +32,7 @@ export interface DashboardSettings {
 	taskTemplates: TaskTemplate[];
 	sidebarPinnedDefault: boolean;
 	projectHideNestedDocs: boolean;
+	recentDashboardFiles: string[];
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -66,6 +67,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	taskTemplates: [],
 	sidebarPinnedDefault: true,
 	projectHideNestedDocs: true,
+	recentDashboardFiles: [],
 };
 
 export interface QuoteItem {
@@ -248,6 +250,7 @@ export interface RenderCallbacks {
 	onFileDrop(cardId: string, filePath: string): void;
 	onProjectItemReorder(cardId: string, fromIndex: number, toIndex: number): void;
 	onProjectItemMoveToCard(srcCardId: string, itemIndex: number, destCardId: string, destIndex: number): void;
+	onProjectGroupAdd(columnName: string, title: string): void;
 	onColumnRename(oldName: string, newName: string): void;
 	onColumnDelete(columnName: string): void;
 	onColumnSectionTypeChange(columnName: string, sectionType: string): void;

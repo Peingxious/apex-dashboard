@@ -52,7 +52,6 @@ export function serialize(data: DashboardData): string {
 	const lines: string[] = [];
 
 	lines.push('---');
-	lines.push('dashboard: true');
 
 	lines.push('banner:');
 	if (data.banner.image) {
