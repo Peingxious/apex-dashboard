@@ -1,11 +1,9 @@
-import { Plugin, moment, Notice, TFile, WorkspaceLeaf } from 'obsidian';
+import { Plugin, moment, Notice, TFile } from 'obsidian';
 import { DashboardSettings, DEFAULT_SETTINGS } from './types';
 import { DashboardView, DASHBOARD_VIEW_TYPE } from './view';
 import { DashboardSettingTab } from './settings';
 import { SidebarView, SIDEBAR_VIEW_TYPE } from './sidebar-view';
-import { NoteDashboardView, NOTE_DASHBOARD_VIEW_TYPE } from './note-dashboard-view';
 import { setLanguage, t, type Language } from './i18n';
-import { parse } from './parser';
 
 export default class DashboardPlugin extends Plugin {
 	settings: DashboardSettings;
@@ -35,31 +33,6 @@ export default class DashboardPlugin extends Plugin {
 			SIDEBAR_VIEW_TYPE,
 			(leaf) => new SidebarView(leaf, this)
 		);
-
-		// Register the note-level dashboard view (any note with columns frontmatter)
-		this.registerView(
-			NOTE_DASHBOARD_VIEW_TYPE,
-			(leaf) => new NoteDashboardView(leaf, this)
-		);
-
-		// Auto-detect dashboard notes on file open
-		this.registerEvent(this.app.workspace.on('active-leaf-change', async (leaf) => {
-			if (!leaf) return;
-			const file = leaf.getViewState();
-			// Only intercept markdown views
-			if (file.type !== 'markdown' || !file.state?.file) return;
-
-			const notePath = file.state.file as string;
-			const tfile = this.app.vault.getAbstractFileByPath(notePath);
-			if (!(tfile instanceof TFile)) return;
-
-			// Check if this note has columns frontmatter (dashboard note)
-			const isDashboardNote = await this.isDashboardNote(notePath);
-			if (isDashboardNote && leaf.getViewType() !== NOTE_DASHBOARD_VIEW_TYPE) {
-				// Open in note dashboard view instead
-				await this.openNoteAsDashboard(notePath);
-			}
-		}));
 
 		// Add settings tab
 		this.addSettingTab(new DashboardSettingTab(this.app, this));
@@ -385,77 +358,6 @@ export default class DashboardPlugin extends Plugin {
 			}
 		}
 
-		// Close note dashboard views for this file
-		const ndLeaves = this.app.workspace.getLeavesOfType(NOTE_DASHBOARD_VIEW_TYPE);
-		for (const leaf of ndLeaves) {
-			const view = leaf.view as NoteDashboardView;
-			const state = leaf.getViewState() as { state?: { notePath?: string } };
-			if (state?.state?.notePath === notePath) {
-				await this.app.workspace.closeLeaf(leaf);
-			}
-		}
-	}
-
-	/**
-	 * Check if a markdown file has columns frontmatter (identifies as dashboard note).
-	 */
-	async isDashboardNote(notePath: string): Promise<boolean> {
-		const file = this.app.vault.getAbstractFileByPath(notePath);
-		if (!(file instanceof TFile) || !file.path.endsWith('.md')) return false;
-
-		try {
-			const content = await this.app.vault.read(file);
-			const trimmed = content.trimStart();
-			if (!trimmed.startsWith('---')) return false;
-
-			const endIdx = trimmed.indexOf('---', 3);
-			if (endIdx === -1) return false;
-
-			const yaml = trimmed.slice(3, endIdx);
-			return yaml.includes('columns:');
-		} catch {
-			return false;
-		}
-	}
-
-	/**
-	 * Open a note as a full-page Dashboard view.
-	 * Creates or reuses a NoteDashboardView leaf and loads the note data.
-	 */
-	async openNoteAsDashboard(notePath: string): Promise<void> {
-		const { workspace } = this.app;
-
-		// Record to recent dashboard files (persisted in settings)
-		const recent = this.settings.recentDashboardFiles || [];
-		const filtered = recent.filter(p => p !== notePath);
-		filtered.unshift(notePath);
-		this.settings.recentDashboardFiles = filtered.slice(0, 10); // keep max 10
-		await this.saveSettings();
-
-		// Check if already open in a note-dashboard view
-		const existingLeaves = workspace.getLeavesOfType(NOTE_DASHBOARD_VIEW_TYPE);
-		for (const leaf of existingLeaves) {
-			const state = leaf.getViewState() as { state?: { notePath?: string } };
-			if (state?.state?.notePath === notePath) {
-				workspace.revealLeaf(leaf);
-				return;
-			}
-		}
-
-		// Create new leaf with the note dashboard view
-		const leaf = workspace.getLeaf('tab');
-		await leaf.setViewState({
-			type: NOTE_DASHBOARD_VIEW_TYPE,
-			active: true,
-			state: { notePath },
-		});
-		workspace.revealLeaf(leaf);
-
-		// Initialize the view with the note path
-		const view = leaf.view as NoteDashboardView;
-		if (view.setNotePath) {
-			await view.setNotePath(notePath);
-		}
 	}
 
 	/**
@@ -475,38 +377,5 @@ export default class DashboardPlugin extends Plugin {
 		// Embed the note into the dashboard
 		const view = leaf.view as DashboardView;
 		await view.embedNoteDashboard(notePath);
-	}
-
-	/**
-	 * Convert a note's headings to dashboard columns, then open it as
-	 * a full-page dashboard (instead of just sidebar overlay).
-	 */
-	async convertNoteToDashboardPage(notePath: string): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(notePath);
-		if (!(file instanceof TFile) || !file.path.endsWith('.md')) {
-			new Notice(t('noteDash.onlyMarkdown'));
-			return;
-		}
-
-		const content = await this.app.vault.read(file);
-		const noteName = file.basename;
-		const headings = this.extractH2Headings(content, noteName);
-
-		if (headings.length === 0) {
-			new Notice(t('sidebar.noHeadings'));
-			return;
-		}
-
-		// Build the new frontmatter with columns
-		const newFrontmatter = this.buildColumnFrontmatter(headings);
-		const newContent = this.injectFrontmatter(content, newFrontmatter);
-
-		// Write back to file
-		await this.app.vault.modify(file, newContent);
-
-		new Notice(t('sidebar.converted', { count: headings.length }));
-
-		// Open as full-page dashboard (not sidebar overlay)
-		await this.openNoteAsDashboard(notePath);
 	}
 }

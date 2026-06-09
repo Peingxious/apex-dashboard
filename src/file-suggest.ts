@@ -8,9 +8,15 @@ export interface FileSuggestHandle {
 /**
  * Attach a file search suggest dropdown to an input element.
  * Shows a dropdown with vault files, positioned right below the input.
+ *
+ * @param onPick  Optional: called immediately when user picks a suggestion item.
+ *                If provided, the picked value is NOT written into input —
+ *                the caller handles the action (e.g. adding a note).
+ *                If omitted, behaviour falls back to filling input (legacy).
  */
-export function attachFileSuggest(el: HTMLElement, app: App): FileSuggestHandle {
+export function attachFileSuggest(el: HTMLElement, app: App, onPick?: (value: string) => void): FileSuggestHandle {
 	let active = false;
+	let selecting = false; // Lock: prevent re-open after user picks an item
 	const input = el as HTMLInputElement;
 	let modal: FileSuggestModal | null = null;
 
@@ -19,10 +25,12 @@ export function attachFileSuggest(el: HTMLElement, app: App): FileSuggestHandle 
 			close();
 			return;
 		}
+		if (selecting) return;
 		open();
 	});
 
 	input.addEventListener('focus', () => {
+		if (selecting) return;
 		if (input.value.trim()) open();
 	});
 
@@ -49,14 +57,29 @@ export function attachFileSuggest(el: HTMLElement, app: App): FileSuggestHandle 
 	function open() {
 		close();
 		active = true;
+		selecting = false;
 		modal = new FileSuggestModal(app, (path) => {
-			input.value = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
-			input.dispatchEvent(new Event('input', { bubbles: true }));
-			close();
-			input.focus();
+			const value = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
+			if (onPick) {
+				// Caller handles the action directly (e.g. add note)
+				onPick(value);
+				input.value = '';
+				close();
+			} else {
+				// Legacy: fill input, let caller's Enter handler submit
+				selecting = true; // Lock: suppress input→open() re-trigger
+				input.value = value;
+				input.dispatchEvent(new Event('input', { bubbles: true }));
+				close();
+				requestAnimationFrame(() => { selecting = false; });
+			}
+		});
+		modal.setOnExternalClose(() => {
+			active = false;
+			selecting = true; // Block focus from reopening
+			requestAnimationFrame(() => { selecting = false; });
 		});
 		modal.open(input.value);
-		positionDropdown();
 	}
 
 	function close() {
@@ -70,9 +93,22 @@ export function attachFileSuggest(el: HTMLElement, app: App): FileSuggestHandle 
 	function positionDropdown() {
 		if (!modal) return;
 		const container = modal.containerEl.querySelector('.modal-container') as HTMLElement;
+		const bg = modal.containerEl.querySelector('.modal-bg') as HTMLElement;
 		if (!container) return;
 
 		const rect = input.getBoundingClientRect();
+
+		// Hide backdrop — inline dropdown, not full-screen modal
+		if (bg) {
+			bg.style.display = 'none';
+		}
+
+		// Hide close button — user closes via Escape/blur/pick, not X
+		const closeBtn = container.querySelector('.modal-close-button') as HTMLElement;
+		if (closeBtn) {
+			closeBtn.style.display = 'none';
+		}
+
 		container.style.position = 'fixed';
 		container.style.top = `${rect.bottom + 4}px`;
 		container.style.left = `${rect.left}px`;
@@ -90,11 +126,26 @@ export function attachFileSuggest(el: HTMLElement, app: App): FileSuggestHandle 
 class FileSuggestModal extends FuzzySuggestModal<TFile> {
 	private onSelect: (path: string) => void;
 	private queryValue: string = '';
+	private onExternalClose?: () => void;
 
 	constructor(app: App, onSelect: (path: string) => void) {
 		super(app);
 		this.onSelect = onSelect;
 		this.setPlaceholder('Search files...');
+	}
+
+	setOnExternalClose(fn: () => void) {
+		this.onExternalClose = fn;
+	}
+
+	onOpen() {
+		super.onOpen();
+		positionDropdown();
+	}
+
+	override onClose() {
+		this.onExternalClose?.();
+		super.onClose();
 	}
 
 	open(query?: string) {

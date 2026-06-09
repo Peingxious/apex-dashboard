@@ -1957,6 +1957,7 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	el.dataset.cardType = card.type;
 	el.setAttribute('role', 'article');
 	el.setAttribute('aria-label', card.title);
+	el.setAttribute('draggable', 'true');
 
 	if (card.color) {
 		el.dataset.hasColor = 'true';
@@ -1980,7 +1981,6 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 	}
 
 	const header = el.createDiv({ cls: 'dashboard-card-header' });
-	header.setAttribute('draggable', 'true');
 
 	// Mobile: tap header to toggle card action buttons
 	header.addEventListener('touchstart', () => {
@@ -2609,47 +2609,6 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 		//   Each depth-0 line is a draggable item showing title + child count
 		//   depth>=1 sub-items are hidden, counted as "+N"
 		//   Items can be reordered within a card or dragged between project cards
-		if (!card.body) return;
-
-		const lines = card.body.split('\n');
-
-		// Collect title info
-		interface TitleInfo { cleanText: string; childCount: number; }
-		const titles: TitleInfo[] = [];
-
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i]!;
-			if (!line.trim()) continue;
-			const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
-			if (depth !== 0) continue;
-
-			let cleanText = line.replace(/^\t*/, '');
-			if (cleanText.startsWith('- ')) cleanText = cleanText.slice(2);
-			titles.push({ cleanText, childCount: 0 });
-		}
-
-		// Calculate child counts
-		{
-			let titleIdx = 0;
-			let inlineCount = 0;
-			for (let i = 0; i < lines.length; i++) {
-				const line = lines[i]!;
-				if (!line.trim()) continue;
-				const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
-				if (depth === 0) {
-					if (titleIdx > 0 && titles[titleIdx - 1]) {
-						titles[titleIdx - 1]!.childCount = inlineCount;
-					}
-					titleIdx++;
-					inlineCount = 0;
-				} else if (titleIdx > 0) {
-					inlineCount++;
-				}
-			}
-			if (titleIdx > 0 && titles[titleIdx - 1]) {
-				titles[titleIdx - 1]!.childCount = inlineCount;
-			}
-		}
 
 		const list = container.createDiv({ cls: 'dashboard-project-list' });
 		list.dataset.cardId = card.id;
@@ -2657,7 +2616,7 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 		// Empty-list drop target for moving items in from other cards
 		list.addEventListener('dragover', (e) => {
 			if (!projectItemDragSource) return;
-			if (projectItemDragSource.cardId === card.id && titles.length > 0) return;
+			if (projectItemDragSource.cardId === card.id) return;
 			e.preventDefault();
 			if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
 			list.addClass('dashboard-task-list--drop-target');
@@ -2677,9 +2636,54 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 				projectItemDragSource.cardId,
 				projectItemDragSource.itemIndex,
 				card.id,
-				titles.length,
+				0,
 			);
 		});
+
+		if (card.body) {
+
+		const lines = card.body.split('\n');
+
+		// Collect title info and child items
+		interface TitleInfo { cleanText: string; childCount: number; children: string[] }
+		const titles: TitleInfo[] = [];
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i]!;
+			if (!line.trim()) continue;
+			const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
+			if (depth !== 0) continue;
+
+			let cleanText = line.replace(/^\t*/, '');
+			if (cleanText.startsWith('- ')) cleanText = cleanText.slice(2);
+			titles.push({ cleanText, childCount: 0, children: [] });
+		}
+
+		// Calculate child counts and collect child text
+		{
+			let titleIdx = 0;
+			let inlineCount = 0;
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i]!;
+				if (!line.trim()) continue;
+				const depth = (line.match(/^(\t*)/)?.[1]?.length ?? 0);
+				if (depth === 0) {
+					if (titleIdx > 0 && titles[titleIdx - 1]) {
+						titles[titleIdx - 1]!.childCount = inlineCount;
+					}
+					titleIdx++;
+					inlineCount = 0;
+				} else if (titleIdx > 0) {
+					inlineCount++;
+					let childText = line.replace(/^\t*/, '');
+					if (childText.startsWith('- ')) childText = childText.slice(2);
+					titles[titleIdx - 1]!.children.push(childText);
+				}
+			}
+			if (titleIdx > 0 && titles[titleIdx - 1]) {
+				titles[titleIdx - 1]!.childCount = inlineCount;
+			}
+		}
 
 		titles.forEach((title, index) => {
 			const item = list.createDiv({ cls: 'dashboard-project-item' });
@@ -2695,10 +2699,21 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 			const titleSpan = item.createSpan({ cls: 'dashboard-project-item-title' });
 			renderTextWithLinks(titleSpan, title.cleanText, app);
 
-			// Child count badge
+			// Child count badge (keep for drag hint)
 			if (title.childCount > 0) {
 				const countEl = item.createSpan({ cls: 'dashboard-project-child-count' });
 				countEl.setText(`+${title.childCount}`);
+			}
+
+			// Render child items as indented sub-list with "- " prefix
+			if (title.children.length > 0) {
+				const childList = list.createDiv({ cls: 'dashboard-project-children' });
+				for (const childText of title.children) {
+					const childEl = childList.createDiv({ cls: 'dashboard-project-child-item' });
+					const prefix = childEl.createSpan({ cls: 'dashboard-project-child-prefix', text: '- ' });
+					const childContent = childEl.createSpan({ cls: 'dashboard-project-child-text' });
+					renderTextWithLinks(childContent, childText, app);
+				}
 			}
 
 			// ----- Drag events -----
@@ -2754,6 +2769,7 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 				}
 			});
 		});
+		} // end if (card.body)
 
 	// Add note input row (inline, with file search suggest - same style as todo's add-task)
 	const addRow = container.createDiv({ cls: 'dashboard-task-add' });
@@ -2761,7 +2777,9 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 		cls: 'dashboard-task-input',
 		attr: { type: 'text', placeholder: t('renderer.addNote') },
 	});
-	const fileSuggest = attachFileSuggest(input, app);
+	const fileSuggest = attachFileSuggest(input, app, (value) => {
+		callbacks.onProjectDocsAdd(card, value);
+	});
 	input.addEventListener('keydown', (e) => {
 		if (fileSuggest.isActive()) return;
 		if (e.key === 'Enter' && input.value.trim()) {

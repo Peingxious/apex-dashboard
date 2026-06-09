@@ -32,7 +32,10 @@ export interface DashboardSettings {
 	taskTemplates: TaskTemplate[];
 	sidebarPinnedDefault: boolean;
 	projectHideNestedDocs: boolean;
-	recentDashboardFiles: string[];
+	/** List of note paths opened as tabs in the workspace dashboard */
+	embeddedNoteTabs: string[];
+	/** Currently active tab path (null = main dashboard) */
+	activeEmbeddedNoteTab: string | null;
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -67,7 +70,8 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
 	taskTemplates: [],
 	sidebarPinnedDefault: true,
 	projectHideNestedDocs: true,
-	recentDashboardFiles: [],
+	embeddedNoteTabs: [],
+	activeEmbeddedNoteTab: null,
 };
 
 export interface QuoteItem {

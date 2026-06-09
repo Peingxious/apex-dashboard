@@ -52,11 +52,21 @@ export class DashboardView extends ItemView {
 	private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
 	private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
-	// Embedded note dashboard mode
-	private embeddedNotePath: string | null = null;
+	// Embedded note dashboard mode (tabs persisted in plugin.settings)
 	private embeddedData: DashboardData | null = null;
 	private embeddedDataCache = new Map<string, DashboardData>();
-	private lastEmbeddedPath: string | null = null;
+
+	/** Get current active tab path from settings */
+	get embeddedNotePath(): string | null {
+		return this.plugin.settings.activeEmbeddedNoteTab ?? null;
+	}
+
+	/** Set active tab path in settings */
+	set embeddedNotePath(path: string | null) {
+		this.plugin.settings.activeEmbeddedNoteTab = path;
+		// Persist to disk so it survives reload
+		this.plugin.saveSettings();
+	}
 
 	constructor(leaf: WorkspaceLeaf, plugin: DashboardPlugin) {
 		super(leaf);
@@ -96,6 +106,12 @@ export class DashboardView extends ItemView {
 			const currentData = this.sync.getData();
 			if (currentData) this.render(currentData);
 		});
+
+		// Restore last active embedded note tab if any
+		const savedTab = this.plugin.settings.activeEmbeddedNoteTab;
+		if (savedTab) {
+			this.reenterEmbeddedMode(savedTab);
+		}
 	}
 
 	async onClose(): Promise<void> {
@@ -296,7 +312,7 @@ export class DashboardView extends ItemView {
 		// Left group: tabs
 		const leftGroup = navBar.createDiv({ cls: 'dashboard-view-nav-left' });
 
-		// "Main Dashboard" tab
+		// "Main Dashboard" tab (home)
 		const mainTab = leftGroup.createEl('button', {
 			cls: 'dashboard-view-nav-tab' + (!this.embeddedNotePath ? ' dashboard-view-nav-tab--active' : ''),
 			text: t('main.dashboard'),
@@ -306,23 +322,31 @@ export class DashboardView extends ItemView {
 			this.exitEmbeddedMode();
 		});
 
-		// Current embedded note tab (if in embedded mode or was recently opened)
-		const activeNotePath = this.embeddedNotePath ?? this.lastEmbeddedPath;
-		if (activeNotePath) {
-			const noteName = activeNotePath.split('/').pop() ?? activeNotePath;
-			const isActive = !!this.embeddedNotePath;
-			const curTab = leftGroup.createEl('button', {
-				cls: 'dashboard-view-nav-tab' + (isActive ? ' dashboard-view-nav-tab--active' : ''),
-				text: noteName,
-				attr: { title: activeNotePath },
+		// Embedded note tabs from settings
+		const tabPaths = this.plugin.settings.embeddedNoteTabs ?? [];
+		for (const notePath of tabPaths) {
+			const noteName = notePath.split('/').pop() ?? notePath;
+			const isActive = this.embeddedNotePath === notePath;
+
+			const tabEl = leftGroup.createDiv({
+				cls: 'dashboard-view-nav-tab-wrap' + (isActive ? ' dashboard-view-nav-tab--active' : ''),
+				attr: { title: notePath },
 			});
-			setIcon(curTab, 'file-code', 'before');
-			curTab.addEventListener('click', async () => {
-				if (!this.embeddedNotePath && this.lastEmbeddedPath) {
-					await this.reenterEmbeddedMode(this.lastEmbeddedPath);
-				} else {
-					this.app.workspace.revealLeaf(this.leaf);
+
+			const btn = tabEl.createEl('button', { cls: 'dashboard-view-nav-tab', text: noteName });
+			setIcon(btn, 'file-code', 'before');
+			btn.addEventListener('click', async () => {
+				if (!isActive) {
+					await this.embedNoteDashboard(notePath);
 				}
+			});
+
+			// Close button
+			const closeBtn = tabEl.createEl('button', { cls: 'dashboard-view-nav-tab-close' });
+			setIcon(closeBtn, 'x');
+			closeBtn.addEventListener('click', async (e) => {
+				e.stopPropagation();
+				await this.closeNoteTab(notePath);
 			});
 		}
 
@@ -452,7 +476,13 @@ export class DashboardView extends ItemView {
 			const content = await this.app.vault.read(file);
 			this.embeddedData = parse(content);
 			this.embeddedNotePath = notePath;
-			this.lastEmbeddedPath = notePath;
+			// Add to persisted tabs list if not already there
+			const tabs = this.plugin.settings.embeddedNoteTabs ?? [];
+			if (!tabs.includes(notePath)) {
+				tabs.push(notePath);
+				this.plugin.settings.embeddedNoteTabs = tabs;
+				this.plugin.saveSettings();
+			}
 			// Update cache
 			this.embeddedDataCache.set(notePath, this.embeddedData);
 
@@ -467,6 +497,24 @@ export class DashboardView extends ItemView {
 			console.error('[apex-dashboard] Error loading note:', err);
 			new Notice(t('noteDash.loadError'));
 		}
+	}
+
+	/** Close a note tab from the navigation bar */
+	async closeNoteTab(notePath: string): Promise<void> {
+		const tabs = (this.plugin.settings.embeddedNoteTabs ?? []).filter(p => p !== notePath);
+		this.plugin.settings.embeddedNoteTabs = tabs;
+
+		// If closing the active tab, switch to main dashboard
+		if (this.plugin.settings.activeEmbeddedNoteTab === notePath) {
+			this.plugin.settings.activeEmbeddedNoteTab = null;
+			this.embeddedData = null;
+			const root = this.containerEl.children[1] as HTMLElement;
+			root?.removeClass('apex-note-dashboard-root');
+			const currentData = this.sync.getData();
+			if (currentData) this.render(currentData);
+		}
+
+		await this.plugin.saveSettings();
 	}
 
 	/** Re-enter embedded mode from cached data */
@@ -496,19 +544,21 @@ export class DashboardView extends ItemView {
 		root?.addClass('apex-note-dashboard-root');
 	}
 
-	/** Exit embedded mode, return to main dashboard (keep data cached) */
+	/** Exit embedded mode, return to main dashboard (keep tabs intact) */
 	private exitEmbeddedMode(): void {
-		if (!this.embeddedNotePath) return;
-		this.lastEmbeddedPath = this.embeddedNotePath;
-		this.embeddedNotePath = null;
+		if (!this.plugin.settings.activeEmbeddedNoteTab) return;
+		this.plugin.settings.activeEmbeddedNoteTab = null;
 		this.embeddedData = null;
-		// Keep cache intact — do NOT clear it
+		// Keep cache and tabs intact — do NOT clear them
 
 		const root = this.containerEl.children[1] as HTMLElement;
 		root?.removeClass('apex-note-dashboard-root');
 
 		const currentData = this.sync.getData();
 		if (currentData) this.render(currentData);
+
+		// Persist the tab state change
+		this.plugin.saveSettings();
 	}
 
 	/** Create callbacks for embedded note mode (save changes back to note) */
