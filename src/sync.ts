@@ -867,6 +867,19 @@ export class SyncEngine {
             if (depth === 0) break;
             endIdx++;
           }
+          // Capture the wikilink path of the line we are about to
+          // remove so we can mirror the deletion into projectDocs.
+          // Without this, an in-memory projectDocs array can resurrect
+          // the item on the next render (when card.body is empty,
+          // the renderer falls back to projectDocs as the source of
+          // truth). This was the "delete the last item and it comes
+          // back" symptom.
+          const removedPath = (() => {
+            const raw = (lines[startIdx] ?? "").replace(/^\t+/, "");
+            const m = raw.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
+            if (!m || !m[1]) return undefined;
+            return pathToWikiLink(m[1]).slice(2, -2);
+          })();
           lines.splice(startIdx, endIdx - startIdx);
           // Normalize: drop any trailing empty lines that the splice
           // may have introduced so the body stays compact.
@@ -874,7 +887,61 @@ export class SyncEngine {
             lines.pop();
           }
           const body = lines.join("\n");
-          return { ...card, body };
+
+          // Mirror the removal into projectDocs so the two data
+          // sources stay in sync. We try the captured wikilink path
+          // first, then fall back to the index-based position.
+          type DocEntry = { path: string; children?: unknown[] } | string;
+          let nextProjectDocs: DocEntry[] | undefined = (
+            card as {
+              projectDocs?: DocEntry[];
+            }
+          ).projectDocs;
+          if (Array.isArray(nextProjectDocs) && nextProjectDocs.length > 0) {
+            let dropIdx = -1;
+            if (removedPath) {
+              const target = removedPath.trim();
+              dropIdx = nextProjectDocs.findIndex((d) => {
+                const p = typeof d === "string" ? d : d?.path;
+                return (
+                  typeof p === "string" &&
+                  pathToWikiLink(p).slice(2, -2) === target
+                );
+              });
+            }
+            if (
+              dropIdx < 0 &&
+              itemIndex >= 0 &&
+              itemIndex < nextProjectDocs.length
+            ) {
+              dropIdx = itemIndex;
+            }
+            if (dropIdx >= 0) {
+              nextProjectDocs = nextProjectDocs.filter((_, i) => i !== dropIdx);
+            }
+          }
+
+          // Normalize projectDocs back to ProjectDocNode[] (the
+          // shape DashboardCard expects). If the source array held
+          // plain strings we promote them, matching the other sync
+          // helpers (addDocToCard etc.) which always store
+          // {path, children}.
+          const normalizedProjectDocs:
+            | import("./types").ProjectDocNode[]
+            | undefined = Array.isArray(nextProjectDocs)
+            ? nextProjectDocs.map((d) => ({
+                path: typeof d === "string" ? d : d.path,
+                children: [],
+              }))
+            : undefined;
+
+          return {
+            ...card,
+            body,
+            ...(normalizedProjectDocs
+              ? { projectDocs: normalizedProjectDocs }
+              : {}),
+          };
         }),
       })),
     };
@@ -1110,10 +1177,25 @@ export class SyncEngine {
       try {
         const current = await this.app.vault.read(fileRef);
 
-        // Safety: skip write if new content is drastically smaller
-        if (current.length > 0 && content.length < current.length * 0.3) {
+        // Safety: skip write if the new content is drastically smaller
+        // than the current file. The previous blanket 30% threshold was
+        // too aggressive — it blocked legitimate user actions like
+        // "delete the last project item from a small dashboard file"
+        // (the markdown shrinks but is still a valid dashboard),
+        // which manifested as "the item comes back on reload".
+        //
+        // The real risk this guard was trying to prevent is the banner
+        // image being lost (banner image data lives inside the markdown
+        // file as a base64 dataURL and a content reset would wipe it
+        // silently). So instead of a global size ratio, we compare the
+        // banner section of the new content against the banner section
+        // of the current file. If the banner is preserved, the user-
+        // visible content is allowed to shrink freely.
+        const newBannerLen = extractBannerSectionLength(content);
+        const currentBannerLen = extractBannerSectionLength(current);
+        if (currentBannerLen > 0 && newBannerLen < currentBannerLen * 0.5) {
           console.warn(
-            "Dashboard write skipped: new content significantly smaller than current file",
+            "Dashboard write skipped: banner image appears to have been lost (new banner section < 50% of current).",
           );
           return;
         }
@@ -1174,4 +1256,27 @@ function simpleHash(str: string): string {
     hash |= 0;
   }
   return hash.toString(36);
+}
+
+/**
+ * Extract the byte-length of the "banner:" YAML block of a serialized
+ * dashboard markdown file. The block starts at the first "banner:" token
+ * and ends at the next top-level "---" or "columns:" marker (whichever
+ * comes first). This is used by writeToDisk() to verify that the banner
+ * image data (base64 dataURL) survives a write without depending on the
+ * total file size — letting legitimate user deletions (e.g. removing the
+ * last project item) shrink the body freely while still guarding against
+ * accidentally wiping out the banner image.
+ */
+function extractBannerSectionLength(content: string): number {
+  const start = content.indexOf("\nbanner:");
+  const bannerStart = start >= 0 ? start + 1 : content.indexOf("banner:");
+  if (bannerStart < 0) return 0;
+  // Find the first top-level marker after banner — either "---" on its
+  // own line, or "columns:" (also top-level). YAML "image:" lines begin
+  // with two spaces, so they do not match.
+  const rest = content.slice(bannerStart);
+  const endMatch = rest.match(/\n---\n|\ncolumns:/);
+  if (!endMatch || endMatch.index === undefined) return rest.length;
+  return endMatch.index;
 }

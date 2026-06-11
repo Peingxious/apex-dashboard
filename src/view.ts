@@ -1040,14 +1040,23 @@ export class DashboardView extends ItemView {
         // Fallback: when the index-based lookup fails (e.g. body is
         // empty so the renderer read projectDocs), try to find the
         // first depth-0 line whose wikilink text matches itemPath.
+        // We strip the leading tabs from each line first so that
+        // lines which came back from parse() with a "\t- [[x]]" shape
+        // (parse() returns card.body with the bullet indent preserved
+        // as a leading tab) are also matched. Without this, the
+        // fallback never fires for a body that round-trips through
+        // parse+serialize, so deleting the last project item looks
+        // like a no-op.
         if (startIdx < 0 && itemPath) {
           const target = itemPath.trim();
           for (let i = 0; i < lines.length; i++) {
             const l = lines[i] ?? "";
             if (!l.trim()) continue;
-            const depth = l.match(/^(\t*)/)?.[1]?.length ?? 0;
-            if (depth !== 0) continue;
-            const m = l.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
+            // Strip leading tabs (parseCard may keep the indent on
+            // each body line) before extracting the wikilink target.
+            const stripped = l.replace(/^\t+/, "");
+            // Match either "- [[x]]" or a bare "[[x]]" link.
+            const m = stripped.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
             if (m && m[1] && pathToWikiLink(m[1]).slice(2, -2) === target) {
               startIdx = i;
               break;

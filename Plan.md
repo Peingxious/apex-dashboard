@@ -20,6 +20,53 @@
 5. [renderer.ts:TitleInfo](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3567) 新增 `path` 字段，捕获原始 wikilink target；删除按钮把 `title.path` 作为兜底标识传入
 6. [types.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L318) 接口扩展接受可选 `itemPath`
 
+## 修复 2026-06-12：删除最后一个 project item "删不掉 / 会恢复"
+
+**根因**：[sync.ts:writeToDisk](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1102) 内部有一个**全局 size check**：
+
+```ts
+if (current.length > 0 && content.length < current.length * 0.3) {
+  return; // 跳过写入
+}
+```
+
+当主 dashboard 文件本身较小（无 banner image, 仅几百 ~ 几 KB），删除最后一个 project item 后 `content.length < current.length * 0.3` 命中，写盘被跳过：
+
+1. `removeProjectItem` mutate `this.data.cards[i].body = ""`（in-memory 成功）
+2. `notifyCallbacks()` 立即触发 → `view.render(data)` 用最新 in-memory data 重新渲染，**UI 上看 item 消失了**
+3. 但 `writeQueue` 内 `vault.modify` 被 size check 跳过，**实际文件未更新**
+4. 用户切换 tab / 重启 Obsidian → 重新 parse 文件 → 旧 item **"恢复"**
+5. 用户尝试插入新项 → `addDocToCard` 在 mutate 后的空 body 上 append → 写盘 size check 仍不通过 → 文件仍是旧内容 → 旧 item + 新 item 都没正确落地
+
+**修复**：
+
+1. [sync.ts:writeToDisk](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1102) 把"全局 30% size check"替换为"**banner 段**长度对比"（[sync.ts:extractBannerSectionLength](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1207)）。当且仅当 banner image 段在新内容里被截断超过 50% 时才跳过写入
+2. 这保留了原始保护（防止 banner dataURL 在 mutate 中被意外清空），同时允许用户的合法删除操作（body 缩小）正常落盘
+3. 用户现在可以删除最后一个 item → 卡片变为空 project（body 留空）→ 文件正常写入 → 重新打开保持空状态
+
+---
+
+## 修复 2026-06-12（续）：最后一个 item 删除后"删不掉、添加新的才被覆盖"
+
+**根因**（banner check 修复后暴露的第二层 bug）：
+
+[sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L804) 之前**只更新 `body` 不更新 `projectDocs`**。流程：
+
+1. 用户点 × → `removeProjectItem` 把 `card.body` 改空（或去掉对应行）
+2. 内存 `card.projectDocs` 数组**没有同步删除**对应 entry
+3. `writeToDisk` 写盘成功（banner check 放行）
+4. **下一次渲染** 走 [renderer.ts:renderProjectBody](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3503)：
+   - `if (card.body)` → `body = ""` 为 falsy，**不进入 body 分支**
+   - 进入 `else if (Array.isArray(projectDocObjects) && projectDocObjects.length > 0 ...)` 分支，从 `card.projectDocs` 重新合成 lines
+   - `projectDocs` 没被清空 → **旧 item "复活"**
+5. 用户后续添加新 item → 走 `addDocToCard` 改 body → 写盘时 `serialize` 优先用 mutate 后的 body → 旧 item 因为 projectDocs 仍存在但 body 缺失，**在 add 时才被覆盖**
+
+**修复**：
+
+1. [sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L804) 在 splice body 行后**同步**清理 `card.projectDocs`：先按 wikilink path 匹配删除，失败则按 `itemIndex` 删除，最后 normalize 回 `ProjectDocNode[]`
+2. 嵌入视图的 [view.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1024) 已经有 `projectDocs` splice 逻辑（之前 path 匹配 + index 兜底）保持不动；其 path fallback 增加 leading-tab 剥离（defense-in-depth）以匹配 parseCard 可能带前导 tab 的 body 行
+3. 验证：现在删除最后一个 project item → 内存 `body` 与 `projectDocs` 同步清空 → 渲染走 body 分支（`body = ""` falsy）走 `projectDocs` 分支但都空 → 不渲染任何 item → 文件写入空 body → 重新打开保持空状态
+
 ---
 
 ## 当前状态概览
