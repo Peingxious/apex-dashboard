@@ -2,6 +2,24 @@
 
 > 目标与范围以 [Target.md](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/Target.md) 为准。
 
+## 修复 2026-06-12：删除最后一个 project 项会恢复
+
+**根因**：主工作台 body 写入在 [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts) 中使用了两种不同的格式：
+
+- `addDocToCard` 写入 `- [[x]]`（带 `- ` 前缀）
+- `reorderDocPaths` / `moveDocToCard` / `updateProjectDocs` / `removeProjectDoc` 写入 `[[x]]`（无 `- ` 前缀）
+
+当用户执行过任何 reorder/drag/delete 操作后，主工作台 body 会变成无前缀格式，渲染的 titles[] 索引在 `removeProjectItem` 的 index-based 查找过程中可能与预期的 body 行不匹配（尤其在最后一个项被删除时），导致 `startIdx < 0` 静默 return，**删除不生效**，看起来"恢复"。
+
+**修复**：
+
+1. [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts) 全部 5 个写入 body 的函数统一为 `- [[x]]` 格式，并对输入做兼容（同时识别 `- [[x]]` 和 `[[x]]` 两种格式）
+2. [sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L804) 增加可选 `itemPath` 参数，index 失败时回退到 wikilink 文本匹配
+3. [view.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1806) 主工作台 callback 透传 `itemPath`
+4. [view.ts:嵌入视图 onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1008) 同样支持 path 兜底，且 `projectDocs` splice 优先 path 匹配再 fallback index
+5. [renderer.ts:TitleInfo](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3567) 新增 `path` 字段，捕获原始 wikilink target；删除按钮把 `title.path` 作为兜底标识传入
+6. [types.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L318) 接口扩展接受可选 `itemPath`
+
 ---
 
 ## 当前状态概览

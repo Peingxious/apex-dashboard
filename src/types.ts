@@ -315,7 +315,7 @@ export interface RenderCallbacks {
     destCardId: string,
     destIndex: number,
   ): void;
-  onProjectItemDelete(cardId: string, itemIndex: number): void;
+  onProjectItemDelete(cardId: string, itemIndex: number, itemPath?: string): void;
   onProjectGroupAdd(columnName: string, title: string): void;
   onColumnRename(oldName: string, newName: string): void;
   onColumnDelete(columnName: string): void;

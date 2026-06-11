@@ -47,7 +47,7 @@ import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
 import { ReminderNoticeModal } from "./reminder-notice";
 import { t } from "./i18n";
-import { parse } from "./parser";
+import { parse, pathToWikiLink } from "./parser";
 
 export const DASHBOARD_VIEW_TYPE = "apex-dashboard-view";
 
@@ -885,7 +885,6 @@ export class DashboardView extends ItemView {
           // Use the shared pathToWikiLink helper so the stored wikilink
           // matches the format produced by serialize() — basename only,
           // no folder prefix, no ".md" extension.
-          const { pathToWikiLink } = await import("./parser");
           const newLine = `- ${pathToWikiLink(docPath)}`;
           found.card.body = found.card.body
             ? `${found.card.body}\n${newLine}`
@@ -970,9 +969,16 @@ export class DashboardView extends ItemView {
         const cardType = found.card.type;
         if (cardType === "weather" || cardType === "tracker") return;
         if (sectionType === "todo") {
-          found.card.tasks.push({ text: `[[${filePath}]]`, checked: false });
+          // Use the shared helper so the embedded todo link is written
+          // in the canonical wikilink form (basename only, no folder
+          // prefix, no ".md" suffix).
+          found.card.tasks.push({
+            text: pathToWikiLink(filePath),
+            checked: false,
+          });
         } else if (sectionType === "memo") {
-          found.card.body += (found.card.body ? "\n" : "") + `[[${filePath}]]`;
+          const link = pathToWikiLink(filePath);
+          found.card.body += (found.card.body ? "\n" : "") + link;
         } else {
           if (!found.card.projectDocs) found.card.projectDocs = [];
           found.card.projectDocs.push({ path: filePath, children: [] });
@@ -1006,7 +1012,11 @@ export class DashboardView extends ItemView {
           await self.saveEmbeddedAndRefresh();
         }
       },
-      onProjectItemDelete: async (cardId: string, itemIndex: number) => {
+      onProjectItemDelete: async (
+        cardId: string,
+        itemIndex: number,
+        itemPath?: string,
+      ) => {
         const found = self.findEmbeddedCard(cardId);
         if (!found) return;
         // Remove one top-level item from the card body (the line + its indented children)
@@ -1027,8 +1037,25 @@ export class DashboardView extends ItemView {
             topCount++;
           }
         }
+        // Fallback: when the index-based lookup fails (e.g. body is
+        // empty so the renderer read projectDocs), try to find the
+        // first depth-0 line whose wikilink text matches itemPath.
+        if (startIdx < 0 && itemPath) {
+          const target = itemPath.trim();
+          for (let i = 0; i < lines.length; i++) {
+            const l = lines[i] ?? "";
+            if (!l.trim()) continue;
+            const depth = l.match(/^(\t*)/)?.[1]?.length ?? 0;
+            if (depth !== 0) continue;
+            const m = l.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
+            if (m && m[1] && pathToWikiLink(m[1]).slice(2, -2) === target) {
+              startIdx = i;
+              break;
+            }
+          }
+        }
         if (startIdx < 0) {
-          // body has no top-level line at this index — fall through to
+          // body has no top-level line matching — fall through to
           // also try removing from projectDocs (in case it is the source
           // of truth).
         } else {
@@ -1045,14 +1072,33 @@ export class DashboardView extends ItemView {
             endIdx++;
           }
           lines.splice(startIdx, endIdx - startIdx);
-          found.card.body = lines.join("\n").replace(/^\n+|\n+$/g, "");
+          // Drop any trailing empty lines so the body stays compact.
+          while (lines.length > 0 && !lines[lines.length - 1]!.trim()) {
+            lines.pop();
+          }
+          found.card.body = lines.join("\n");
         }
-        // Also drop the matching index from projectDocs when it exists,
+        // Also drop the matching item from projectDocs when it exists,
         // so the renderer (which prefers projectDocs) stays in sync with
         // the saved body and the deleted item does not "come back".
+        // We prefer matching by path first, then fall back to index.
         const pd = (found.card as any).projectDocs;
-        if (Array.isArray(pd) && itemIndex >= 0 && itemIndex < pd.length) {
-          pd.splice(itemIndex, 1);
+        if (Array.isArray(pd)) {
+          let dropIdx = -1;
+          if (itemPath) {
+            const target = itemPath.trim();
+            dropIdx = pd.findIndex((d: any) => {
+              const p = typeof d === "string" ? d : d?.path;
+              return (
+                typeof p === "string" &&
+                pathToWikiLink(p).slice(2, -2) === target
+              );
+            });
+          }
+          if (dropIdx < 0 && itemIndex >= 0 && itemIndex < pd.length) {
+            dropIdx = itemIndex;
+          }
+          if (dropIdx >= 0) pd.splice(dropIdx, 1);
         }
         await self.saveEmbeddedAndRefresh();
       },
@@ -1229,7 +1275,10 @@ export class DashboardView extends ItemView {
         title: link.name,
         type: "project",
         column: colName,
-        body: `[[${link.path}]]`,
+        // Use the shared helper so the new project card's body is in
+        // the canonical wikilink form (basename only, no folder
+        // prefix, no ".md" suffix).
+        body: pathToWikiLink(link.path),
         tasks: [],
         url: "",
         wikiLink: "",
@@ -1800,8 +1849,11 @@ export class DashboardView extends ItemView {
           destCardId,
           destIndex,
         ),
-      onProjectItemDelete: (cardId: string, itemIndex: number) =>
-        this.sync.removeProjectItem(cardId, itemIndex),
+      onProjectItemDelete: (
+        cardId: string,
+        itemIndex: number,
+        itemPath?: string,
+      ) => this.sync.removeProjectItem(cardId, itemIndex, itemPath),
       onColumnRename: (oldName: string, newName: string) =>
         this.sync.renameColumn(oldName, newName),
       onColumnDelete: async (columnName: string) => {
@@ -1880,7 +1932,10 @@ export class DashboardView extends ItemView {
     }
     if (cardType === "weather" || cardType === "tracker") return;
     if (cardType === "task" || sectionType === "todo") {
-      this.sync.addTask(cardId, `[[${filePath}]]`);
+      // Use the shared helper so to-do tasks get the same canonical
+      // wikilink form as project items (basename only, no folder
+      // prefix, no ".md" suffix).
+      this.sync.addTask(cardId, pathToWikiLink(filePath));
     } else if (sectionType === "memo") {
       this.sync.addFileLinkToMemo(cardId, filePath);
     } else {

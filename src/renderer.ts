@@ -24,6 +24,7 @@ import { readTrackerData } from "./tracker-service";
 import type { PomodoroService } from "./pomodoro-service";
 import type { ReadingService } from "./reading-service";
 import { searchBooks, downloadCoverAsBlobUrl } from "./book-service";
+import { pathToWikiLink } from "./parser";
 import { activityColor } from "./pomodoro-service";
 import { renderSidebarLunarWidget } from "./lunar-widget";
 import type { HolidayInfo } from "./holiday-service";
@@ -3316,7 +3317,11 @@ function renderTaskBody(
     attr: { type: "text", placeholder: t("renderer.addTask") },
   });
   const taskSuggest = attachFileSuggest(input, app, (filePath) => {
-    callbacks.onTaskAdd(card.id, `[[${filePath}]]`);
+    // Use the shared pathToWikiLink helper so the inserted task is
+    // always the canonical wikilink form (basename only, no folder
+    // prefix, no ".md" suffix), matching the format used everywhere
+    // else (addDocToCard, project items, etc.).
+    callbacks.onTaskAdd(card.id, pathToWikiLink(filePath));
     input.value = "";
   });
   input.addEventListener("keydown", (e) => {
@@ -3566,6 +3571,7 @@ function renderProjectBody(
     // Collect title info and child items
     interface TitleInfo {
       cleanText: string;
+      path: string;
       childCount: number;
       children: string[];
     }
@@ -3579,7 +3585,12 @@ function renderProjectBody(
 
       let cleanText = line.replace(/^\t*/, "");
       if (cleanText.startsWith("- ")) cleanText = cleanText.slice(2);
-      titles.push({ cleanText, childCount: 0, children: [] });
+      // Capture the raw wikilink target so the per-item delete button
+      // can pass a stable identifier to the sync layer. When the body
+      // line has no [[...]] link, fall back to the cleaned text.
+      const pathMatch = line.match(/\[\[([^\]|]+)/);
+      const path = pathMatch && pathMatch[1] ? pathMatch[1] : cleanText;
+      titles.push({ cleanText, path, childCount: 0, children: [] });
     }
 
     // Calculate child counts and collect child text
@@ -3642,7 +3653,11 @@ function renderProjectBody(
       setIcon(delBtn, "x");
       delBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        callbacks.onProjectItemDelete(card.id, index);
+        // Pass both the index and the wikilink path so the sync
+        // layer can fall back to a text-based lookup when the
+        // index doesn't resolve (which would otherwise make the
+        // last item "come back" after deletion).
+        callbacks.onProjectItemDelete(card.id, index, title.path);
       });
 
       // Render child items as indented sub-list with "- " prefix
