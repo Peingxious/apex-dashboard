@@ -654,6 +654,49 @@ export class SyncEngine {
 		await this.writeToDisk();
 	}
 
+	/**
+	 * Remove a top-level project item (the line + its indented children) from
+	 * a card's body. Used by the dashboard project's per-item delete button.
+	 */
+	async removeProjectItem(cardId: string, itemIndex: number): Promise<void> {
+		if (!this.data) return;
+
+		this.data = {
+			...this.data,
+			columns: this.data.columns.map(col => ({
+				...col,
+				cards: col.cards.map(card => {
+					if (card.id !== cardId) return card;
+					const lines = (card.body ?? '').split('\n');
+					let topCount = 0;
+					let startIdx = -1;
+					for (let i = 0; i < lines.length; i++) {
+						const l = lines[i] ?? '';
+						if (!l.trim()) continue;
+						const depth = (l.match(/^(\t*)/)?.[1]?.length ?? 0);
+						if (depth === 0) {
+							if (topCount === itemIndex) { startIdx = i; break; }
+							topCount++;
+						}
+					}
+					if (startIdx < 0) return card;
+					let endIdx = startIdx + 1;
+					while (endIdx < lines.length) {
+						const l = lines[endIdx] ?? '';
+						if (!l.trim()) { endIdx++; continue; }
+						const depth = (l.match(/^(\t*)/)?.[1]?.length ?? 0);
+						if (depth === 0) break;
+						endIdx++;
+					}
+					lines.splice(startIdx, endIdx - startIdx);
+					const body = lines.join('\n').replace(/^\n+|\n+$/g, '');
+					return { ...card, body };
+				}),
+			})),
+		};
+		await this.writeToDisk();
+	}
+
 	async addFileLinkToMemo(cardId: string, filePath: string): Promise<void> {
 		if (!this.data) return;
 

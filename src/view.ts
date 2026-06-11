@@ -443,8 +443,21 @@ export class DashboardView extends ItemView {
   private async showColumnFilePicker(anchorEl: HTMLElement): Promise<void> {
     const mdFiles = this.app.vault.getMarkdownFiles();
     const columnFiles: TFile[] = [];
+    // Normalize the user-configured exclusion list for fast matching by path or basename
+    const excluded = (this.plugin.settings.excludedNotePaths ?? [])
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
 
     for (const f of mdFiles) {
+      // Skip files explicitly excluded from the picker
+      const lower = f.path.toLowerCase();
+      if (
+        excluded.some(
+          (x) =>
+            lower === x || lower === `${x}.md` || lower.endsWith(`/${x}.md`),
+        )
+      )
+        continue;
       try {
         const content = await this.app.vault.read(f);
         if (content.trimStart().startsWith("---")) {
@@ -475,16 +488,12 @@ export class DashboardView extends ItemView {
     const existing = root?.querySelector(".dashboard-nav-dropdown");
     if (existing) existing.remove();
 
-    // Append dropdown to root (not navBar) to avoid clipping
-    const dropdown = root.createDiv({ cls: "dashboard-nav-dropdown" });
-    dropdown.style.position = "fixed";
-    const btnRect = (
-      anchorEl.querySelector(".dashboard-view-nav-btn") as HTMLElement
-    )?.getBoundingClientRect();
-    if (btnRect) {
-      dropdown.style.top = `${btnRect.bottom}px`;
-      dropdown.style.right = `${window.innerWidth - btnRect.right}px`;
-    }
+    // Append dropdown to navBar so it's positioned relative to the button
+    const dropdown = anchorEl.createDiv({ cls: "dashboard-nav-dropdown" });
+    // Reset any inline styles — let CSS position it just below the button
+    dropdown.style.position = "";
+    dropdown.style.top = "";
+    dropdown.style.right = "";
     const list = dropdown.createDiv({ cls: "dashboard-nav-dropdown-list" });
 
     // Search input
@@ -868,6 +877,19 @@ export class DashboardView extends ItemView {
         if (found) {
           if (!found.card.projectDocs) found.card.projectDocs = [];
           found.card.projectDocs.push({ path: docPath, children: [] });
+          // Keep body in sync so the markdown round-trip preserves the
+          // new item even when body was non-empty (e.g. a hand-typed
+          // "- 12"). Without this, serialize() writes body verbatim
+          // and the new projectDocs item is lost on the next parse.
+          //
+          // Use the shared pathToWikiLink helper so the stored wikilink
+          // matches the format produced by serialize() — basename only,
+          // no folder prefix, no ".md" extension.
+          const { pathToWikiLink } = await import("./parser");
+          const newLine = `- ${pathToWikiLink(docPath)}`;
+          found.card.body = found.card.body
+            ? `${found.card.body}\n${newLine}`
+            : newLine;
           await self.saveEmbeddedAndRefresh();
         }
       },
@@ -983,6 +1005,56 @@ export class DashboardView extends ItemView {
           destFound.card.projectDocs.splice(destIndex, 0, item);
           await self.saveEmbeddedAndRefresh();
         }
+      },
+      onProjectItemDelete: async (cardId: string, itemIndex: number) => {
+        const found = self.findEmbeddedCard(cardId);
+        if (!found) return;
+        // Remove one top-level item from the card body (the line + its indented children)
+        const body = found.card.body ?? "";
+        const lines = body.split("\n");
+        // Find the nth top-level line index
+        let topCount = 0;
+        let startIdx = -1;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i] ?? "";
+          if (!line.trim()) continue;
+          const depth = line.match(/^(\t*)/)?.[1]?.length ?? 0;
+          if (depth === 0) {
+            if (topCount === itemIndex) {
+              startIdx = i;
+              break;
+            }
+            topCount++;
+          }
+        }
+        if (startIdx < 0) {
+          // body has no top-level line at this index — fall through to
+          // also try removing from projectDocs (in case it is the source
+          // of truth).
+        } else {
+          // Remove startIdx line + all subsequent lines that are more indented (children)
+          let endIdx = startIdx + 1;
+          while (endIdx < lines.length) {
+            const l = lines[endIdx] ?? "";
+            if (!l.trim()) {
+              endIdx++;
+              continue;
+            }
+            const depth = l.match(/^(\t*)/)?.[1]?.length ?? 0;
+            if (depth === 0) break;
+            endIdx++;
+          }
+          lines.splice(startIdx, endIdx - startIdx);
+          found.card.body = lines.join("\n").replace(/^\n+|\n+$/g, "");
+        }
+        // Also drop the matching index from projectDocs when it exists,
+        // so the renderer (which prefers projectDocs) stays in sync with
+        // the saved body and the deleted item does not "come back".
+        const pd = (found.card as any).projectDocs;
+        if (Array.isArray(pd) && itemIndex >= 0 && itemIndex < pd.length) {
+          pd.splice(itemIndex, 1);
+        }
+        await self.saveEmbeddedAndRefresh();
       },
       onColumnRename: async (oldName: string, newName: string) => {
         const col = self.embeddedData?.columns.find((c) => c.name === oldName);
@@ -1107,7 +1179,7 @@ export class DashboardView extends ItemView {
   private async saveEmbeddedAndRefresh(): Promise<void> {
     if (!this.embeddedData || !this.embeddedNotePath) return;
     const { serialize } = await import("./parser");
-    const newContent = serialize(this.embeddedData);
+    const newContent = serialize(this.embeddedData, this.app);
     this.embeddedDataCache.set(this.embeddedNotePath, this.embeddedData);
     const file = this.app.vault.getAbstractFileByPath(this.embeddedNotePath);
     if (file instanceof TFile) {
@@ -1728,6 +1800,8 @@ export class DashboardView extends ItemView {
           destCardId,
           destIndex,
         ),
+      onProjectItemDelete: (cardId: string, itemIndex: number) =>
+        this.sync.removeProjectItem(cardId, itemIndex),
       onColumnRename: (oldName: string, newName: string) =>
         this.sync.renameColumn(oldName, newName),
       onColumnDelete: async (columnName: string) => {

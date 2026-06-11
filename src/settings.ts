@@ -77,6 +77,24 @@ export class DashboardSettingTab extends PluginSettingTab {
 					this.plugin.refreshAllDashboards();
 				}));
 
+		new Setting(containerEl)
+			.setName(t('settings.excludedNotePaths'))
+			.setDesc(t('settings.excludedNotePathsDesc'))
+			.addText(text => text
+				.setPlaceholder('dashboard, area/workbench')
+				.setValue((this.plugin.settings.excludedNotePaths ?? []).join(', '))
+				.onChange(async (value) => {
+					const list = value
+						.split(',')
+						.map(s => s.trim())
+						.filter(Boolean);
+					this.plugin.settings = {
+						...this.plugin.settings,
+						excludedNotePaths: list,
+					};
+					await this.plugin.saveSettings();
+				}));
+
 		this.renderWidgetSettings(containerEl);
 
 		this.renderLunarSettings(containerEl);
