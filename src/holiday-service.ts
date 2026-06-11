@@ -1,14 +1,14 @@
 export type HolidayInfo = {
-    name: string;
-    date: string;
+	name: string;
+	date: string;
+	holiday?: boolean;
+	type?: number;
 };
 
-export async function fetchHolidayData(): Promise<HolidayInfo[]> {
-    // Stub: fetch holiday data
-    return [];
+export async function fetchHolidayData(_year: number): Promise<Record<string, HolidayInfo>> {
+	return {};
 }
 
-export function getHolidayForDate(date: string): HolidayInfo | null {
-    // Stub: get holiday for date
-    return null;
+export function getHolidayForDate(date: string, holidayData: Record<string, HolidayInfo>): HolidayInfo | null {
+	return holidayData[date] ?? null;
 }

@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"target": "ES2018",
+		"lib": ["DOM", "DOM.Iterable", "ES2020"],
+		"module": "ESNext",
+		"moduleResolution": "Node",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"noEmit": true,
+		"skipLibCheck": true,
+		"strict": false
+	},
+	"include": ["src/**/*.ts"]
+}

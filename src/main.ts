@@ -46,10 +46,12 @@ export default class DashboardPlugin extends Plugin {
 		this.addCommand({
 			id: 'open-dashboard',
 			name: t('command.openDashboard'),
-			hotkey: {
-				modifiers: ['Mod', 'Alt', 'Shift'],
-				key: 'Z',
-			},
+			hotkeys: [
+				{
+					modifiers: ['Mod', 'Alt', 'Shift'],
+					key: 'Z',
+				},
+			],
 			callback: () => {
 				this.activateView();
 			},
@@ -100,10 +102,12 @@ export default class DashboardPlugin extends Plugin {
 		this.addCommand({
 			id: 'embed-note-in-dashboard',
 			name: t('command.embedInDashboard'),
-			hotkey: {
-				modifiers: ['Mod', 'Alt'],
-				key: 'D',
-			},
+			hotkeys: [
+				{
+					modifiers: ['Mod', 'Alt'],
+					key: 'D',
+				},
+			],
 			checkCallback: (checking) => {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.extension === 'md') {
@@ -163,7 +167,7 @@ export default class DashboardPlugin extends Plugin {
 
 		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
 		if (!leaf) {
-			leaf = workspace.getLeaf('tab');
+			leaf = (workspace as unknown as { getLeaf: (...args: unknown[]) => typeof leaf }).getLeaf('tab') as typeof leaf;
 			await leaf.setViewState({ type: DASHBOARD_VIEW_TYPE, active: true });
 		}
 		workspace.revealLeaf(leaf);
@@ -175,7 +179,7 @@ export default class DashboardPlugin extends Plugin {
 		let leaf = workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE)[0];
 		if (!leaf) {
 			// Open in right sidebar
-			leaf = workspace.getLeaf('tab', 'right');
+			leaf = (workspace as unknown as { getLeaf: (...args: unknown[]) => typeof leaf }).getLeaf('tab', 'right') as typeof leaf;
 			await leaf.setViewState({ type: SIDEBAR_VIEW_TYPE, active: true });
 		}
 		workspace.revealLeaf(leaf);
@@ -186,7 +190,7 @@ export default class DashboardPlugin extends Plugin {
 		const { workspace } = this.app;
 		const existing = workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE)[0];
 		if (existing) {
-			await workspace.closeLeaf(existing);
+			existing.detach();
 		} else {
 			await this.activateSidebar();
 		}
@@ -203,7 +207,7 @@ export default class DashboardPlugin extends Plugin {
 		// Find or create an overlay leaf (using the right sidebar as container)
 		let leaf = workspace.getLeavesOfType(SIDEBAR_VIEW_TYPE)[0];
 		if (!leaf) {
-			leaf = workspace.getLeaf('tab', 'right');
+			leaf = (workspace as unknown as { getLeaf: (...args: unknown[]) => typeof leaf }).getLeaf('tab', 'right') as typeof leaf;
 			await leaf.setViewState({ type: SIDEBAR_VIEW_TYPE, active: true });
 		}
 		workspace.revealLeaf(leaf);
@@ -251,20 +255,15 @@ export default class DashboardPlugin extends Plugin {
 	private extractH2Headings(content: string, noteName: string): string[] {
 		const headings: string[] = [];
 		const lines = content.split('\n');
-		const selfRefPatterns = [
-			`# [[${noteName}]]`,
-			`# [[${noteName}|`,
-			noteName,
-		];
+		const selfRefExact = new Set([noteName, `[[${noteName}]]`]);
+		const selfRefPrefix = `[[${noteName}|`;
 
 		for (const line of lines) {
 			const trimmed = line.trim();
 			if (trimmed.startsWith('## ')) {
 				const heading = trimmed.slice(3).trim();
 				// Skip self-reference heading (file name self-embed)
-				const isSelfRef = selfRefPatterns.some(
-					(p) => heading === p || heading.startsWith(p)
-				);
+				const isSelfRef = selfRefExact.has(heading) || heading.startsWith(selfRefPrefix);
 				if (!isSelfRef) {
 					headings.push(heading);
 				}
@@ -369,7 +368,7 @@ export default class DashboardPlugin extends Plugin {
 		// Find or create the main dashboard view
 		let leaf = workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE)[0];
 		if (!leaf) {
-			leaf = workspace.getLeaf('tab');
+			leaf = (workspace as unknown as { getLeaf: (...args: unknown[]) => typeof leaf }).getLeaf('tab') as typeof leaf;
 			await leaf.setViewState({ type: DASHBOARD_VIEW_TYPE, active: true });
 		}
 		workspace.revealLeaf(leaf);

@@ -14,6 +14,7 @@ import { activityColor } from './pomodoro-service';
 import { renderSidebarLunarWidget } from './lunar-widget';
 import type { HolidayInfo } from './holiday-service';
 import { CountdownSettingsModal } from './countdown-modal';
+import { showConfirmDialog } from './confirm-dialog';
 import { Chart, LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip } from 'chart.js';
 
 Chart.register(LineController, LineElement, PointElement, BarController, BarElement, LinearScale, CategoryScale, Filler, Tooltip);
@@ -1359,7 +1360,7 @@ function openBookSearch(
 	manualBtn.addEventListener('click', () => {
 		const val = manualInput.value.trim();
 		if (val) {
-			onSelect({ title: val, author: '', coverUrl: '', isbn: '', source: 'manual', currentPage: 0, totalPages: 0, finished: false });
+			onSelect({ title: val, author: '', coverUrl: '', isbn: '', source: 'manual', currentPage: 0, totalPages: 0, finished: false, totalSeconds: 0, sessions: 0 });
 			close();
 		}
 	});
@@ -1420,7 +1421,7 @@ function openBookSearch(
 				item.addEventListener('click', () => {
 					onSelect({
 						title: book.title, author: book.author, coverUrl: book.coverUrl,
-						isbn: book.isbn, source: 'google', currentPage: 0, totalPages: 0, finished: false,
+						isbn: book.isbn, source: 'openlibrary', currentPage: 0, totalPages: 0, finished: false, totalSeconds: 0, sessions: 0,
 					});
 					close();
 				});
@@ -1993,18 +1994,15 @@ function renderCard(card: DashboardCard, columnName: string, sectionType: string
 		}
 	}, { passive: true });
 
-	console.log('[apex-dashboard] renderCard title, cardId:', card.id, 'cardType:', card.type, 'sectionType:', sectionType, 'title:', JSON.stringify(card.title), 'isProjectLike:', isProjectLike);
 	const titleEl = header.createEl('h4', { cls: 'dashboard-card-title' });
 	try {
 		renderTextWithLinks(titleEl, card.title, app);
-		console.log('[apex-dashboard] titleEl innerHTML after render:', titleEl.innerHTML, 'textContent:', titleEl.textContent, 'classList:', [...titleEl.classList]);
 		if (titleEl.querySelector('.dashboard-wikilink, .dashboard-external-link')) {
 			titleEl.addClass('dashboard-card-title--linked');
 		}
 	} catch (err) {
 		console.error('[apex-dashboard] title renderTextWithLinks FAILED:', err);
 		titleEl.setText(card.title);
-		console.log('[apex-dashboard] title fallback textContent:', titleEl.textContent);
 	}
 
 	const skipEditBtn = isMemo || isTask || (isWidget && isDashboardSection);
@@ -2457,9 +2455,15 @@ function renderTaskBody(container: HTMLElement, card: DashboardCard, callbacks: 
 		cls: 'dashboard-task-input',
 		attr: { type: 'text', placeholder: t('renderer.addTask') },
 	});
-	const taskSuggest = attachFileSuggest(input, app);
+	const taskSuggest = attachFileSuggest(input, app, (filePath) => {
+		callbacks.onTaskAdd(card.id, `[[${filePath}]]`);
+		input.value = '';
+	});
 	input.addEventListener('keydown', (e) => {
-		if (taskSuggest.isActive()) return;
+		if (e.key === 'Enter' && taskSuggest.tryPickSelection()) {
+			e.preventDefault();
+			return;
+		}
 		if (e.key === 'Enter' && input.value.trim()) {
 			callbacks.onTaskAdd(card.id, input.value.trim());
 			input.value = '';
@@ -2779,9 +2783,13 @@ function renderLinkBody(container: HTMLElement, card: DashboardCard): void {
 	});
 	const fileSuggest = attachFileSuggest(input, app, (value) => {
 		callbacks.onProjectDocsAdd(card, value);
+		input.value = '';
 	});
 	input.addEventListener('keydown', (e) => {
-		if (fileSuggest.isActive()) return;
+		if (e.key === 'Enter' && fileSuggest.tryPickSelection()) {
+			e.preventDefault();
+			return;
+		}
 		if (e.key === 'Enter' && input.value.trim()) {
 			callbacks.onProjectDocsAdd(card, input.value.trim());
 			input.value = '';
@@ -2821,32 +2829,25 @@ function getSectionType(column: DashboardColumn): string {
 }
 
 function renderTextWithLinks(container: HTMLElement, text: string, app: App): void {
-	console.log('[apex-dashboard] renderTextWithLinks called, text:', JSON.stringify(text));
 	const parts = text.split(/(\[\[[^\]]+?\]\]|\[[^\]]+\]\([^)]+\))/g);
-	console.log('[apex-dashboard] renderTextWithLinks parts:', parts);
 	for (const part of parts) {
 		const wikiMatch = part.match(/^\[\[([^\]]+)\]\]$/);
 		if (wikiMatch) {
-			console.log('[apex-dashboard] renderTextWithLinks wiki match, content:', wikiMatch[1]);
 			renderWikilink(container, wikiMatch[1]!, app);
 			continue;
 		}
 		const extMatch = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
 		if (extMatch) {
-			console.log('[apex-dashboard] renderTextWithLinks external match:', extMatch[1], extMatch[2]);
 			renderExternalLink(container, extMatch[1]!, extMatch[2]!);
 			continue;
 		}
 		if (part) {
-			console.log('[apex-dashboard] renderTextWithLinks text node:', JSON.stringify(part));
 			container.appendChild(document.createTextNode(part));
 		}
 	}
-	console.log('[apex-dashboard] renderTextWithLinks done, container innerHTML:', container.innerHTML);
 }
 
 function renderWikilink(container: HTMLElement, content: string, app: App): void {
-	console.log('[apex-dashboard] renderWikilink called, content:', JSON.stringify(content));
 	let alias: string | undefined;
 	let linkPart = content;
 
@@ -2854,7 +2855,6 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 	if (pipeIdx !== -1) {
 		alias = content.slice(pipeIdx + 1);
 		linkPart = content.slice(0, pipeIdx);
-		console.log('[apex-dashboard] renderWikilink alias detected:', alias, 'linkPart:', linkPart);
 	}
 
 	let path = linkPart;
@@ -2864,11 +2864,9 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 	if (hashIdx !== -1) {
 		path = linkPart.slice(0, hashIdx);
 		fragment = linkPart.slice(hashIdx + 1);
-		console.log('[apex-dashboard] renderWikilink fragment detected, path:', path, 'fragment:', fragment);
 	}
 
 	const noteName = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
-	console.log('[apex-dashboard] renderWikilink noteName:', noteName);
 	let displayName: string;
 	if (alias) {
 		displayName = alias;
@@ -2896,7 +2894,6 @@ function renderWikilink(container: HTMLElement, content: string, app: App): void
 			displayName = noteName;
 		}
 	}
-	console.log('[apex-dashboard] renderWikilink displayName:', displayName);
 
 	const link = container.createSpan({
 		cls: 'dashboard-wikilink',

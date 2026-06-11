@@ -1,4 +1,4 @@
-import { App, Modal, Setting } from 'obsidian';
+import { App, Modal, Setting, TFile } from 'obsidian';
 import type { BannerData } from './types';
 import { t } from './i18n';
 
@@ -16,7 +16,7 @@ export function resolveVaultImage(app: App, path: string): string | null {
 	}
 	try {
 		const file = app.vault.getAbstractFileByPath(path);
-		if (file) {
+		if (file instanceof TFile) {
 			return app.vault.getResourcePath(file);
 		}
 	} catch {

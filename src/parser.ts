@@ -742,7 +742,6 @@ function parseCardsFromBullets(content: string, columnName: string, sectionType:
 		// Only skip actual task checkbox lines: '- [x]' or '- [ ]'
 		const isTaskCheckbox = /^-\s+\[[ x]\]/.test(line);
 		if (line.startsWith('- ') && !line.startsWith('-\t') && !isTaskCheckbox && !line.startsWith('  - ')) {
-			console.log('[apex-dashboard] parseCardsFromBullets NEW CARD, line:', JSON.stringify(line), 'sectionType:', sectionType);
 			if (currentCard) {
 				cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName, sectionType));
 			}
@@ -785,7 +784,6 @@ function parseCardsFromBullets(content: string, columnName: string, sectionType:
 		cards.push(parseCard({ title: currentCard.title, body: currentCard.lines.join('\n').trim() }, columnName, sectionType));
 	}
 
-	console.log('[apex-dashboard] parseCardsFromBullets DONE, column:', columnName, 'sectionType:', sectionType, 'cardCount:', cards.length, 'cards:', cards.map(c => ({ id: c.id, title: c.title, type: c.type })));
 	return cards;
 }
 

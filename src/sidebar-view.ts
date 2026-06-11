@@ -1,6 +1,6 @@
 import { ItemView, WorkspaceLeaf, setIcon, Notice, TFile } from 'obsidian';
 import type DashboardPlugin from './main';
-import type { DashboardData, DashboardCard } from './types';
+import type { DashboardData, DashboardCard, CardSize } from './types';
 import { SyncEngine } from './sync';
 import { renderSidebarWidgets, renderSidebarWeekCalendar, renderDashboard, renderSidebarPomodoro, renderSidebarReading } from './renderer';
 import { loadHolidayData, renderSidebarLunarWidget } from './lunar-widget';
@@ -400,7 +400,7 @@ export class SidebarView extends ItemView {
 				const found = findCard(cardId);
 				if (found) { found.card.width = width; await saveAndRefresh(); }
 			},
-			onCardSizeChange: async (cardId: string, size: any) => {
+			onCardSizeChange: async (cardId: string, size: CardSize) => {
 				const found = findCard(cardId);
 				if (found) { found.card.size = size; await saveAndRefresh(); }
 			},

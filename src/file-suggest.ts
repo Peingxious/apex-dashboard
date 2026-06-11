@@ -1,8 +1,9 @@
-import { App, FuzzySuggestModal, TFile, TFolder } from 'obsidian';
+import { App, FuzzySuggestModal, TFile } from 'obsidian';
 
 export interface FileSuggestHandle {
 	isActive(): boolean;
 	close(): void;
+	tryPickSelection(): boolean;
 }
 
 /**
@@ -15,183 +16,211 @@ export interface FileSuggestHandle {
  *                If omitted, behaviour falls back to filling input (legacy).
  */
 export function attachFileSuggest(el: HTMLElement, app: App, onPick?: (value: string) => void): FileSuggestHandle {
+	const input = el as HTMLInputElement | HTMLTextAreaElement;
 	let active = false;
-	let selecting = false; // Lock: prevent re-open after user picks an item
-	const input = el as HTMLInputElement;
-	let modal: FileSuggestModal | null = null;
+	let dropdown: HTMLElement | null = null;
+	let items: TFile[] = [];
+	let selectedIndex = -1;
+	let lastQuery = '';
 
-	input.addEventListener('input', () => {
-		if (!input.value.trim()) {
+	const VAULT_FILE_EXTS = new Set(['md', 'pdf', 'canvas', 'base', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'bmp', 'mp3', 'mp4', 'm4a', 'm4b', 'mov', 'mkv', 'avi']);
+
+	const listFiles = () => {
+		return app.vault.getFiles()
+			.filter(f => !f.path.startsWith('.'))
+			.filter(f => VAULT_FILE_EXTS.has(f.extension));
+	};
+
+	const filterFiles = (q: string): TFile[] => {
+		const query = q.toLowerCase().trim();
+		if (!query) return [];
+
+		const files = listFiles();
+		const matched = files
+			.filter(f => f.path.toLowerCase().includes(query) || f.basename.toLowerCase().includes(query))
+			.slice(0, 20);
+		return matched;
+	};
+
+	const positionDropdown = () => {
+		if (!dropdown) return;
+		const rect = input.getBoundingClientRect();
+		dropdown.style.position = 'fixed';
+		dropdown.style.left = `${rect.left}px`;
+		dropdown.style.top = `${rect.bottom + 4}px`;
+		dropdown.style.width = `${Math.max(rect.width, 280)}px`;
+		dropdown.style.maxHeight = '260px';
+		dropdown.style.zIndex = '10000';
+	};
+
+	const render = () => {
+		if (!dropdown) return;
+		dropdown.empty();
+		const list = dropdown.createDiv({ cls: 'suggestion-container' });
+		for (let i = 0; i < items.length; i++) {
+			const f = items[i]!;
+			const row = list.createEl('button', {
+				cls: 'suggestion-item' + (i === selectedIndex ? ' is-selected' : ''),
+				attr: { type: 'button' },
+			});
+			const name = row.createDiv({ cls: 'suggestion-content', text: f.basename });
+			name.setAttribute('title', f.path);
+			row.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+			});
+			row.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				pick(f);
+			});
+		}
+	};
+
+	const open = () => {
+		if (active) return;
+		active = true;
+		dropdown = document.body.createDiv({ cls: 'dashboard-file-suggest' });
+		positionDropdown();
+
+		const onOutside = (ev: MouseEvent) => {
+			if (!dropdown) return;
+			if (dropdown.contains(ev.target as Node)) return;
+			if (ev.target === input) return;
+			close();
+		};
+		document.addEventListener('mousedown', onOutside);
+
+		const onReposition = () => positionDropdown();
+		window.addEventListener('resize', onReposition);
+		window.addEventListener('scroll', onReposition, true);
+
+		(dropdown as any).__cleanup = () => {
+			document.removeEventListener('mousedown', onOutside);
+			window.removeEventListener('resize', onReposition);
+			window.removeEventListener('scroll', onReposition, true);
+		};
+	};
+
+	const close = () => {
+		if (!active) return;
+		active = false;
+		selectedIndex = -1;
+		items = [];
+		lastQuery = '';
+		if (dropdown) {
+			(dropdown as any).__cleanup?.();
+			dropdown.remove();
+			dropdown = null;
+		}
+	};
+
+	const update = () => {
+		const q = input.value;
+		if (!q.trim()) {
 			close();
 			return;
 		}
-		if (selecting) return;
-		open();
-	});
 
-	input.addEventListener('focus', () => {
-		if (selecting) return;
-		if (input.value.trim()) open();
-	});
+		if (!active) open();
+		if (!dropdown) return;
+		positionDropdown();
 
+		if (q === lastQuery) return;
+		lastQuery = q;
+
+		items = filterFiles(q);
+		selectedIndex = items.length > 0 ? 0 : -1;
+		render();
+		if (items.length === 0) {
+			close();
+		}
+	};
+
+	const insertIntoTextarea = (text: string) => {
+		const ta = input as HTMLTextAreaElement;
+		const start = ta.selectionStart ?? ta.value.length;
+		const end = ta.selectionEnd ?? ta.value.length;
+		const before = ta.value.slice(0, start);
+		const after = ta.value.slice(end);
+		const next = before + text + after;
+		ta.value = next;
+		const caret = start + text.length;
+		ta.setSelectionRange(caret, caret);
+		ta.dispatchEvent(new Event('input', { bubbles: true }));
+	};
+
+	const pick = (file: TFile) => {
+		const path = file.path;
+		if (onPick) {
+			onPick(path);
+			close();
+			return;
+		}
+
+		const linkText = `[[${path}]]`;
+		if (input instanceof HTMLTextAreaElement) {
+			insertIntoTextarea(linkText);
+		} else {
+			input.value = linkText;
+			input.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+		close();
+	};
+
+	const moveSelection = (delta: number) => {
+		if (!active) return;
+		if (items.length === 0) return;
+		const next = Math.max(0, Math.min(items.length - 1, selectedIndex + delta));
+		if (next === selectedIndex) return;
+		selectedIndex = next;
+		render();
+		if (dropdown) {
+			const selected = dropdown.querySelector('.suggestion-item.is-selected') as HTMLElement | null;
+			selected?.scrollIntoView({ block: 'nearest' });
+		}
+	};
+
+	const tryPickSelection = () => {
+		if (!active) return false;
+		if (selectedIndex < 0 || selectedIndex >= items.length) return false;
+		const f = items[selectedIndex]!;
+		pick(f);
+		return true;
+	};
+
+	input.addEventListener('input', () => update());
+	input.addEventListener('focus', () => update());
 	input.addEventListener('blur', () => {
-		// Delay close so click on suggestion item can register
-		setTimeout(() => { if (active) close(); }, 150);
+		setTimeout(() => close(), 150);
 	});
 
-	input.addEventListener('keydown', (e) => {
-		if (!modal || !active) return;
+	input.addEventListener('keydown', (e: KeyboardEvent) => {
 		if (e.key === 'ArrowDown') {
+			if (!active) update();
+			if (!active) return;
 			e.preventDefault();
-			modal.selectNext();
+			moveSelection(1);
 		} else if (e.key === 'ArrowUp') {
+			if (!active) update();
+			if (!active) return;
 			e.preventDefault();
-			modal.selectPrev();
+			moveSelection(-1);
 		} else if (e.key === 'Escape') {
+			if (!active) return;
 			e.preventDefault();
 			close();
-			input.blur();
+		} else if (e.key === 'Enter') {
+			if (tryPickSelection()) {
+				e.preventDefault();
+			}
 		}
 	});
-
-	function open() {
-		close();
-		active = true;
-		selecting = false;
-		modal = new FileSuggestModal(app, (path) => {
-			const value = path.split('/').pop()?.replace(/\.md$/, '') ?? path;
-			if (onPick) {
-				// Caller handles the action directly (e.g. add note)
-				onPick(value);
-				input.value = '';
-				close();
-			} else {
-				// Legacy: fill input, let caller's Enter handler submit
-				selecting = true; // Lock: suppress input→open() re-trigger
-				input.value = value;
-				input.dispatchEvent(new Event('input', { bubbles: true }));
-				close();
-				requestAnimationFrame(() => { selecting = false; });
-			}
-		});
-		modal.setOnExternalClose(() => {
-			active = false;
-			selecting = true; // Block focus from reopening
-			requestAnimationFrame(() => { selecting = false; });
-		});
-		modal.open(input.value);
-	}
-
-	function close() {
-		if (modal) {
-			modal.close();
-			modal = null;
-		}
-		active = false;
-	}
-
-	function positionDropdown() {
-		if (!modal) return;
-		const container = modal.containerEl.querySelector('.modal-container') as HTMLElement;
-		const bg = modal.containerEl.querySelector('.modal-bg') as HTMLElement;
-		if (!container) return;
-
-		const rect = input.getBoundingClientRect();
-
-		// Hide backdrop — inline dropdown, not full-screen modal
-		if (bg) {
-			bg.style.display = 'none';
-		}
-
-		// Hide close button — user closes via Escape/blur/pick, not X
-		const closeBtn = container.querySelector('.modal-close-button') as HTMLElement;
-		if (closeBtn) {
-			closeBtn.style.display = 'none';
-		}
-
-		container.style.position = 'fixed';
-		container.style.top = `${rect.bottom + 4}px`;
-		container.style.left = `${rect.left}px`;
-		container.style.width = `${Math.max(rect.width, 280)}px`;
-		container.style.maxHeight = '260px';
-		container.style.zIndex = '10000';
-	}
 
 	return {
 		isActive: () => active,
 		close,
+		tryPickSelection,
 	};
-}
-
-class FileSuggestModal extends FuzzySuggestModal<TFile> {
-	private onSelect: (path: string) => void;
-	private queryValue: string = '';
-	private onExternalClose?: () => void;
-
-	constructor(app: App, onSelect: (path: string) => void) {
-		super(app);
-		this.onSelect = onSelect;
-		this.setPlaceholder('Search files...');
-	}
-
-	setOnExternalClose(fn: () => void) {
-		this.onExternalClose = fn;
-	}
-
-	onOpen() {
-		super.onOpen();
-		positionDropdown();
-	}
-
-	override onClose() {
-		this.onExternalClose?.();
-		super.onClose();
-	}
-
-	open(query?: string) {
-		this.queryValue = query ?? '';
-		super.open();
-		// Auto-focus and set initial value
-		setTimeout(() => {
-			const inp = this.inputEl?.querySelector('input');
-			if (inp && this.queryValue) {
-				inp.value = this.queryValue;
-				inp.dispatchEvent(new Event('input'));
-			}
-		}, 50);
-	}
-
-	getItems(): TFile[] {
-		return this.app.vault.getMarkdownFiles();
-	}
-
-	getItemText(item: TFile): string {
-		return item.basename;
-	}
-
-	onChooseItem(item: TFile): void {
-		this.onSelect(item.path);
-	}
-
-	selectNext() {
-		const results = this.resultContainerEl.querySelectorAll('.suggestion-item');
-		const current = this.resultContainerEl.querySelector('.is-selected');
-		const idx = current ? [...results].indexOf(current as HTMLElement) : -1;
-		const nextIdx = Math.min(idx + 1, results.length - 1);
-		results[nextIdx]?.classList.add('is-selected');
-		current?.classList.remove('is-selected');
-		(results[nextIdx] as HTMLElement)?.scrollIntoView({ block: 'nearest' });
-	}
-
-	selectPrev() {
-		const results = this.resultContainerEl.querySelectorAll('.suggestion-item');
-		const current = this.resultContainerEl.querySelector('.is-selected');
-		const idx = current ? [...results].indexOf(current as HTMLElement) : 0;
-		const prevIdx = Math.max(idx - 1, 0);
-		results[prevIdx]?.classList.add('is-selected');
-		current?.classList.remove('is-selected');
-		(results[prevIdx] as HTMLElement)?.scrollIntoView({ block: 'nearest' });
-	}
 }
 
 /**

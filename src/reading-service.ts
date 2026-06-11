@@ -4,6 +4,8 @@ export interface BookInfo {
 	title: string;
 	author: string;
 	coverUrl: string;
+	isbn?: string;
+	source?: string;
 	totalPages: number;
 	currentPage: number;
 	finished: boolean;
