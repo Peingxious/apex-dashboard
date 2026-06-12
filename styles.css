@@ -11442,8 +11442,3 @@
 .dashboard-reminder-snooze:hover {
   opacity: 0.9;
 }
-
-.dashboard-section-title::before,
-.dashboard-card-title::before {
-  display: none !important;
-}
