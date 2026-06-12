@@ -147,15 +147,18 @@ export function attachFileSuggest(
       row.style.maxHeight = "40px";
       row.style.fontSize = "14px";
       row.style.lineHeight = "20px";
-      // Selected row: a soft accent tint — no gradient, no thick left
-      // border, no bold weight. The goal is "you can see which row is
-      // active" without it screaming for attention. Hover keeps the
-      // CSS accent color so the two states stay distinct (one is a
-      // passive cursor, the other is a confirmed pick).
-      row.style.background = isSelected ? "rgba(99, 102, 241, 0.18)" : "";
-      row.style.boxShadow = isSelected
-        ? "inset 0 0 0 1px rgba(99, 102, 241, 0.55)"
-        : "inset 0 0 0 1px transparent";
+      // Selected row: a soft accent tint. We previously also drew an
+      // inset 1px box-shadow as an "inner border" on top of the tint,
+      // and the combination of background + inset border read as
+      // TWO distinct panels inside a single row (this was the
+      // "2 panels" rendering bug reported by users). Drop the inset
+      // border entirely — the translucent tint alone is plenty to
+      // mark the active row. Non-selected rows get no box-shadow at
+      // all (a 1px transparent box-shadow is still a paint operation
+      // and can produce a sub-pixel hairline on some themes, which
+      // is also part of the "extra panel" look).
+      row.style.background = isSelected ? "rgba(99, 102, 241, 0.22)" : "";
+      row.style.boxShadow = "none";
       row.style.borderRadius = "4px";
       row.style.cursor = "pointer";
       row.style.boxSizing = "border-box";

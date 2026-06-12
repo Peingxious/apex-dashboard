@@ -263,6 +263,19 @@ export interface DashboardData {
   columns: DashboardColumn[];
   /** Preserved H1 heading line(s) from original note (e.g. "# [[Note]] #Tag") */
   h1Heading?: string;
+  /**
+   * Unrecognised top-level frontmatter keys that were present in the
+   * source markdown. Preserved verbatim through parse → mutate →
+   * serialize round-trips so we do not silently WIPE OUT user-owned
+   * metadata when the user edits columns/banner/etc. Example: a
+   * frontmatter block with `banner`, `columns`, and a user-owned
+   * `Type: dashboard` field must come back with `Type` still set
+   * after the plugin re-serialises the file. Only the well-known
+   * keys (banner, quickActions, quickLinks, quickActionOrder,
+   * hiddenPresets, columns) are stripped; everything else is kept
+   * here as the parsed YAML value and re-emitted on serialize.
+   */
+  extraFrontmatter?: Record<string, unknown>;
 }
 
 export interface RenderCallbacks {

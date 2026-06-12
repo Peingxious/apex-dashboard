@@ -263,11 +263,67 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 ---
 
+## 1.1.15：三个稳定性 / 视觉修复
+
+**用户反馈**（2026-06-13）：
+
+1. **多属性更新数据异常**：对 BannerData 等对象做多属性更新时，原有未更新的属性值会被 `Object.assign` / `{ ...target, ...updates }` 中的 `undefined` 清掉
+2. **Markdown 编辑与仪表盘同步问题**：在 Obsidian 编辑器里修改 .md 文件后，embedded-mode 的工作台视图不能实时刷新，需要手动切换 tab / 重启
+3. **下拉列表选项"2 面板"现象**：`attachFileSuggest` 选中的行被画成「半透明紫色背景 + 1px 内嵌 box-shadow 内边框」，两层叠在一起像 2 个面板
+
+### 修复 1：BannerData 多属性更新不再清空未编辑字段
+
+| 文件                                                                                                                             | 改动                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| [src/banner.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/banner.ts)                           | `BannerEditModal.save` 不再无条件写 `images: undefined`；只有 `localImages.length > 0` 时才把 `images` 放进 updates 对象               |
+| [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) `openEmbeddedBannerEditModal` | 消费者不再用 `Object.assign(banner, updates)`；改为按 key 循环，仅当 `value !== undefined` 时才赋值（即标准"safe merge partial" 模式） |
+
+### 修复 1b：保存时不再清空用户自有的 frontmatter 字段
+
+**根因**：[src/parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts) `serialize()` 只输出 6 个插件自有的顶层 key（`banner` / `quickActions` / `quickActionOrder` / `hiddenPresets` / `columns` / 旧式 `quickLinks`），其它 frontmatter 字段（`Type: dashboard` / `cssclass: ...` / `tags: [...]` / `aliases: [...]` 等）从未被 `parse()` 收进 `DashboardData`，因此下一次保存就静默丢失了。
+
+**修复**：
+
+- [src/types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts) `DashboardData` 新增 `extraFrontmatter?: Record<string, unknown>` 字段
+- [src/parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts) 新增 `KNOWN_FRONTMATTER_KEYS` 集合；`parse()` 把不在该集合内的所有顶层 key 收进 `data.extraFrontmatter`
+- `serialize()` 在 `---` 后、`banner:` 之前，用 `yaml.stringify` 把 `extraFrontmatter` 整块写回，保留嵌套结构和引号
+- 用户自有的字段在 round-trip 后仍然存在，验证脚本（parse → mutate → serialize → re-parse）已 PASS：`Type: dashboard` + `tags: [dashboard, apex]` 都完整保留
+
+### 修复 2：embedded 视图随 .md 编辑实时刷新
+
+| 文件                                                                                                                        | 改动                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) `registerVaultListeners` | `vault.on("modify")` 检测到 `file.path === this.embeddedNotePath` 时调用 `reloadEmbeddedFromDisk()`                                              |
+| 同上                                                                                                                        | 新增私有方法 `reloadEmbeddedFromDisk()`：从 vault 读最新内容 → `parse()` 解析 → 更新 `embeddedData` 与 `embeddedDataCache` → `render()` 重新绘制 |
+
+### 修复 3：下拉列表无"2 面板"
+
+| 文件                                                                                                                        | 改动                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `render` | 选中行：移除 `inset 0 0 0 1px ...` 那个 1px 内边框；只保留 `rgba(99, 102, 241, 0.22)` 半透明背景。alpha 微微提高到 0.22 让选中更明显 |
+| 同上                                                                                                                        | 未选中行：`box-shadow: "none"`，避免 1px transparent 阴影被某些主题画成亚像素发丝线                                                  |
+
+### 子任务
+
+- [x] banner.ts: `BannerEditModal.save` 条件性包含 `images` 字段
+- [x] view.ts: `openEmbeddedBannerEditModal` 改为按 key 安全 merge
+- [x] types.ts: `DashboardData` 新增 `extraFrontmatter` 字段
+- [x] parser.ts: `KNOWN_FRONTMATTER_KEYS` 集合 + `parse()` 收集 extra keys
+- [x] parser.ts: `serialize()` 用 `yaml.stringify` 把 extra 字段写回 frontmatter
+- [x] view.ts: `registerVaultListeners` modify 路径在命中 `embeddedNotePath` 时调用 `reloadEmbeddedFromDisk`
+- [x] view.ts: 新增 `reloadEmbeddedFromDisk` 私有方法
+- [x] file-suggest.ts: 选中行移除 inset 1px box-shadow，非选中行 box-shadow="none"
+- [x] CHANGELOG / Target / Plan 同步：版本 1.1.14 → 1.1.15
+- [x] npm run build 验证通过
+- [x] 编写 round-trip 脚本验证 `Type:` / `tags:` 字段被完整保留（已通过 PASS）
+
+---
+
 ## 当前状态概览
 
 | 维度         | 状态                                       |
 | ------------ | ------------------------------------------ |
-| **版本**     | 1.1.14                                     |
+| **版本**     | 1.1.15                                     |
 | **构建**     | ✅ `npm run build` 通过                    |
 | **核心功能** | ✅ 四大卡片类型、侧边栏小组件、拖拽交互    |
 | **国际化**   | ✅ 中英文支持                              |

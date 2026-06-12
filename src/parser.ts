@@ -13,7 +13,7 @@ import type {
   LibraryConfig,
   ProjectDocNode,
 } from "./types";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { t } from "./i18n";
 
 const KNOWN_METADATA_KEYS = new Set([
@@ -52,6 +52,26 @@ const DEFAULT_COLUMNS = [
   { name: "Library", color: "#8b5cf6", sectionType: "projects" },
 ];
 
+/**
+ * Top-level frontmatter keys that the plugin owns and writes back
+ * verbatim. Anything NOT in this set is a user-owned key and must
+ * be preserved through parse → mutate → serialize round-trips so
+ * the plugin does not silently WIPE OUT user metadata (e.g. a
+ * `Type: dashboard` field declared on the dashboard note itself).
+ *
+ * Compare against KNOWN_METADATA_KEYS further down — that one
+ * applies to per-card metadata inside the body, not top-level
+ * frontmatter.
+ */
+const KNOWN_FRONTMATTER_KEYS = new Set([
+  "banner",
+  "quickActions",
+  "quickLinks", // legacy: migrated to quickActions on read
+  "quickActionOrder",
+  "hiddenPresets",
+  "columns",
+]);
+
 export function parse(markdown: string): DashboardData {
   const { frontmatter, body } = splitFrontmatter(markdown);
   const banner = parseBanner(frontmatter);
@@ -60,11 +80,25 @@ export function parse(markdown: string): DashboardData {
   const columnDefs = parseColumnDefs(frontmatter);
   const { columns, h1Heading } = parseColumnsWithH1(body, columnDefs);
 
+  // Capture every frontmatter key the plugin does not own so we can
+  // write it back unchanged on serialize. Without this, the next
+  // save would drop user-owned fields like `Type: dashboard`,
+  // `tags: [...]`, `cssclass: dashboard`, etc.
+  const extraFrontmatter: Record<string, unknown> = {};
+  for (const key of Object.keys(frontmatter)) {
+    if (!KNOWN_FRONTMATTER_KEYS.has(key)) {
+      extraFrontmatter[key] = frontmatter[key];
+    }
+  }
+
   const data: DashboardData = { banner, quickActions, columns };
   if (quickActionOrder) data.quickActionOrder = quickActionOrder;
   if (h1Heading) data.h1Heading = h1Heading;
   const hiddenPresets = parseHiddenPresets(frontmatter);
   if (hiddenPresets) data.hiddenPresets = hiddenPresets;
+  if (Object.keys(extraFrontmatter).length > 0) {
+    data.extraFrontmatter = extraFrontmatter;
+  }
   return data;
 }
 
@@ -91,6 +125,32 @@ export function serialize(data: DashboardData, app?: App): string {
   const lines: string[] = [];
 
   lines.push("---");
+
+  // Write back user-owned frontmatter keys BEFORE the plugin-owned
+  // ones, so any `Type: dashboard` / `cssclass: ...` / `tags: [...]`
+  // field that lives in the original note is preserved on the next
+  // save. The plugin's own keys (`banner`, `columns`, ...) are
+  // appended afterwards and will override these only if a user
+  // happened to use a colliding name (which is an actual conflict,
+  // not data loss). Without this block the serialize pass would
+  // silently WIPE OUT every key that is not part of the plugin's
+  // schema.
+  if (data.extraFrontmatter && Object.keys(data.extraFrontmatter).length > 0) {
+    const extraYaml = stringifyYaml(data.extraFrontmatter, {
+      lineWidth: 0,
+    }).trimEnd();
+    if (extraYaml) {
+      // Indent every line of the extra block by 0 spaces (top-level
+      // keys must sit at column 0 inside the frontmatter), then
+      // append. The block already contains its own internal newlines
+      // and child-key indentation; we just need to make sure there
+      // are no trailing blank lines that would create a double-blank
+      // after the `---` closer.
+      for (const line of extraYaml.split(/\r?\n/)) {
+        lines.push(line);
+      }
+    }
+  }
 
   lines.push("banner:");
   if (data.banner.image) {

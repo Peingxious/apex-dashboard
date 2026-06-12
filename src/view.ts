@@ -1555,7 +1555,19 @@ export class DashboardView extends ItemView {
       this.app,
       this.embeddedData.banner,
       async (updates) => {
-        Object.assign(this.embeddedData!.banner, updates);
+        // Multi-attribute update fix: only copy the fields that the
+        // caller actually provided a defined value for. Using
+        // `Object.assign(target, updates)` blindly writes every key
+        // from `updates` — including keys whose value is `undefined` —
+        // onto the target, which would wipe out the existing
+        // rotation images array, quote color, or quote list when the
+        // caller did not intend to touch them.
+        for (const key of Object.keys(updates) as Array<keyof BannerData>) {
+          const value = updates[key];
+          if (value !== undefined) {
+            (this.embeddedData!.banner as any)[key] = value;
+          }
+        }
         await this.saveEmbeddedAndRefresh();
       },
       this.plugin.settings.stylePreset,
@@ -2434,9 +2446,17 @@ export class DashboardView extends ItemView {
 
     const createRef = events.on("create", handler);
     const modifyRef = events.on("modify", (file) => {
-      if (file instanceof TFile && file.extension === "md") {
-        handler();
+      if (!(file instanceof TFile) || file.extension !== "md") return;
+      // Markdown / dashboard sync fix: when the user edits an .md
+      // file in the Obsidian editor, the embedded-mode view must
+      // re-parse the file and re-render so that the visible cards
+      // reflect the latest markdown content. Without this, the
+      // embedded dashboard keeps showing stale data until the user
+      // manually re-clicks the tab or restarts Obsidian.
+      if (this.embeddedNotePath && file.path === this.embeddedNotePath) {
+        void this.reloadEmbeddedFromDisk();
       }
+      handler();
     });
     const deleteRef = events.on("delete", handler);
     const renameRef = events.on("rename", handler);
@@ -2447,6 +2467,31 @@ export class DashboardView extends ItemView {
       { evt: events, ref: deleteRef },
       { evt: events, ref: renameRef },
     ];
+  }
+
+  /**
+   * Re-read the currently active embedded note from disk and re-render
+   * the dashboard. Called when vault events report that the file was
+   * modified externally (i.e. by the user editing the markdown in
+   * Obsidian's editor, not by the plugin's own saveEmbeddedAndRefresh
+   * path). The cache is updated so subsequent tab switches serve the
+   * fresh data without an extra disk read.
+   */
+  private async reloadEmbeddedFromDisk(): Promise<void> {
+    const notePath = this.embeddedNotePath;
+    if (!notePath) return;
+    const file = this.app.vault.getAbstractFileByPath(notePath);
+    if (!(file instanceof TFile)) return;
+    try {
+      const content = await this.app.vault.read(file);
+      const data = parse(content);
+      this.embeddedData = data;
+      this.embeddedDataCache.set(notePath, data);
+      const currentData = this.sync.getData();
+      if (currentData) this.render(currentData);
+    } catch (err) {
+      console.error("[apex-dashboard] Error reloading embedded note:", err);
+    }
   }
 
   /**
