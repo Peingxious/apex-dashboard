@@ -24,7 +24,14 @@ export function attachFileSuggest(
   let active = false;
   let dropdown: HTMLElement | null = null;
   let items: TFile[] = [];
+  /** Visual highlight row (follows the top match by default). */
   let selectedIndex = -1;
+  /**
+   * Row the user has explicitly committed to via ↑ / ↓ navigation.
+   * Starts at -1 and is reset to -1 on every query change, so a bare
+   * Enter never picks a suggestion — the user must navigate first.
+   */
+  let pickedIndex = -1;
   let lastQuery = "";
 
   const VAULT_FILE_EXTS = new Set([
@@ -123,11 +130,12 @@ export function attachFileSuggest(
     list.style.overflowY = "auto";
     for (let i = 0; i < items.length; i++) {
       const f = items[i]!;
+      const isSelected = i === selectedIndex;
       // Use a <div role="option"> instead of a <button> — buttons can be
       // styled down to a 12px line-height by aggressive host resets, and
       // that was the root cause of the "dropdown is only 32px tall" bug.
       const row = list.createDiv({
-        cls: "suggestion-item" + (i === selectedIndex ? " is-selected" : ""),
+        cls: "suggestion-item" + (isSelected ? " is-selected" : ""),
         attr: { role: "option", tabindex: "-1" },
       });
       row.style.display = "flex";
@@ -139,12 +147,20 @@ export function attachFileSuggest(
       row.style.maxHeight = "40px";
       row.style.fontSize = "14px";
       row.style.lineHeight = "20px";
-      row.style.color = "#e6e6e6";
-      row.style.background = "transparent";
+      // Selected row: a soft accent tint — no gradient, no thick left
+      // border, no bold weight. The goal is "you can see which row is
+      // active" without it screaming for attention. Hover keeps the
+      // CSS accent color so the two states stay distinct (one is a
+      // passive cursor, the other is a confirmed pick).
+      row.style.background = isSelected ? "rgba(99, 102, 241, 0.18)" : "";
+      row.style.boxShadow = isSelected
+        ? "inset 0 0 0 1px rgba(99, 102, 241, 0.55)"
+        : "inset 0 0 0 1px transparent";
       row.style.borderRadius = "4px";
       row.style.cursor = "pointer";
       row.style.boxSizing = "border-box";
       row.style.flex = "0 0 40px";
+      row.style.transition = "background 0.1s ease, box-shadow 0.1s ease";
       const name = row.createDiv({
         cls: "suggestion-content",
         text: f.basename,
@@ -212,6 +228,7 @@ export function attachFileSuggest(
     if (!active) return;
     active = false;
     selectedIndex = -1;
+    pickedIndex = -1;
     items = [];
     lastQuery = "";
     if (dropdown) {
@@ -239,7 +256,12 @@ export function attachFileSuggest(
     lastQuery = q;
 
     items = filterFiles(q);
-    selectedIndex = items.length > 0 ? 0 : -1;
+    // No row is selected by default — the user must navigate with ↑/↓
+    // to commit a pick. This keeps the dropdown a pure preview of matches
+    // and matches the request: "if I didn't navigate, the typed text is
+    // the user's intent".
+    selectedIndex = -1;
+    pickedIndex = -1;
     render();
     if (items.length === 0) {
       close();
@@ -283,6 +305,9 @@ export function attachFileSuggest(
     const next = Math.max(0, Math.min(items.length - 1, selectedIndex + delta));
     if (next === selectedIndex) return;
     selectedIndex = next;
+    // The user has now explicitly navigated to this row, so it becomes
+    // the "picked" candidate that Enter will commit.
+    pickedIndex = next;
     render();
     if (dropdown) {
       const selected = dropdown.querySelector(
@@ -294,8 +319,10 @@ export function attachFileSuggest(
 
   const tryPickSelection = () => {
     if (!active) return false;
-    if (selectedIndex < 0 || selectedIndex >= items.length) return false;
-    const f = items[selectedIndex]!;
+    // Only commit if the user has explicitly arrow-navigated since the
+    // last query change. Otherwise the typed text is the user's intent.
+    if (pickedIndex < 0 || pickedIndex >= items.length) return false;
+    const f = items[pickedIndex]!;
     pick(f);
     return true;
   };

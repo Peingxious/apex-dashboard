@@ -5938,30 +5938,49 @@
   overflow-y: auto;
 }
 
-.dashboard-task-delete {
-  background: none !important;
+/* Shared "row delete" button — used by todo tasks and project/memo items.
+   Image 1 style: small red X, appears on hover, click to delete directly. */
+.dashboard-task-delete,
+.dashboard-project-item-delete {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  color: var(--db-text-muted);
   cursor: pointer;
-  padding: 0 3px;
-  min-height: 0;
-  line-height: 1;
+  color: var(--db-text-muted);
+  border-radius: 4px;
   opacity: 0;
   transition:
     opacity 0.15s ease,
-    color 0.15s ease;
-  display: flex;
-  align-items: center;
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
-.dashboard-task-delete:hover {
-  color: var(--db-text) !important;
+.dashboard-project-item-delete {
+  margin-left: auto;
 }
 
-.dashboard-task-delete svg {
+.dashboard-task-delete:hover,
+.dashboard-project-item-delete:hover {
+  color: #fff !important;
+  background: var(--db-danger, #e74c3c) !important;
+}
+
+.dashboard-task-delete svg,
+.dashboard-project-item-delete svg {
   width: 14px;
   height: 14px;
+}
+
+.dashboard-task-item:hover .dashboard-task-delete,
+.dashboard-project-item:hover .dashboard-project-item-delete {
+  opacity: 1;
 }
 
 .dashboard-task-add {
@@ -6148,36 +6167,6 @@
 
 .dashboard-project-item:hover {
   background: var(--db-bg-card-hover);
-}
-
-.dashboard-project-item:hover .dashboard-project-item-delete {
-  opacity: 1;
-}
-
-.dashboard-project-item-delete {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  margin-left: auto;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--db-text-faint);
-  opacity: 0;
-  transition:
-    opacity 0.15s ease,
-    color 0.15s ease,
-    background 0.15s ease;
-  border-radius: 4px;
-}
-
-.dashboard-project-item-delete:hover {
-  color: var(--db-danger, #e74c3c);
-  background: rgba(231, 76, 60, 0.12);
 }
 
 .dashboard-project-item:active {
@@ -10849,6 +10838,151 @@
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--db-border, rgba(255, 255, 255, 0.06));
+}
+
+/* Visible properties (table / list view) */
+.dashboard-library-config-section-desc {
+  margin: 0 0 8px 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
+.dashboard-library-config-visible-props {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  background: var(--bg-surface-primary, var(--background-primary));
+  border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+  border-radius: var(--db-radius-sm, 6px);
+}
+
+.dashboard-library-config-visible-props-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--db-text, var(--text-normal));
+  cursor: pointer;
+  user-select: none;
+}
+
+.dashboard-library-config-visible-props-row input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--interactive-accent, #8b5cf6);
+}
+
+.dashboard-library-config-visible-props-row label {
+  flex: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dashboard-library-config-visible-props-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dashboard-library-config-visible-props-action {
+  padding: 4px 10px;
+  border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.12));
+  border-radius: var(--db-radius-sm, 4px);
+  background: var(--bg-surface-secondary, var(--background-secondary));
+  color: var(--db-text, var(--text-normal));
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.dashboard-library-config-visible-props-action:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--interactive-accent, #8b5cf6);
+}
+
+.dashboard-library-config-visible-props-action:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Property chips inside list view (when visibleProperties is configured) */
+.dashboard-library-list-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.dashboard-library-list-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.dashboard-library-list-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: var(--db-radius-sm, 4px);
+  background: var(--bg-surface-secondary, var(--background-secondary));
+  border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+  font-size: 10px;
+  line-height: 1.4;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-library-list-chip-key {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Meta row in list view: property values (no labels) + time, time is the last element */
+.dashboard-library-list-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.dashboard-library-list-meta-value {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  line-height: 1.4;
+  padding: 1px 6px;
+  border-radius: var(--db-radius-sm, 4px);
+  background: var(--bg-surface-secondary, var(--background-secondary));
+  border: 1px solid var(--db-border-input, rgba(255, 255, 255, 0.08));
+  color: var(--db-text, var(--text-normal));
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-library-list-chip-val {
+  color: var(--db-text, var(--text-normal));
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Action buttons */

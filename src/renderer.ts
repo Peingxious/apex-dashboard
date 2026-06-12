@@ -78,6 +78,18 @@ function getCSSVar(name: string): string {
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
+/**
+ * The section title is the column name verbatim. We intentionally do
+ * NOT split it into "title + trailing number" anymore — the section
+ * name is a regular user-facing string (e.g. "library", "Project 5",
+ * "121", "闪念-2026-01月"), the same way every other section name is
+ * displayed. Treating it as a label/tag would change its meaning from
+ * "name" to "id", which is misleading.
+ */
+function renderColumnTitle(titleEl: HTMLElement, name: string): void {
+  titleEl.setText(name);
+}
+
 let taskDragSource: { cardId: string; taskIndex: number } | null = null;
 let projectItemDragSource: { cardId: string; itemIndex: number } | null = null;
 
@@ -2437,14 +2449,22 @@ function renderSection(
   const toggle = titleWrap.createDiv({ cls: "dashboard-section-toggle" });
   toggle.setAttribute("role", "button");
   toggle.setAttribute("aria-label", "Toggle section");
+  // Section name is rendered as a regular user-facing string — the
+  // same way every other section name is displayed. We do NOT extract
+  // a trailing number into a separate badge: a column called "library"
+  // is just "library", a column called "121" is just "121", and a
+  // column called "Project 5" is just "Project 5". Treating the name
+  // as a label/tag would change its meaning from "name" to "id".
   const titleEl = titleWrap.createEl("h3", {
-    text: column.name,
     cls: "dashboard-section-title",
   });
+  renderColumnTitle(titleEl, column.name);
 
   titleEl.addEventListener("dblclick", (e) => {
     e.stopPropagation();
-    const currentName = titleEl.getText();
+    // When editing, present the full original column name so the user
+    // can edit the whole string verbatim.
+    const currentName = column.name;
     titleEl.empty();
     const input = titleEl.createEl("input", {
       cls: "dashboard-section-rename-input",
@@ -2458,8 +2478,9 @@ function renderSection(
       if (save && newName && newName !== currentName) {
         callbacks.onColumnRename(currentName, newName);
       } else {
+        // Cancel path — restore the original column name verbatim.
         titleEl.empty();
-        titleEl.setText(currentName);
+        renderColumnTitle(titleEl, currentName);
       }
     };
 
@@ -3573,7 +3594,6 @@ function renderProjectBody(
       cleanText: string;
       path: string;
       childCount: number;
-      children: string[];
     }
     const titles: TitleInfo[] = [];
 
@@ -3590,10 +3610,12 @@ function renderProjectBody(
       // line has no [[...]] link, fall back to the cleaned text.
       const pathMatch = line.match(/\[\[([^\]|]+)/);
       const path = pathMatch && pathMatch[1] ? pathMatch[1] : cleanText;
-      titles.push({ cleanText, path, childCount: 0, children: [] });
+      titles.push({ cleanText, path, childCount: 0 });
     }
 
-    // Calculate child counts and collect child text
+    // Count hidden children per depth-0 title so the +N badge stays
+    // correct. The children themselves are NOT rendered inline — see
+    // the comment below the delete-button handler.
     {
       let titleIdx = 0;
       let inlineCount = 0;
@@ -3609,9 +3631,6 @@ function renderProjectBody(
           inlineCount = 0;
         } else if (titleIdx > 0) {
           inlineCount++;
-          let childText = line.replace(/^\t*/, "");
-          if (childText.startsWith("- ")) childText = childText.slice(2);
-          titles[titleIdx - 1]!.children.push(childText);
         }
       }
       if (titleIdx > 0 && titles[titleIdx - 1]) {
@@ -3660,23 +3679,15 @@ function renderProjectBody(
         callbacks.onProjectItemDelete(card.id, index, title.path);
       });
 
-      // Render child items as indented sub-list with "- " prefix
-      if (title.children.length > 0) {
-        const childList = list.createDiv({ cls: "dashboard-project-children" });
-        for (const childText of title.children) {
-          const childEl = childList.createDiv({
-            cls: "dashboard-project-child-item",
-          });
-          const prefix = childEl.createSpan({
-            cls: "dashboard-project-child-prefix",
-            text: "- ",
-          });
-          const childContent = childEl.createSpan({
-            cls: "dashboard-project-child-text",
-          });
-          renderTextWithLinks(childContent, childText, app);
-        }
-      }
+      // Child items are intentionally NOT expanded inline anymore.
+      // A project item may carry dozens or hundreds of nested
+      // children, and rendering them all as a visible sub-list
+      // pushes the real content far down the page. The +N badge
+      // next to the title is the single source of truth for the
+      // hidden-child count; the user can click the title (or the
+      // note itself) to drill in if they need to see the children.
+      // The children array on `title` is still populated by the
+      // counting loop above so that the badge value stays correct.
 
       // ----- Drag events -----
       item.addEventListener("dragstart", (e) => {
@@ -3897,12 +3908,68 @@ function renderWikilink(
     },
   });
 
+  const linkText = fragment ? `${path}#${fragment}` : path;
+
   link.addEventListener("click", (e) => {
     e.stopPropagation();
     // Use native Obsidian link resolution for proper fragment/heading navigation
-    const linkText = fragment ? `${path}#${fragment}` : path;
     app.workspace.openLinkText(linkText, "", false, { active: true });
   });
+
+  // Hover-driven native Page Preview (Obsidian internal-link style).
+  //
+  // Obsidian's Page Preview core plugin is driven by a workspace-level
+  // "link-hover" event. The markdown post-processor fires this event
+  // when the user hovers an internal-link element; Page Preview then
+  // reads the user's setting (Settings → Page Preview → "Reader mode"
+  // / "Hover" vs "Ctrl/Cmd + hover") and decides whether to pop the
+  // preview panel.
+  //
+  // Our dashboard wikilinks are custom DOM (not markdown-rendered),
+  // so the post-processor never sees them and Page Preview never
+  // activates. We bridge that gap by dispatching "link-hover"
+  // ourselves on plain mouseover, exactly the same way the markdown
+  // post-processor does in the editor. Page Preview then takes over
+  // and shows the same native popover (fragment navigation, embeds,
+  // "Open" / "Open to the right" all work as expected).
+  let hoverTimer: number | null = null;
+  const clearHoverTimer = (): void => {
+    if (hoverTimer !== null) {
+      window.clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  };
+  link.addEventListener("mouseover", (event) => {
+    if (hoverTimer !== null) return;
+    // If the link was already detached (e.g. mid-render swap), bail.
+    if (!link.isConnected) return;
+    hoverTimer = window.setTimeout(() => {
+      hoverTimer = null;
+      // The link may have been re-rendered (and thus detached)
+      // during the delay window; in that case we must NOT fire the
+      // event on a stale node.
+      if (!link.isConnected) return;
+      // Cast through unknown — "link-hover" is dispatched by
+      // Obsidian internals and isn't in the public .d.ts, but every
+      // Page Preview install listens for it.
+      (
+        app.workspace as unknown as {
+          trigger: (
+            type: string,
+            evt: MouseEvent,
+            target: HTMLElement,
+            linkText: string,
+            source: string,
+          ) => void;
+        }
+      ).trigger("link-hover", event, link, linkText, "apex-dashboard");
+    }, 200);
+  });
+  link.addEventListener("mouseout", clearHoverTimer);
+  // If the user mouses out, hits a key, or the link gets re-rendered
+  // before the timer fires, drop it so we don't pop a preview that
+  // no longer matches the cursor position.
+  link.addEventListener("keydown", clearHoverTimer);
 }
 
 function renderExternalLink(

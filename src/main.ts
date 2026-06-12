@@ -119,6 +119,35 @@ export default class DashboardPlugin extends Plugin {
 				return false;
 			},
 		});
+
+		// Command: Undo last delete (restores card / task / project item / column)
+		this.addCommand({
+			id: 'undo-last-delete',
+			name: t('undo.command'),
+			hotkeys: [
+				{
+					modifiers: ['Mod'],
+					key: 'Z',
+				},
+			],
+			checkCallback: (checking) => {
+				const leaves = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
+				const view = leaves[0]?.view as DashboardView | undefined;
+				if (view && view.canUndo()) {
+					if (!checking) {
+						void view.undoLast().then((label) => {
+							if (label) {
+								new Notice(label);
+							} else {
+								new Notice(t('undo.nothing'));
+							}
+						});
+					}
+					return true;
+				}
+				return false;
+			},
+		});
 	}
 
 	onunload(): void {

@@ -123,6 +123,7 @@ export class DashboardView extends ItemView {
 
     await this.sync.init();
     this.registerVaultListeners();
+    this.registerUndoShortcut();
     this.startReminderChecker();
     this.startWeatherRefresh();
     this.pomodoroService = new PomodoroService(this.plugin);
@@ -160,6 +161,20 @@ export class DashboardView extends ItemView {
     if (data) {
       this.render(data);
     }
+  }
+
+  /**
+   * Public undo hook: called by Ctrl/Cmd+Z and by the command-palette
+   * command registered in main.ts. Returns a short human-readable
+   * label for the action that was undone, or null when there is
+   * nothing left to undo.
+   */
+  async undoLast(): Promise<string | null> {
+    return this.sync.undo();
+  }
+
+  canUndo(): boolean {
+    return this.sync.canUndo();
   }
 
   addSection(): void {
@@ -672,11 +687,7 @@ export class DashboardView extends ItemView {
         modal.open();
       },
       onCardDelete: async (cardId: string) => {
-        const confirmed = await showConfirmDialog(this.app, {
-          title: t("common.confirmDelete"),
-          message: t("common.confirmDeleteMessage"),
-        });
-        if (!confirmed) return;
+        // Direct delete (project/memo style): no confirm dialog
         self.deleteEmbeddedCardById(cardId);
         await self.saveEmbeddedAndRefresh();
       },
@@ -1743,11 +1754,7 @@ export class DashboardView extends ItemView {
     return {
       onCardEdit: (card: DashboardCard) => this.openCardEditModal(card),
       onCardDelete: async (cardId: string) => {
-        const confirmed = await showConfirmDialog(this.app, {
-          title: t("common.confirmDelete"),
-          message: t("common.confirmDeleteMessage"),
-        });
-        if (!confirmed) return;
+        // Direct delete (project/memo style): no confirm dialog
         this.sync.deleteCard(cardId);
         new Notice(t("card.deleted"));
       },
@@ -1755,12 +1762,8 @@ export class DashboardView extends ItemView {
         this.sync.toggleTask(cardId, idx, checked),
       onTaskAdd: (cardId: string, text: string) =>
         this.sync.addTask(cardId, text),
-      onTaskDelete: async (cardId: string, idx: number) => {
-        const confirmed = await showConfirmDialog(this.app, {
-          title: t("common.confirmDelete"),
-          message: t("common.confirmDeleteMessage"),
-        });
-        if (!confirmed) return;
+      onTaskDelete: (cardId: string, idx: number) => {
+        // Direct delete (project/memo style): no confirm dialog
         this.sync.deleteTask(cardId, idx);
       },
       onTaskReorder: (cardId: string, from: number, to: number) =>
@@ -2156,6 +2159,45 @@ export class DashboardView extends ItemView {
       { evt: events, ref: deleteRef },
       { evt: events, ref: renameRef },
     ];
+  }
+
+  /**
+   * Global Ctrl/Cmd+Z listener: pops the most recent undo entry from
+   * the sync engine and shows a Notice with the operation that was
+   * reversed. Skipped when the user is typing in an input/textarea
+   * (e.g. the card-edit modal) so Obsidian's own undo continues to
+   * work inside text fields.
+   */
+  private registerUndoShortcut(): void {
+    this.registerDomEvent(document, "keydown", (evt) => {
+      const isUndoCombo =
+        (evt.ctrlKey || evt.metaKey) &&
+        !evt.shiftKey &&
+        !evt.altKey &&
+        !evt.repeat &&
+        (evt.key === "z" || evt.key === "Z");
+      if (!isUndoCombo) return;
+
+      // Let text fields handle their own undo.
+      const target = evt.target as HTMLElement | null;
+      if (target) {
+        const tag = target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) {
+          return;
+        }
+      }
+
+      if (!this.sync.canUndo()) return;
+
+      evt.preventDefault();
+      void this.undoLast().then((label) => {
+        if (label) {
+          new Notice(label);
+        } else {
+          new Notice(t("undo.nothing"));
+        }
+      });
+    });
   }
 
   private unregisterVaultListeners(): void {

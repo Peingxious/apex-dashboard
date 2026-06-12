@@ -7,6 +7,8 @@ import type {
   QuickAction,
   BannerData,
   CardType,
+  DashboardColumn,
+  ProjectDocNode,
 } from "./types";
 import {
   parse,
@@ -26,6 +28,44 @@ const KNOWN_METADATA_KEYS = new Set([
   "type",
 ]);
 
+/**
+ * Undo entry: a snapshot of the data removed by a destructive op,
+ * plus the position/identifier needed to restore it in-place.
+ *
+ * Only the recent "one-click" deletes are tracked — sort/toggle/text
+ * edits are handled by Obsidian's own editor Ctrl+Z.
+ */
+type UndoEntry =
+  | {
+      kind: "card";
+      columnName: string;
+      cardIndex: number;
+      card: DashboardCard;
+    }
+  | {
+      kind: "task";
+      cardId: string;
+      taskIndex: number;
+      task: TaskItem;
+    }
+  | {
+      kind: "projectItem";
+      cardId: string;
+      /** Path hint (wikilink basename) used to relocate the item at restore time. */
+      itemPath?: string;
+      /** Lines (including any indented children) that were spliced out of card.body. */
+      removedLines: string[];
+      /** Wikilink path captured at removal time, used to re-insert into projectDocs. */
+      removedPath?: string;
+      /** Index inside card.projectDocs from which the doc entry was dropped. */
+      removedProjectDocIdx: number;
+    }
+  | {
+      kind: "column";
+      columnIndex: number;
+      column: DashboardColumn;
+    };
+
 export class SyncEngine {
   private app: App;
   private settings: DashboardSettings;
@@ -39,6 +79,9 @@ export class SyncEngine {
   private eventRef: ReturnType<typeof this.app.vault.on> | null = null;
   private static readonly BACKUP_DIR = ".dashboard-backup";
   private static readonly MAX_BACKUPS = 5;
+  /** Stack of in-memory undo entries for the most recent destructive ops. */
+  private undoStack: UndoEntry[] = [];
+  private static readonly MAX_UNDO = 50;
 
   constructor(app: App, settings: DashboardSettings) {
     this.app = app;
@@ -82,6 +125,110 @@ export class SyncEngine {
 
   async refresh(): Promise<void> {
     await this.load();
+  }
+
+  /**
+   * Public undo hook (bound to Ctrl/Cmd+Z by the view).
+   * Returns a short human-readable label for the operation that was
+   * undone, or null if there was nothing to undo.
+   */
+  async undo(): Promise<string | null> {
+    const entry = this.undoStack.pop();
+    if (!entry || !this.data) return null;
+    const label = this.applyUndo(entry);
+    await this.writeToDisk();
+    return label;
+  }
+
+  canUndo(): boolean {
+    return this.undoStack.length > 0;
+  }
+
+  /** Inverse of `undo()`: push a snapshot of the data we just removed. */
+  private pushUndo(entry: UndoEntry): void {
+    this.undoStack.push(entry);
+    if (this.undoStack.length > SyncEngine.MAX_UNDO) {
+      this.undoStack.shift();
+    }
+  }
+
+  private applyUndo(entry: UndoEntry): string {
+    switch (entry.kind) {
+      case "card": {
+        const col = this.data!.columns.find((c) => c.name === entry.columnName);
+        if (col) {
+          const insertAt = Math.min(entry.cardIndex, col.cards.length);
+          col.cards.splice(insertAt, 0, entry.card);
+        }
+        return t("undo.card", { title: entry.card.title || "" });
+      }
+      case "task": {
+        for (const col of this.data!.columns) {
+          const card = col.cards.find((c) => c.id === entry.cardId);
+          if (card) {
+            const insertAt = Math.min(entry.taskIndex, card.tasks.length);
+            card.tasks.splice(insertAt, 0, entry.task);
+            break;
+          }
+        }
+        return t("undo.task", { text: entry.task.text || "" });
+      }
+      case "projectItem": {
+        for (const col of this.data!.columns) {
+          const card = col.cards.find((c) => c.id === entry.cardId);
+          if (!card) continue;
+          const lines = (card.body ?? "").split("\n");
+          // Re-locate the insertion point: prefer the path hint, then
+          // the original index, then fall back to the end of the body.
+          let insertAt = -1;
+          if (entry.itemPath) {
+            const target = entry.itemPath.trim();
+            for (let i = 0; i < lines.length; i++) {
+              const l = lines[i] ?? "";
+              if (!l.trim()) continue;
+              const depth = l.match(/^(\t*)/)?.[1]?.length ?? 0;
+              if (depth !== 0) continue;
+              const m = l.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
+              if (m && m[1] && pathToWikiLink(m[1]).slice(2, -2) === target) {
+                insertAt = i;
+                break;
+              }
+            }
+          }
+          if (insertAt < 0) insertAt = lines.length;
+          lines.splice(insertAt, 0, ...entry.removedLines);
+          card.body = lines.join("\n");
+
+          // Mirror restore into projectDocs if a path was captured.
+          if (entry.removedPath) {
+            const projectDocs = (card as { projectDocs?: ProjectDocNode[] })
+              .projectDocs;
+            const normalized: ProjectDocNode[] = Array.isArray(projectDocs)
+              ? projectDocs.map((d) => ({
+                  path: d.path,
+                  children: d.children ?? [],
+                }))
+              : [];
+            const idx = Math.min(entry.removedProjectDocIdx, normalized.length);
+            normalized.splice(idx, 0, {
+              path: entry.removedPath,
+              children: [],
+            });
+            (card as { projectDocs?: ProjectDocNode[] }).projectDocs =
+              normalized;
+          }
+          break;
+        }
+        return t("undo.projectItem", {
+          title: entry.itemPath || "",
+        });
+      }
+      case "column": {
+        const insertAt = Math.min(entry.columnIndex, this.data!.columns.length);
+        this.data!.columns.splice(insertAt, 0, entry.column);
+        return t("undo.column", { name: entry.column.name || "" });
+      }
+    }
   }
 
   async toggleTask(
@@ -222,6 +369,19 @@ export class SyncEngine {
   async deleteTask(cardId: string, taskIndex: number): Promise<void> {
     if (!this.data) return;
 
+    // Snapshot the task before removal so Ctrl+Z can restore it.
+    let snapshot: TaskItem | undefined;
+    for (const col of this.data.columns) {
+      const card = col.cards.find((c) => c.id === cardId);
+      if (card && card.tasks[taskIndex]) {
+        snapshot = { ...card.tasks[taskIndex]! };
+        break;
+      }
+    }
+    if (snapshot) {
+      this.pushUndo({ kind: "task", cardId, taskIndex, task: snapshot });
+    }
+
     this.data = {
       ...this.data,
       columns: this.data.columns.map((col) => ({
@@ -296,6 +456,26 @@ export class SyncEngine {
 
   async deleteCard(cardId: string): Promise<void> {
     if (!this.data) return;
+
+    // Snapshot the card (and the column + index it was on) so Ctrl+Z
+    // can restore it to exactly the same slot.
+    let snapshot: {
+      columnName: string;
+      cardIndex: number;
+      card: DashboardCard;
+    } | null = null;
+    for (const col of this.data.columns) {
+      const idx = col.cards.findIndex((c) => c.id === cardId);
+      if (idx >= 0) {
+        snapshot = {
+          columnName: col.name,
+          cardIndex: idx,
+          card: { ...col.cards[idx]!, tasks: [...col.cards[idx]!.tasks] },
+        };
+        break;
+      }
+    }
+    if (snapshot) this.pushUndo({ kind: "card", ...snapshot });
 
     this.data = {
       ...this.data,
@@ -414,6 +594,17 @@ export class SyncEngine {
 
   async deleteColumn(name: string): Promise<void> {
     if (!this.data) return;
+
+    // Snapshot the column (and its position) so Ctrl+Z can restore it.
+    const idx = this.data.columns.findIndex((col) => col.name === name);
+    if (idx >= 0) {
+      const col = this.data.columns[idx]!;
+      this.pushUndo({
+        kind: "column",
+        columnIndex: idx,
+        column: { ...col, cards: [...col.cards] },
+      });
+    }
 
     this.data = {
       ...this.data,
@@ -808,6 +999,11 @@ export class SyncEngine {
   ): Promise<void> {
     if (!this.data) return;
 
+    // Undo snapshot: captured inside the .map() below and pushed to
+    // the undo stack right before writeToDisk() so Ctrl+Z can
+    // re-insert the removed lines + projectDoc entry verbatim.
+    let undoSnapshot: Extract<UndoEntry, { kind: "projectItem" }> | null = null;
+
     this.data = {
       ...this.data,
       columns: this.data.columns.map((col) => ({
@@ -880,6 +1076,9 @@ export class SyncEngine {
             if (!m || !m[1]) return undefined;
             return pathToWikiLink(m[1]).slice(2, -2);
           })();
+          // Snapshot the lines (and any indented children) BEFORE the
+          // splice so the undo path can re-insert them verbatim.
+          const removedLines = lines.slice(startIdx, endIdx);
           lines.splice(startIdx, endIdx - startIdx);
           // Normalize: drop any trailing empty lines that the splice
           // may have introduced so the body stays compact.
@@ -918,7 +1117,37 @@ export class SyncEngine {
             }
             if (dropIdx >= 0) {
               nextProjectDocs = nextProjectDocs.filter((_, i) => i !== dropIdx);
+              // Capture for the undo entry: the removed body lines +
+              // the path + the projectDoc slot it was dropped from.
+              undoSnapshot = {
+                kind: "projectItem",
+                cardId,
+                itemPath,
+                removedLines,
+                removedPath,
+                removedProjectDocIdx: dropIdx,
+              };
+            } else if (removedLines.length > 0) {
+              // No projectDoc entry to mirror, but still snapshot the
+              // body lines so undo can re-insert them.
+              undoSnapshot = {
+                kind: "projectItem",
+                cardId,
+                itemPath,
+                removedLines,
+                removedPath,
+                removedProjectDocIdx: -1,
+              };
             }
+          } else if (removedLines.length > 0) {
+            undoSnapshot = {
+              kind: "projectItem",
+              cardId,
+              itemPath,
+              removedLines,
+              removedPath,
+              removedProjectDocIdx: -1,
+            };
           }
 
           // Normalize projectDocs back to ProjectDocNode[] (the
@@ -945,6 +1174,7 @@ export class SyncEngine {
         }),
       })),
     };
+    if (undoSnapshot) this.pushUndo(undoSnapshot);
     await this.writeToDisk();
   }
 

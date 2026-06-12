@@ -147,6 +147,13 @@ export function serialize(data: DashboardData, app?: App): string {
       if (lc.pageSize) {
         lines.push(`      pageSize: ${lc.pageSize}`);
       }
+      if (lc.visibleProperties && lc.visibleProperties.length > 0) {
+        lines.push(
+          `      visibleProperties: [${lc.visibleProperties
+            .map((p) => `"${escapeYamlString(p)}"`)
+            .join(", ")}]`,
+        );
+      }
       if (lc.quickDateFilter) {
         lines.push(`      quickDateFilter:`);
         lines.push(`        property: "${lc.quickDateFilter.property}"`);
@@ -788,6 +795,11 @@ function parseLibraryConfig(raw: Record<string, unknown>): LibraryConfig {
     sortDesc: raw.sortDesc !== false,
     kanbanGroupBy: raw.kanbanGroupBy ? String(raw.kanbanGroupBy) : undefined,
     pageSize: typeof raw.pageSize === "number" ? raw.pageSize : undefined,
+    visibleProperties: Array.isArray(raw.visibleProperties)
+      ? (raw.visibleProperties as unknown[])
+          .map((v) => String(v))
+          .filter(Boolean)
+      : undefined,
     quickDateFilter:
       raw.quickDateFilter && typeof raw.quickDateFilter === "object"
         ? {

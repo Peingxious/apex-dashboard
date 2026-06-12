@@ -2,6 +2,38 @@
 
 > 目标与范围以 [Target.md](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/Target.md) 为准。
 
+## 新增 2026-06-12：表格/列表视图属性筛选显示 + 看板视图专属设置隔离
+
+**背景**：当前 [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-section.ts) 的 `renderTableView` 会自动从前 20 条结果的 frontmatter 抓取最多 6 个 key 作为列，无法由用户控制；`renderListView` 只显示文件名 + 创建时间，无元数据扩展位。本次新增「属性筛选显示」功能，让用户能按需勾选要展示的属性字段。
+
+### 方案
+
+| 维度         | 改动                                                                                                                                                                                                                                                                                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **数据模型** | [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts) `LibraryConfig` 新增 `visibleProperties?: string[]`；未设置/空数组表示全量显示（向后兼容）                                                                                                                                                                 |
+| **配置 UI**  | [library-config-modal.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-config-modal.ts) 在「视图模式」与「排序/分页」之间新增「显示属性」section：**仅当 `viewMode === 'table'` 或 `viewMode === 'list'` 时显示**，多选 checkbox 列表（基于 `extractFrontmatterProperties` 的全部 key + 内置 name/modified/created） |
+| **看板专属** | 「分组依据」section 继续仅在 `viewMode === 'kanban'` 时显示（已有逻辑保持）                                                                                                                                                                                                                                                                                 |
+| **表格渲染** | [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-section.ts) `renderTableView` 优先用 `config.visibleProperties` 决定列；未设置时降级为旧逻辑（filters + 前 20 条 frontmatter 自动收集）                                                                                                            |
+| **列表渲染** | `renderListView` 在 name 与 date 之间插入属性 chip 行；只显示 `config.visibleProperties` 中勾选了的字段（数组为空则不显示任何 chip）                                                                                                                                                                                                                        |
+| **持久化**   | [parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts) `serialize` 增加 `visibleProperties: [a, b, c]` YAML 输出；`parseLibraryConfig` 反向解析回数组                                                                                                                                                           |
+| **i18n**     | [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts) 新增 `library.visibleProperties` / `library.visiblePropertiesDesc` / `library.showAll` 中英文键                                                                                                                                                              |
+| **样式**     | [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css) 新增 `.dashboard-library-list-meta` / `.dashboard-library-list-meta-value` 样式（无 chip 边框，纯文本 + 末位时间）                                                                                                                                         |
+| **版本**     | 1.1.5 → 1.1.6（patch：列表项 UI 调整）                                                                                                                                                                                                                                                                                                                      |
+| **文档**     | README.md / README_ZH.md / CHANGELOG.md / Target.md 同步                                                                                                                                                                                                                                                                                                    |
+
+### 子任务
+
+- [x] types.ts: LibraryConfig 添加 `visibleProperties?: string[]`
+- [x] parser.ts: serialize + parseLibraryConfig 双向支持
+- [x] i18n.ts: 新增 3 个 key
+- [x] library-config-modal.ts: 新增「显示属性」section（条件渲染 table/list）
+- [x] library-section.ts: renderTableView 优先用 visibleProperties；renderListView 改为内联属性值 + 末位时间
+- [x] styles.css: 列表项 meta 行 + 复选框列表样式
+- [x] 同步 Target.md / README / README_ZH / CHANGELOG，版本 1.1.6
+- [x] npm run build 验证通过
+
+---
+
 ## 修复 2026-06-12：删除最后一个 project 项会恢复
 
 **根因**：主工作台 body 写入在 [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts) 中使用了两种不同的格式：
@@ -69,11 +101,138 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 ---
 
+## 新增 2026-06-12：分区标题尾数分离为角标（兼容旧列表）
+
+**背景**：旧版本的工作台列表曾以**纯数字**作为分区名（例：`11`、`121`），本质是"列表编号"。新版本允许任意文本作为分区名后，旧的纯数字分区在标题里显得突兀。需要在保留原始 column.name（保证 sync / serialize 兼容）的前提下，把尾部的数字视觉上**抽离为角标**显示在标题之后。
+
+**展示规则**（由 `splitTrailingNumber` 函数实现）：
+
+| 原 column.name         | 标题文本         | 角标   |
+| ---------------------- | ---------------- | ------ |
+| `11`                   | （空）           | `#11`  |
+| `121`                  | （空）           | `#121` |
+| `Project 5`            | `Project`        | `#5`   |
+| `闪念-2026-01月`       | `闪念-2026-01月` | （无） |
+| `Project 5 `（尾空格） | `Project 5`      | （无） |
+
+**关键约束**：
+
+- **子列表（projectDocs 子项）不显示**这个角标。子项的 `+N` 徽章是子项自己的隐藏子项计数，与分区编号无关，必须严格隔离。
+- 双击重命名时，输入框出现的是**完整 column.name**（含数字），用户可整体编辑；保存时若名称变化，走 `callbacks.onColumnRename`；取消时仅恢复 titleText 部分，badge 角标在下一轮 render 自动重新派生。
+- 仅在标题 DOM 新增一个 `dashboard-section-number-badge` 元素，**不影响** `data-column` 属性、`onColumnRename` 传入的 currentName / newName 等下游逻辑。
+
+### 子任务
+
+- [x] renderer.ts: 新增 `splitTrailingNumber` 纯函数（含 JSDoc + 边界注释）
+- [x] renderer.ts: 分区标题渲染改为 `splitTrailingNumber` 分离 + 角标 span
+- [x] renderer.ts: 双击重命名输入框使用 `column.name` 完整值；取消时仅恢复 titleText
+- [x] i18n.ts: 新增 `renderer.columnNumberBadge` 中英文
+- [x] styles.css: 新增 `.dashboard-section-number-badge` 角标样式（克制的半透明底 + 1px 边线）
+- [x] npm run build 验证通过
+
+---
+
+## 新增 2026-06-12：项目项 wikilink 支持 Ctrl/Cmd+悬浮原生文件预览
+
+**背景**：工作台里的项目项通过自定义 DOM 渲染（`renderTextWithLinks` → 内部 span 带 `internal-link` class + `data-href` / `href`），**不走 markdown post-processor**。Obsidian 的 Page Preview 核心插件靠 post-processor 给 wikilink 挂 mouseover 监听，再派发 workspace 级别的 `link-hover` 事件触发悬浮面板。我们的自定义 DOM 没有任何监听，所以 Ctrl+悬浮什么都不出现。
+
+**方案**：在 `renderWikilink` 中给生成的 span 主动挂上 mouseover 监听，命中 Ctrl/Cmd 后等 200ms 派发 `app.workspace.trigger("link-hover", mouseEvent, target, linkText, source)`。Page Preview 接到这个事件会接管，弹出与 markdown 视图里完全一样的悬浮面板（支持 fragment 跳转、embed 渲染、"在新面板中打开"等所有原生能力）。
+
+**安全约束**：
+
+- **200ms 延迟** — 防止鼠标快速划过整个列表时弹一堆面板
+- **mouseleave / keydown 取消定时器** — 鼠标移走或松开 Ctrl/Cmd 即时撤销
+- **`link.isConnected` 检查** — render 重新构建 DOM 时旧 link 已 detach，timer 触发时跳过派发，避免在已卸载节点上派发
+- **`!ctrlKey && !metaKey` 早退** — 普通 hover 不触发（与原生行为一致）
+- **`source: "apex-dashboard"`** — 给 Page Preview 一个可识别的 source 字符串，未来排查多插件派发时方便定位
+
+### 子任务
+
+- [x] renderer.ts: `renderWikilink` 添加 mouseover/keydown/mouseout 监听 + workspace.link-hover 派发
+- [x] 同步 Target.md / CHANGELOG / README / README_ZH，版本 1.1.12 → 1.1.13
+- [x] npm run build 验证通过
+
+---
+
+## 撤销 2026-06-12：分区标题「尾号拆成 #N 角标」改动
+
+**背景**：1.1.12 引入了 `splitTrailingNumber` 把 `column.name` 拆成 `titleText` + `trailingNumber`，把数字部分画成角标 span。设计意图是兼容旧版纯数字分区名（`11` / `121`）。
+
+**问题**：分区名是**用户可见的标签**（`library` / `Project 5` / `121` / `闪念-2026-01月`），不是 id。把 `121` 这种纯数字分区名拆成"空标题 + `#121` 角标"，`<h3 class="dashboard-section-title">` 文本节点是空的，只剩一个标签式角标，视觉上把「名字」变成「编号」——和「其他分区名以普通标题文本展示」语义不一致。
+
+**修复**：
+
+- `renderer.ts`：删除 `splitTrailingNumber` 函数，新增 `renderColumnTitle(titleEl, name)` 辅助函数（仅做 `titleEl.setText(name)`）；section 标题渲染处直接 `renderColumnTitle(titleEl, column.name)`
+- `renderer.ts`：双击重命名取消路径改为 `renderColumnTitle(titleEl, currentName)`，不再调用 `splitTrailingNumber`
+- `styles.css`：删除 `.dashboard-section-number-badge` 样式块
+- `i18n.ts`：删除 `renderer.columnNumberBadge` 中英文键值
+- `Plan.md` / `CHANGELOG.md` / `README.md` / `README_ZH.md` / `Target.md` 同步：版本 1.1.13 → 1.1.14
+
+### 子任务
+
+- [x] renderer.ts: 移除 `splitTrailingNumber` 函数，引入 `renderColumnTitle`
+- [x] renderer.ts: section 标题 + 重命名取消路径用 `renderColumnTitle`
+- [x] styles.css: 移除 `.dashboard-section-number-badge` 样式
+- [x] i18n.ts: 移除 `renderer.columnNumberBadge` 中英文
+- [x] 同步 Plan / CHANGELOG / README / README_ZH / Target，版本 1.1.13 → 1.1.14
+- [x] npm run build 验证通过
+
+---
+
+## 1.1.14 增补：wikilink 原生 hover tooltip
+
+**背景**：1.1.13 实现 `link-hover` 派发后，Ctrl/Cmd+hover 已经能调起 Obsidian 原生 Page Preview 弹窗（用户反馈"图2样式"）。但**普通 hover**（无修饰键）目前只显示空白，没有原生 tooltip——Obsidian 在编辑器里默认会给 wikilink 加一个 `title` 属性，鼠标悬浮时显示链接路径。
+
+**修复**：
+
+- `renderer.ts` 中 `renderWikilink` 创建的 span 增加 `title` 属性（带 fragment 时为 `path#fragment`，否则为 `path`）。普通 hover 由浏览器原生 tooltip 渲染，**Ctrl/Cmd+hover 仍走 `link-hover` 派发**给 Page Preview
+- 注释明确「plain hover = native tooltip, Ctrl/Cmd+hover = Page Preview」的分工
+
+### 子任务
+
+- [x] renderer.ts: `renderWikilink` span 增加 `title` 属性
+- [x] CHANGELOG 增补「Native hover tooltip on wikilink, Page Preview kept for Ctrl+hover」
+- [x] npm run build 验证通过
+
+---
+
+## 1.1.14 修订：仅 project-item 启用 hover，卡片标题/任务/笔记不启用
+
+**背景**：上一节添加的 `title` 属性 + Ctrl 限制是两个独立问题：
+
+1. `title` 属性会在**卡片标题**（"To Read"）上同时显示一个浏览器原生 tooltip 标签——用户反馈"图1 下面那个 To Read 不要了"（即红色框里的卡片级 chip）
+2. Ctrl+hover 才触发 Page Preview 跟用户在编辑器里的预期不符——Obsidian 默认是普通 hover 触发（Settings → Page Preview → Hover）
+
+**问题**：
+
+- `renderTextWithLinks` 是一处实现，**所有调用方**（卡片标题 / task 文本 / note 文本 / project-item 标题）都拿到 `title` 属性 + Ctrl 限制。卡片标题拿到 `title` 是副作用，违反"卡片标题就是普通文本"的语义
+
+**修复**：
+
+- `renderer.ts` 给 `renderTextWithLinks` 和 `renderWikilink` 加 `options: { enableHover?: boolean }` 参数（默认 `false`）
+- 移除 `renderWikilink` 中我刚加的 `title` 属性——**所有 wikilink 都不再带浏览器原生 tooltip**
+- 把 hover 派发逻辑（`mouseover` 200ms 延时 + `mouseout`/`keydown` 清理）包在 `if (options.enableHover)` 里
+- 取消 `Ctrl/Cmd` 限制——**普通 hover 就派发 `link-hover`**，让 Page Preview 完全接管弹窗逻辑（与 Obsidian 编辑器内 wikilink 行为一致）
+- 调用方：
+  - project-item 标题 span：`renderTextWithLinks(titleSpan, title.cleanText, app, { enableHover: true })`（唯一启用项）
+  - 卡片标题 / task 文本 / note 文本：不传 `options`，默认 `false`，**hover 它们不触发任何预览**
+
+### 子任务
+
+- [x] renderer.ts: `renderTextWithLinks` / `renderWikilink` 增加 `options.enableHover` 参数
+- [x] renderer.ts: 移除 `renderWikilink` 中的 `title` 属性
+- [x] renderer.ts: hover 派发逻辑包裹在 `if (options.enableHover)` 中
+- [x] renderer.ts: project-item 标题 span 调用时传 `{ enableHover: true }`
+- [x] CHANGELOG / README / README_ZH / Target 同步：1.1.14 hover 行为修订说明
+- [x] npm run build 验证通过
+
+---
+
 ## 当前状态概览
 
 | 维度         | 状态                                       |
 | ------------ | ------------------------------------------ |
-| **版本**     | 1.1.4                                      |
+| **版本**     | 1.1.14                                     |
 | **构建**     | ✅ `npm run build` 通过                    |
 | **核心功能** | ✅ 四大卡片类型、侧边栏小组件、拖拽交互    |
 | **国际化**   | ✅ 中英文支持                              |

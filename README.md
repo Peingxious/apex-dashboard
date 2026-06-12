@@ -9,21 +9,27 @@
 ## Features
 
 ### 🗒️ Memo
+
 Capture thoughts instantly with a built-in memo pad. Each memo card has a writable textarea — jot down ideas, meeting notes, or daily reflections without leaving your dashboard. Supports `[[wikilinks]]` that render as clickable links.
 
 ### ✅ Todo
+
 Manage tasks with interactive checklists. Add, reorder, drag-and-drop, and check off tasks. A progress bar shows completion percentage at a glance. Todo items also support `[[wikilinks]]` for cross-referencing notes.
 
 ### 📁 Projects
+
 Organize your vault documents into project cards. Each card links to related notes, displays a cover image (supports both local vault images and web URLs), and supports inline document search to add new files quickly. Manage multiple file types including Markdown notes, PDFs, images, audio, and video.
 
 ### 📝 Notes
+
 A compact, list-style section for organizing reference documents and quick-access files. Displays up to 5 cards per row without cover images for maximum density.
 
 ### ⚡ Quick Actions
+
 Pin your most-used shortcuts to the sidebar. Supports two action types: **File** links to open any document, and **Command** shortcuts to trigger any Obsidian command. Includes built-in presets for New Journal and New Note.
 
 ### 🌤️ Sidebar Widgets
+
 The left sidebar features decorative widgets for at-a-glance information:
 
 - **Week Calendar** — A compact 7-day strip highlighting today's date
@@ -34,15 +40,19 @@ The left sidebar features decorative widgets for at-a-glance information:
 - **Countdown** — A customizable countdown to any target date, displayed as days or hours remaining
 
 ### 🎨 Banner
+
 A customizable banner with an inspirational quote and optional background image. Supports both local vault images and web URLs. Double-click to edit.
 
 ### 🔄 Drag & Drop
+
 Drag cards between sections to reorganize your workspace. Drag task items within Todo cards to reorder. Drag document links between project/note cards.
 
 ### 🧩 Custom Sections
+
 Create sections with 4 built-in types — **Memo**, **Todo**, **Projects**, and **Notes** — each with its own layout and behavior. Mix and match to fit your workflow.
 
 ### 🕐 Recent Documents
+
 The sidebar shows recently edited files with relative timestamps, so you can jump back into your latest work.
 
 ## Themes
@@ -60,11 +70,13 @@ The dashboard automatically inherits your Obsidian theme colors, seamlessly adap
 ## Installation
 
 ### From Obsidian Community Plugins
+
 1. Open Settings > Community Plugins
 2. Browse and search for "Apex Dashboard"
 3. Click Install, then Enable
 
 ### Manual Installation
+
 1. Download the latest release from [GitHub Releases](https://github.com/pandorareads/apex-dashboard/releases)
 2. Extract into your vault's `.obsidian/plugins/apex-dashboard/` folder
 3. Open Settings > Community Plugins and enable "Apex Dashboard"
@@ -83,20 +95,20 @@ The dashboard uses an indented bullet-list format:
 ## Memo
 
 - 2026-06-08 memo
-	- Welcome to Apex Dashboard! Click here to edit your first memo.
+  - Welcome to Apex Dashboard! Click here to edit your first memo.
 
 ## Todo
 
 - Task list
-	- [ ] Review dashboard plugin code
-	- [ ] Write documentation
-	- due: 2025-05-20
+  - [ ] Review dashboard plugin code
+  - [ ] Write documentation
+  - due: 2025-05-20
 
 ## Projects
 
 - Obsidian Dashboard
-	- [[obsidian-dashboard/README.md]]
-	- progress: 60
+  - [[obsidian-dashboard/README.md]]
+  - progress: 60
 ```
 
 - `##` headings define sections
@@ -109,7 +121,52 @@ The dashboard uses an indented bullet-list format:
 
 ## What's New
 
+### 1.1.14
+
+- **Project-item wikilink: native Page Preview on plain hover; card titles stay passive** — The earlier 1.1.14 pass added a `title` HTML attribute so plain hover showed a small browser tooltip; the user did not want that — it produced a tag-style "To Read" chip on the card title. Removed. Page Preview (the rich popover) is now the only hover affordance, fires on plain `mouseover` (200ms delay, no Ctrl required), and is opt-in per call site via `renderTextWithLinks(..., { enableHover: true })`. Only the project-item title span opts in; card titles, task text, and note text intentionally never trigger a preview
+- **Section title is no longer split into "title text + #N badge"** — The 1.1.12 "trailing number as badge" change is reverted. A column name is a user-facing label (`library`, `Project 5`, `121`, `闪念-2026-01月`), not an id, so it now renders verbatim as the `<h3>` — the same way every other section name is displayed. This also fixes the empty `<h3>` that happened when a column was just a number like `121`. Removed `splitTrailingNumber()`, the `.dashboard-section-number-badge` CSS, and the `renderer.columnNumberBadge` i18n string. Rename input and cancel-restore both use the full `column.name`
+
+### 1.1.13
+
+- **Native file preview on Ctrl/Cmd+hover for project-item wikilinks** — Project items in the workspace section were rendered as custom DOM, not via the markdown post-processor, so the core `Page Preview` plugin never saw them and hovering with Ctrl/Cmd did nothing. The fix dispatches the workspace-level `link-hover` event (the same one the markdown post-processor fires) whenever the user holds Ctrl (Cmd on macOS) and hovers for ~200ms. The same native popover that fires for a wikilink in any markdown view now fires for a project item too — fragment-aware navigation, embeds, and "Open" / "Open to the right" all work as expected. Mouseleave, key-down, and re-render detach all cancel the timer
+
+### 1.1.12
+
+- **Column title: trailing number rendered as a styled badge** — _Reverted in 1.1.14_ (the section name is a user-facing label, not an id)
+
+### 1.1.11
+
+- **File-suggest: no pre-selection on input, subtler highlight style** — No row is pre-highlighted when you type; pressing ↓ / ↑ moves a soft accent-tint highlight. The previous gradient + thick left-border + bold was too loud; it is now a soft `rgba(99, 102, 241, 0.18)` background with a 1px inner accent ring
+
+### 1.1.10
+
+- **File-suggest dropdown highlight now visible on ↑/↓ navigation** — The highlighted row is now unmistakable: indigo→light-indigo gradient, 3px accent left-border, bold weight. Hover on unselected rows is also restored. The fix removes an inline `background: transparent` that was beating the CSS `.is-selected` and `:hover` rules
+
+### 1.1.9
+
+- **File-suggest dropdown no longer auto-picks the first match on Enter** — The vault file search dropdown (used by add-note and other picker inputs) used to commit the first filtered match as soon as the user pressed Enter, which silently overwrote the text the user had just typed. Now the highlighted row is still the top match (visual cue), but pressing Enter without first navigating with ↑ / ↓ leaves the input untouched — the caller reads exactly the typed text. Mouse click on a row still works as before
+
+### 1.1.8
+
+- **Ctrl/Cmd+Z undo for one-click deletes** — Pressing Ctrl+Z (Cmd+Z on macOS) inside the dashboard now restores the most recently deleted card, todo task, project item, or column. A snapshot of the removed data is captured before each destructive op and pushed to an in-memory undo stack (capped at 50 entries). The view re-renders automatically after the undo, and a brief Notice shows which type of entry was restored. Obsidian's native editor undo continues to work inside text inputs — the global keydown listener bails when the focus is on an `<input>`, `<textarea>`, or any `contenteditable` element
+- **Command-palette entry** — The same undo action is now available as "Undo last delete" in Obsidian's command palette, with Ctrl/Cmd+Z as the explicit hotkey. The command is contextually hidden when there is nothing on the undo stack
+
+### 1.1.7
+
+- **Unified row-delete UX** — The small red X button is now the single delete affordance for both todo tasks and project/memo items. It appears on hover with a subtle 4px rounded shape and fills with the theme danger color. The previous larger red X with the "Delete task" tooltip on project items has been retired in favor of the same compact treatment todo uses
+- **One-click delete** — Clicking the X on a todo task, a project item, or a card header now deletes the entry directly, mirroring project/memo's existing behavior. The "Are you sure?" confirm modal that previously interrupted card and task deletion has been removed
+
+### 1.1.6
+
+- **Library list view — pill meta row** — Property values are now shown as rounded pill chips (no key labels) immediately before the time at the end of each list entry. The chips keep the familiar rounded border and subtle background from the previous design, while the time remains a plain muted label as the final element. This gives the list view a clean, scannable layout that matches the table view's column ordering
+
+### 1.1.5
+
+- **Library table / list — Visible Properties** — Pick exactly which property fields to show as table columns (or list metadata chips). A new "Visible Properties" section appears in the library config modal when the view mode is set to Table or List. Uncheck a property to hide it; use "Show all" / "Deselect all" for quick batch actions. When unset (legacy configs), the view keeps its previous auto-discovery behavior — fully backward compatible
+- **Kanban exclusive setting preserved** — The "Group by" setting continues to appear only when Kanban is the active view mode, ensuring it never bleeds into the Table / List / Grid configurations
+
 ### 1.1.3
+
 - **Mobile widget bar redesign** — Replaced the overlapping tab buttons with a collapsible strip below the banner. Tap the strip to reveal wider bookmark tabs (Pomodoro, Reading, Lunar), then tap a tab to expand its widget panel
 - **Theme-aware tab colors** — Tab icons now transition from gray (inactive) to the theme primary text color (active), adapting to both light and dark themes
 - **Updated widget icons** — Pomodoro uses hourglass icon, Lunar uses moon icon for clearer visual identity
@@ -118,15 +175,18 @@ The dashboard uses an indented bullet-list format:
 - **Style improvements** — Various visual polish and consistency fixes
 
 ### 1.1.2
+
 - **Obsidian plugin review fixes** — Addressed feedback from the official Obsidian plugin review process
 - **MIT license** — Changed license from ISC to MIT
 
 ### v1.1.1
+
 - **Library config persistence** — Fixed a critical bug where library section configurations (filters, view mode, sort settings, page size) were lost after restarting Obsidian. The YAML parser now correctly handles nested objects in column definitions
 - **Grid position persistence** — Fixed grid position (gcol/grow) values never being saved to the dashboard file, causing card positions to reset on reload
 - **Write race condition fix** — Fixed a race condition where rapid updates could cause the file watcher to overwrite newer data with older content
 
 ### v1.1.0
+
 - **Reading Tracker widget** — Full reading session management in the sidebar: add books from Douban search or manual input, start/pause/stop reading timer, and save sessions with page progress
 - **Book cards** — Each active book displays cover image, title, author, reading progress bar, and today's reading time. Cover images support both web URLs and local vault paths
 - **Edit book info** — Hover a book card to reveal edit (pencil) and remove (x) buttons. Edit modal supports changing title, author, total pages, and cover image URL/path
@@ -135,6 +195,7 @@ The dashboard uses an indented bullet-list format:
 - **Pomodoro donut chart** — Visual breakdown of today's focus sessions by activity, displayed as a donut chart in the stats view
 
 ### v1.0.8
+
 - **Sidebar weather widget** — Real-time weather with current temperature, feels-like temperature, humidity, wind speed, and a 5-day forecast (daily icons + high/low). Powered by Open-Meteo, no API key required
 - **Sidebar heatmap widget** — GitHub-style contribution heatmap for tracking daily frontmatter data (mood, sleep, weight, etc.)
 - **Heatmap summary** — Configurable stats below the heatmap: streak days (⚡), completion rate (✅), both, or off
@@ -145,6 +206,7 @@ The dashboard uses an indented bullet-list format:
 - **5 new themes** — Matcha (green tea warmth), Lilac (soft purple), Sakura (cherry blossom pink), Eclipse (dark mode), Moonlight (silver blue)
 
 ### v1.0.7
+
 - **Task reminders** — Set per-task reminders with a calendar popup. Click the bell icon on any task to pick a date and time
 - **Calendar picker** — Visual month calendar with navigation, day selection, and hour/minute dropdowns (no manual date typing)
 - **Overdue indicator** — Overdue task bell icon turns red with a pulse animation
@@ -160,6 +222,7 @@ The dashboard uses an indented bullet-list format:
 - **Faster banner rotation** — Quotes rotate every 1 hour, images every 30 minutes
 
 ### v1.0.6
+
 - **Multi-quote banner** — Store multiple quotes in the banner, each with its own author. Add, edit, and delete quotes in the edit modal
 - **Banner image rotation** — Add multiple background images that rotate every 2 hours with a smooth fade transition
 - **Quote auto-rotation** — Quotes rotate every 2 hours (offset 1 hour from image rotation so they never swap simultaneously)
@@ -171,6 +234,7 @@ The dashboard uses an indented bullet-list format:
 - **Mobile improvements** — Memo color picker button hidden on mobile, mobile drawer uses solid background for all themes, taller quick actions list
 
 ### v1.0.5
+
 - **Distinct toggle colors** — Each section type (Memo, Todo, Projects, Notes) has its own triangle indicator color
 - **Banner modal button sizing** — "Add quote" and "Add image" buttons in the banner edit modal now use fit-content width instead of stretching full width
 - **Projects card default width** — Fixed new project cards stretching across the entire section; cards now have a proper default width (280px)
@@ -179,6 +243,7 @@ The dashboard uses an indented bullet-list format:
 - **Default template fix** — Projects and Library sections now include `sectionType` in the default template and column definitions
 
 ### v1.0.4
+
 - **Quick Actions** — Quick Links upgraded to Quick Actions, supporting both file links and Obsidian command shortcuts
 - **Add Action modal** — Two tabs (File / Command) for adding custom actions, with built-in presets for New Journal and New Note
 - **4 Section types** — Memo, Todo, Projects, and Notes, each with its own layout and behavior
@@ -189,6 +254,7 @@ The dashboard uses an indented bullet-list format:
 - **Bug fixes** — Fixed wiki link clicks in memo cards, quick link rename race condition, rename listener cleanup on plugin unload
 
 ### v1.0.3
+
 - **Wikilink support** — Memo and Todo cards now render `[[wikilinks]]` as clickable links
 - **Section type selector** — Choose section type when creating new sections
 - **Mobile sidebar drawer** — Slide-in animation for mobile navigation
@@ -196,6 +262,7 @@ The dashboard uses an indented bullet-list format:
 - **Bug fixes** — Card drag restricted to header/cover area, mobile banner edit button, drawer alignment
 
 ### v1.0.2
+
 - **Section management** — Manual section deletion, section type selector
 - **Mobile improvements** — Better card scrolling and mobile layout
 - **Bug fixes** — Respect body section order, form reset prevention

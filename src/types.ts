@@ -233,6 +233,13 @@ export interface LibraryConfig {
   sortDesc: boolean;
   kanbanGroupBy?: string;
   pageSize?: number;
+  /**
+   * 属性筛选显示（仅 table / list 视图生效）
+   * - undefined 或空数组：保留旧行为，表格自动从前 20 条 frontmatter 收集，列表只显示 name + date
+   * - 非空数组：按勾选顺序作为表格列 / 列表元数据 chip 显式展示
+   * 可选 key 包括内置的 name / modified / created，以及 vault 中所有 frontmatter 属性
+   */
+  visibleProperties?: string[];
   quickDateFilter?: {
     property: "created" | "modified";
     start: string;
@@ -315,7 +322,11 @@ export interface RenderCallbacks {
     destCardId: string,
     destIndex: number,
   ): void;
-  onProjectItemDelete(cardId: string, itemIndex: number, itemPath?: string): void;
+  onProjectItemDelete(
+    cardId: string,
+    itemIndex: number,
+    itemPath?: string,
+  ): void;
   onProjectGroupAdd(columnName: string, title: string): void;
   onColumnRename(oldName: string, newName: string): void;
   onColumnDelete(columnName: string): void;

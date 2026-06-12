@@ -23,6 +23,16 @@ const translations: Record<Language, Record<string, string>> = {
     "common.delete": "Delete",
     "card.deleted": "Card deleted",
 
+    // Undo (Ctrl+Z)
+    "undo.card": "Card restored: {title}",
+    "undo.task": "Task restored: {text}",
+    "undo.projectItem": "Project item restored: {title}",
+    "undo.column": "Column restored: {name}",
+    "undo.nothing": "Nothing to undo",
+    "undo.command": "Undo last delete",
+    "undo.commandDesc":
+      "Restore the most recently deleted card, task, project item, or column",
+
     // Settings
     "settings.dashboardFile": "Dashboard file",
     "settings.dashboardFileDesc":
@@ -511,6 +521,11 @@ const translations: Record<Language, Record<string, string>> = {
     "library.filterValues": "{property}: {values}",
     "library.sortBy": "Sort by",
     "library.sortDirection": "Direction",
+    "library.visibleProperties": "Visible Properties",
+    "library.visiblePropertiesDesc":
+      "Pick which property fields appear in this view. Leave all unchecked to show everything.",
+    "library.showAll": "Show all",
+    "library.deselectAll": "Deselect all",
     "sidebar.viewName": "Dashboard Sidebar",
     "sidebar.openDashboard": "Open Dashboard",
     "sidebar.addToNote": "Add Dashboard to Note",
@@ -560,6 +575,15 @@ const translations: Record<Language, Record<string, string>> = {
     "common.confirmDeleteMessage": "确定要删除吗？此操作无法撤销。",
     "common.delete": "删除",
     "card.deleted": "卡片已删除",
+
+    // 撤销（Ctrl+Z）
+    "undo.card": "已恢复卡片：{title}",
+    "undo.task": "已恢复任务：{text}",
+    "undo.projectItem": "已恢复项目项：{title}",
+    "undo.column": "已恢复分区：{name}",
+    "undo.nothing": "没有可撤销的操作",
+    "undo.command": "撤销最近一次删除",
+    "undo.commandDesc": "恢复最近一次删除的卡片、任务、项目项或分区",
 
     // Settings
     "settings.dashboardFile": "仪表盘文件",
@@ -1042,6 +1066,11 @@ const translations: Record<Language, Record<string, string>> = {
     "library.filterValues": "{property}: {values}",
     "library.sortBy": "排序方式",
     "library.sortDirection": "排序方向",
+    "library.visibleProperties": "显示属性",
+    "library.visiblePropertiesDesc":
+      "勾选要在此视图显示的属性字段。全部取消勾选时按默认行为显示。",
+    "library.showAll": "全选",
+    "library.deselectAll": "全不选",
     "sidebar.viewName": "Dashboard 侧边栏",
     "sidebar.openDashboard": "打开 Dashboard",
     "sidebar.addToNote": "为当前笔记添加 Dashboard",
