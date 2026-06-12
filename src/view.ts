@@ -77,8 +77,17 @@ export class DashboardView extends ItemView {
   private holidayData: Record<string, HolidayInfo> = {};
   private mobileWidgetExpanded: "pomodoro" | "reading" | "lunar" | null = null;
   private mobileWidgetTabsOpen: boolean = false;
-  private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 minutes
+  private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 min
   private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+  // Generation counter for the nav-bar. Bumped on every
+  // renderViewNavBar() call. Pending clickTimer callbacks (set by
+  // a tab button in a PREVIOUS render) check this generation before
+  // firing embedNoteDashboard, so they no-op once the bar has been
+  // re-rendered. Without this, a stale timer from a destroyed
+  // button can re-render the view mid-dblclick and replace the
+  // button the user is still trying to interact with.
+  private navBarGeneration = 0;
 
   // Embedded note dashboard mode (tabs persisted in plugin.settings)
   private embeddedData: DashboardData | null = null;
@@ -192,6 +201,14 @@ export class DashboardView extends ItemView {
 
     // Use embedded note data if in embedded mode
     const activeData = this.embeddedData ?? data;
+    console.log("[apex-dashboard] render start", {
+      navGen: this.navBarGeneration,
+      passedDataColumns: data?.columns?.length,
+      activeDataColumns: activeData?.columns?.length,
+      activeDataBannerQuote: activeData?.banner?.quote?.slice(0, 30),
+      isEmbeddedActive: !!this.embeddedData,
+      embeddedNotePath: this.embeddedNotePath,
+    });
 
     // Save scroll positions before re-render
     const root = this.containerEl.children[1] as HTMLElement;
@@ -374,12 +391,122 @@ export class DashboardView extends ItemView {
   }
 
   private renderViewNavBar(container: HTMLElement): void {
+    // Bump generation BEFORE we create any buttons. Every timer
+    // captured in this render captures THIS number. If the bar
+    // gets re-rendered (via embedNoteDashboard or any other
+    // trigger) before the timer fires, the timer's captured gen
+    // will no longer match the class's current gen and the timer
+    // will safely no-op.
+    const navGen = ++this.navBarGeneration;
+    console.log("[apex-dashboard] renderViewNavBar", {
+      navGen,
+      embeddedNotePath: this.embeddedNotePath,
+      mainIsActive: !this.embeddedNotePath,
+    });
+
     const navBar = container.createDiv({ cls: "dashboard-view-nav-bar" });
 
     // Left group: tabs
     const leftGroup = navBar.createDiv({ cls: "dashboard-view-nav-left" });
 
-    // "Main Dashboard" tab (home)
+    // Shared handlers for dblclick + right-click, factored out so
+    // both the main tab AND the note tabs can use them. The main
+    // tab has no underlying md file, so `notePath` is null and
+    // openAsMarkdown() / closeNoteTab() gracefully no-op with a
+    // Notice — but the UI affordance (dblclick + right-click) is
+    // identical, matching the note tabs.
+    const DBLCLICK_THRESHOLD_MS = 250;
+
+    /** Try to open the given md by replacing the active md leaf. */
+    const openAsMarkdown = async (notePath: string | null): Promise<void> => {
+      console.log(
+        "[apex-dashboard] dblclick open (replace active md leaf):",
+        notePath,
+      );
+      if (!notePath) {
+        new Notice(
+          t("noteDash.mainTabNoMd") ||
+            "The main dashboard has no underlying note to open.",
+        );
+        return;
+      }
+      try {
+        const file = this.app.vault.getAbstractFileByPath(notePath);
+        if (!(file instanceof TFile)) {
+          new Notice(t("noteDash.fileNotFound"));
+          return;
+        }
+
+        const mdLeaves = this.app.workspace.getLeavesOfType("markdown");
+        const activeFile = this.app.workspace.getActiveFile();
+        const targetLeaf =
+          mdLeaves.find((l) => {
+            const viewFile = (l.view as { file?: TFile | null }).file;
+            return viewFile?.path === activeFile?.path;
+          }) ??
+          mdLeaves[0] ??
+          null;
+
+        if (!targetLeaf) {
+          new Notice(
+            t("noteDash.noActiveMd") ||
+              "No markdown window is open to replace. Open a note first, then double-click the tab.",
+          );
+          console.warn(
+            "[apex-dashboard] no active md leaf to replace; refusing to create a new leaf (per Plan.md ironclad rule)",
+            { notePath },
+          );
+          return;
+        }
+
+        await targetLeaf.openFile(file, { active: true });
+        console.log("[apex-dashboard] replaced active md leaf with:", notePath);
+      } catch (err) {
+        console.error("[apex-dashboard] open failed:", notePath, err);
+      }
+    };
+
+    /** Close a note tab; for the main tab this is a no-op. */
+    const closeNoteTab = async (notePath: string | null): Promise<void> => {
+      if (!notePath) {
+        new Notice(
+          t("noteDash.mainTabCannotClose") ||
+            "The main dashboard tab cannot be closed.",
+        );
+        return;
+      }
+      await this.closeNoteTab(notePath);
+    };
+
+    /** Build a contextmenu handler for a tab (main or note). */
+    const buildContextMenu = (notePath: string | null) => {
+      return (e: MouseEvent): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        const menu = new Menu();
+        menu.addItem((item) =>
+          item
+            .setTitle(t("noteDash.menuOpen") || "Open note")
+            .setIcon("file-text")
+            .onClick(() => {
+              if (notePath) activateNoteTab(notePath);
+              void openAsMarkdown(notePath);
+            }),
+        );
+        menu.addSeparator();
+        menu.addItem((item) =>
+          item
+            .setTitle(t("noteDash.menuClose") || "Close tab")
+            .setIcon("x")
+            .onClick(() => {
+              void closeNoteTab(notePath);
+            }),
+        );
+        menu.showAtPosition({ x: e.clientX, y: e.clientY });
+      };
+    };
+
+    // ---- Main Dashboard tab (home) ----
     const mainTab = leftGroup.createEl("button", {
       cls:
         "dashboard-view-nav-tab" +
@@ -391,9 +518,78 @@ export class DashboardView extends ItemView {
       setIcon(icon, "home");
       mainTab.insertBefore(icon, mainTab.firstChild);
     }
-    mainTab.addEventListener("click", () => {
-      this.exitEmbeddedMode();
-    });
+    {
+      // Main tab: same dblclick + right-click affordance as note
+      // tabs. Pass null as notePath so openAsMarkdown / closeNoteTab
+      // gracefully no-op with a Notice.
+      const mainNavGen = this.navBarGeneration;
+      let clickTimer: ReturnType<typeof setTimeout> | null = null;
+      let lastClickTime = 0;
+      const onClick = (): void => {
+        const now = Date.now();
+        const isDouble = now - lastClickTime < DBLCLICK_THRESHOLD_MS;
+        lastClickTime = now;
+        if (clickTimer !== null) {
+          clearTimeout(clickTimer);
+          clickTimer = null;
+        }
+        if (isDouble) {
+          console.log("[apex-dashboard] main tab dblclick", { mainNavGen });
+          void openAsMarkdown(null);
+          return;
+        }
+        if (!this.embeddedNotePath) {
+          // Already on main; nothing to do.
+          return;
+        }
+        clickTimer = setTimeout(() => {
+          if (this.navBarGeneration !== mainNavGen) {
+            clickTimer = null;
+            return;
+          }
+          clickTimer = null;
+          this.exitEmbeddedMode();
+        }, DBLCLICK_THRESHOLD_MS);
+      };
+      mainTab.addEventListener("click", onClick);
+      const onContextMenu = buildContextMenu(null);
+      mainTab.addEventListener("contextmenu", onContextMenu);
+    }
+
+    // Store references to all tab elements so we can update the
+    // active-highlight class on the fly — important for the
+    // double-click and right-click "Open" actions, which open the
+    // md in a horizontal-split pane WITHOUT re-rendering the
+    // dashboard view. Without this live update, the tab that was
+    // just opened would not show as highlighted.
+    const mainTabEl = mainTab;
+    const noteTabEls = new Map<string, HTMLElement>();
+
+    // Refresh which tab carries the active-highlight class.
+    // `activePath === null` => main dashboard tab is active.
+    // `activePath`       => the matching note tab is active.
+    const refreshActiveHighlight = (activePath: string | null): void => {
+      if (activePath === null) {
+        mainTabEl.addClass("dashboard-view-nav-tab--active");
+      } else {
+        mainTabEl.removeClass("dashboard-view-nav-tab--active");
+      }
+      for (const [path, el] of noteTabEls) {
+        if (path === activePath) {
+          el.addClass("dashboard-view-nav-tab--active");
+        } else {
+          el.removeClass("dashboard-view-nav-tab--active");
+        }
+      }
+    };
+
+    // Mark a note tab as the currently active embedded note AND
+    // refresh the navbar highlight. Persists across reloads via
+    // `activeEmbeddedNoteTab` in settings.
+    const activateNoteTab = (path: string): void => {
+      this.embeddedNotePath = path;
+      refreshActiveHighlight(path);
+    };
 
     // Embedded note tabs from settings
     const tabPaths = this.plugin.settings.embeddedNoteTabs ?? [];
@@ -407,6 +603,9 @@ export class DashboardView extends ItemView {
           (isActive ? " dashboard-view-nav-tab--active" : ""),
         attr: { title: notePath },
       });
+
+      // Track for live highlight updates
+      noteTabEls.set(notePath, tabEl);
 
       const btn = tabEl.createEl("button", {
         cls: "dashboard-view-nav-tab",
@@ -423,31 +622,24 @@ export class DashboardView extends ItemView {
       // never fire — the second click lands on a brand-new button.
       // We therefore delay the single-click action by 250ms and
       // cancel it if a second click comes in within that window.
+      //
+      // The shared `openAsMarkdown` / `buildContextMenu` (defined
+      // above) are reused — note tabs pass `notePath`, the main
+      // tab passes `null`.
       let clickTimer: ReturnType<typeof setTimeout> | null = null;
       let lastClickTime = 0;
-      const DBLCLICK_THRESHOLD_MS = 250;
-
-      // Opens the underlying md in the CURRENT workspace leaf.
-      // This matches the existing opening logic: the dashboard view
-      // is replaced by the markdown view (the standard "click a
-      // wikilink in the editor" behavior). We do NOT open in a new
-      // leaf here — that would be a new tab and contradicts the
-      // existing opening semantics the user asked us to preserve.
-      const openAsMarkdown = async (): Promise<void> => {
-        console.log("[apex-dashboard] dblclick open:", notePath);
-        try {
-          await this.app.workspace.openLinkText(notePath, "", false, {
-            active: true,
-          });
-        } catch (err) {
-          console.error("[apex-dashboard] openLinkText failed:", notePath, err);
-        }
-      };
 
       btn.addEventListener("click", () => {
         const now = Date.now();
         const isDouble = now - lastClickTime < DBLCLICK_THRESHOLD_MS;
         lastClickTime = now;
+        console.log("[apex-dashboard] tab click", {
+          notePath,
+          isDouble,
+          isActive,
+          navGen,
+          currentGen: this.navBarGeneration,
+        });
 
         if (clickTimer !== null) {
           clearTimeout(clickTimer);
@@ -455,8 +647,11 @@ export class DashboardView extends ItemView {
         }
 
         if (isDouble) {
-          // Second click within threshold -> treat as dblclick
-          void openAsMarkdown();
+          // Second click within threshold -> treat as dblclick.
+          // Mark this tab as active so it shows highlighted, then
+          // open the md in-place in the active md leaf.
+          activateNoteTab(notePath);
+          void openAsMarkdown(notePath);
           return;
         }
 
@@ -468,48 +663,32 @@ export class DashboardView extends ItemView {
         // Defer the embed call so a possible follow-up click can
         // cancel it and be interpreted as a dblclick.
         clickTimer = setTimeout(() => {
+          // Stale-timer guard: if the navbar was re-rendered
+          // between when this timer was armed and now, the
+          // button this timer was attached to is gone. A
+          // re-render here would replace whatever button the
+          // user is currently mid-interaction with (e.g.
+          // their second click of a dblclick), silently
+          // breaking the dblclick / right-click that follows.
+          // We simply no-op.
+          console.log("[apex-dashboard] clickTimer firing", {
+            notePath,
+            navGen,
+            currentGen: this.navBarGeneration,
+            matches: this.navBarGeneration === navGen,
+          });
+          if (this.navBarGeneration !== navGen) {
+            clickTimer = null;
+            return;
+          }
           clickTimer = null;
           void this.embedNoteDashboard(notePath);
         }, DBLCLICK_THRESHOLD_MS);
       });
 
-      const onClose = async (e: MouseEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        await this.closeNoteTab(notePath);
-      };
-
-      // Native contextmenu: keep the existing "close" affordance, but
-      // wrap it in an Obsidian Menu so the user gets the standard
-      // "Open" / "Close" / "Open in new tab" items. The button must
-      // stay clickable after the menu closes — `Menu.showAtPosition`
-      // already handles focus restoration, but we also explicitly
-      // refocus the button so the next right-click / double-click
-      // works without an extra mouse move.
-      const onContextMenu = (e: MouseEvent): void => {
-        e.preventDefault();
-        e.stopPropagation();
-        const menu = new Menu();
-        menu.addItem((item) =>
-          item
-            .setTitle(t("noteDash.menuOpen") || "Open note")
-            .setIcon("file-text")
-            .onClick(() => {
-              void openAsMarkdown();
-            }),
-        );
-        menu.addSeparator();
-        menu.addItem((item) =>
-          item
-            .setTitle(t("noteDash.menuClose") || "Close tab")
-            .setIcon("x")
-            .onClick(() => {
-              void this.closeNoteTab(notePath);
-            }),
-        );
-        menu.showAtPosition({ x: e.clientX, y: e.clientY });
-      };
-
+      // Native contextmenu: same as dblclick — activate tab +
+      // open md in-place — plus a "Close tab" item.
+      const onContextMenu = buildContextMenu(notePath);
       tabEl.addEventListener("contextmenu", onContextMenu);
       btn.addEventListener("contextmenu", onContextMenu);
     }
@@ -653,7 +832,13 @@ export class DashboardView extends ItemView {
 
   /** Load a note's dashboard data and render it embedded in the main view */
   async embedNoteDashboard(notePath: string): Promise<void> {
+    console.log("[apex-dashboard] embedNoteDashboard called", { notePath });
     const file = this.app.vault.getAbstractFileByPath(notePath);
+    console.log("[apex-dashboard] embedNoteDashboard file lookup", {
+      notePath,
+      found: !!file,
+      isTFile: file instanceof TFile,
+    });
     if (!(file instanceof TFile)) {
       new Notice(t("noteDash.fileNotFound"));
       return;
@@ -661,8 +846,22 @@ export class DashboardView extends ItemView {
 
     try {
       const content = await this.app.vault.read(file);
+      console.log("[apex-dashboard] embedNoteDashboard content read", {
+        notePath,
+        length: content.length,
+      });
       this.embeddedData = parse(content);
+      console.log("[apex-dashboard] embedNoteDashboard parse result", {
+        notePath,
+        hasData: !!this.embeddedData,
+        columns: this.embeddedData?.columns?.length,
+      });
       this.embeddedNotePath = notePath;
+      console.log("[apex-dashboard] embedNoteDashboard before render", {
+        notePath,
+        embeddedNotePath: this.embeddedNotePath,
+        hasEmbeddedData: !!this.embeddedData,
+      });
       // Add to persisted tabs list if not already there
       const tabs = this.plugin.settings.embeddedNoteTabs ?? [];
       if (!tabs.includes(notePath)) {
@@ -675,7 +874,14 @@ export class DashboardView extends ItemView {
 
       // Re-render with embedded data
       const currentData = this.sync.getData();
+      console.log("[apex-dashboard] embedNoteDashboard currentData", {
+        notePath,
+        hasCurrentData: !!currentData,
+      });
       if (currentData) this.render(currentData);
+      console.log("[apex-dashboard] embedNoteDashboard after render", {
+        notePath,
+      });
 
       // Add apex-note-dashboard-root class for fixed-width card styles
       const root = this.containerEl.children[1] as HTMLElement;

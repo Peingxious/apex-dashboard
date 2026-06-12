@@ -2,6 +2,38 @@
 
 > 目标与范围以 [Target.md](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/Target.md) 为准。
 
+---
+
+## ⚠️ 绝对禁止：nav-bar tab 双击/右键 "Open note" 的打开行为
+
+**用户已明确禁止的违规方式（已犯过 3 次，绝对不能再犯）**：
+
+| 违规方式 | 代码 | 后果 | 状态 |
+|----------|------|------|------|
+| ❌ 错误 #1：在当前 leaf 打开 | `app.workspace.openLinkText(path, "", false, ...)` | 挤掉 dashboard | 已犯 |
+| ❌ 错误 #2：水平分屏 | `getLeaf("split", "horizontal")` | 不是"激活窗口"，会出现在奇怪位置 | 已犯 |
+| ❌ 错误 #3：当前窗口的新 tab | `getLeaf("tab")` | 用户原话："放屁，你还是在打开了新tab" | 已犯 |
+| ❌ 错误 #4：垂直分屏 | `getLeaf("split", "vertical")` | 同 #2 | 禁止 |
+| ❌ 错误 #5：新 Obsidian 窗口 | `getLeaf("window")` / `getLeaf(true)` | 跳出独立窗口 | 禁止 |
+
+**✅ 唯一正确做法**（用户 2026-06-12 明确回复）：**"替换激活的 md 窗口"**
+
+逻辑：
+1. 遍历 `app.workspace.getLeavesOfType("markdown")`，找到**当前激活**的那个 md leaf
+   - 通过对比 `leaf === app.workspace.activeLeaf`，或对比 `leaf.view.file?.path` 与 `app.workspace.activeEditor?.file?.path`
+2. 在该 md leaf 上调用 `leaf.openFile(file, { active: true })` —— **替换里面的 md**
+3. **绝不动 dashboard leaf**（保证 dblclick/右键/单击 tab 仍可用）
+4. **绝不创建新 leaf**（无论 tab/split/window）
+
+**fallback 规则**（如果找不到激活的 md leaf）：
+- 找最近的一个 md leaf
+- 如果一个 md leaf 都没有，就**什么也不做**（弹 Notice 提示）
+
+**违规历史**（已修复，**仅作警示**）：
+- 2026-06-12 v1.1.14 → 错误 #1 → 改成 #2 → 用户禁止 → 改成 #3 → 用户再次明确禁止（"放屁"）→ 修正为正确方式
+
+---
+
 ## 新增 2026-06-12：表格/列表视图属性筛选显示 + 看板视图专属设置隔离
 
 **背景**：当前 [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-section.ts) 的 `renderTableView` 会自动从前 20 条结果的 frontmatter 抓取最多 6 个 key 作为列，无法由用户控制；`renderListView` 只显示文件名 + 创建时间，无元数据扩展位。本次新增「属性筛选显示」功能，让用户能按需勾选要展示的属性字段。

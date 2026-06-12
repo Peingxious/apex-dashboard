@@ -556,6 +556,10 @@ const translations: Record<Language, Record<string, string>> = {
       'No files with columns found. Add "columns" to a note\'s frontmatter first.',
     "noteDash.menuOpen": "Open note",
     "noteDash.menuClose": "Close tab",
+    "noteDash.noActiveMd":
+      "No markdown window is open to replace. Open a note first, then double-click the tab.",
+    "noteDash.mainTabNoMd":
+      "The main dashboard has no underlying note to open.",
 
     // Commands
     "command.openDashboard": "Open Dashboard",
@@ -1102,6 +1106,9 @@ const translations: Record<Language, Record<string, string>> = {
       "未找到含 columns 的文件。请在笔记 frontmatter 中添加 columns 属性。",
     "noteDash.menuOpen": "打开笔记",
     "noteDash.menuClose": "关闭标签",
+    "noteDash.noActiveMd":
+      "当前没有打开的 md 窗口可替换。请先打开一个笔记，然后双击 tab。",
+    "noteDash.mainTabNoMd": "主工作台没有对应的笔记文件可打开。",
 
     // Commands
     "command.openDashboard": "打开工作台",

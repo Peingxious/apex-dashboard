@@ -2064,7 +2064,12 @@
   background: var(--db-accent-bg, var(--background-modifier-border-focus));
   border-color: var(--db-accent-bg, var(--background-modifier-border-focus));
   font-weight: 500;
-  pointer-events: none;
+  /* NOTE: do NOT set pointer-events: none here. The active tab must
+     remain interactive so the user can dblclick to open the md in
+     a horizontal split, right-click for the Open/Close menu, and
+     single-click an active main tab to keep the dashboard interactive.
+     Keeping pointer-events disabled previously made the active tab
+     look "stuck" and silently broke dblclick + right-click. */
 }
 
 /* Tab wrapper for note tabs (contains button + close) */
