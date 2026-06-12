@@ -1,5 +1,6 @@
 import {
   ItemView,
+  Menu,
   Notice,
   setIcon,
   WorkspaceLeaf,
@@ -416,10 +417,60 @@ export class DashboardView extends ItemView {
         setIcon(icon, "file-code");
         btn.insertBefore(icon, btn.firstChild);
       }
-      btn.addEventListener("click", async () => {
-        if (!isActive) {
-          await this.embedNoteDashboard(notePath);
+      // Single vs double click detection. The single-click action
+      // (embedNoteDashboard) re-renders the whole view and destroys
+      // this button, so the browser's native `dblclick` event can
+      // never fire — the second click lands on a brand-new button.
+      // We therefore delay the single-click action by 250ms and
+      // cancel it if a second click comes in within that window.
+      let clickTimer: ReturnType<typeof setTimeout> | null = null;
+      let lastClickTime = 0;
+      const DBLCLICK_THRESHOLD_MS = 250;
+
+      // Opens the underlying md in the CURRENT workspace leaf.
+      // This matches the existing opening logic: the dashboard view
+      // is replaced by the markdown view (the standard "click a
+      // wikilink in the editor" behavior). We do NOT open in a new
+      // leaf here — that would be a new tab and contradicts the
+      // existing opening semantics the user asked us to preserve.
+      const openAsMarkdown = async (): Promise<void> => {
+        console.log("[apex-dashboard] dblclick open:", notePath);
+        try {
+          await this.app.workspace.openLinkText(notePath, "", false, {
+            active: true,
+          });
+        } catch (err) {
+          console.error("[apex-dashboard] openLinkText failed:", notePath, err);
         }
+      };
+
+      btn.addEventListener("click", () => {
+        const now = Date.now();
+        const isDouble = now - lastClickTime < DBLCLICK_THRESHOLD_MS;
+        lastClickTime = now;
+
+        if (clickTimer !== null) {
+          clearTimeout(clickTimer);
+          clickTimer = null;
+        }
+
+        if (isDouble) {
+          // Second click within threshold -> treat as dblclick
+          void openAsMarkdown();
+          return;
+        }
+
+        if (isActive) {
+          // Already showing this note's dashboard; nothing to do.
+          return;
+        }
+
+        // Defer the embed call so a possible follow-up click can
+        // cancel it and be interpreted as a dblclick.
+        clickTimer = setTimeout(() => {
+          clickTimer = null;
+          void this.embedNoteDashboard(notePath);
+        }, DBLCLICK_THRESHOLD_MS);
       });
 
       const onClose = async (e: MouseEvent) => {
@@ -428,8 +479,39 @@ export class DashboardView extends ItemView {
         await this.closeNoteTab(notePath);
       };
 
-      tabEl.addEventListener("contextmenu", onClose);
-      btn.addEventListener("contextmenu", onClose);
+      // Native contextmenu: keep the existing "close" affordance, but
+      // wrap it in an Obsidian Menu so the user gets the standard
+      // "Open" / "Close" / "Open in new tab" items. The button must
+      // stay clickable after the menu closes — `Menu.showAtPosition`
+      // already handles focus restoration, but we also explicitly
+      // refocus the button so the next right-click / double-click
+      // works without an extra mouse move.
+      const onContextMenu = (e: MouseEvent): void => {
+        e.preventDefault();
+        e.stopPropagation();
+        const menu = new Menu();
+        menu.addItem((item) =>
+          item
+            .setTitle(t("noteDash.menuOpen") || "Open note")
+            .setIcon("file-text")
+            .onClick(() => {
+              void openAsMarkdown();
+            }),
+        );
+        menu.addSeparator();
+        menu.addItem((item) =>
+          item
+            .setTitle(t("noteDash.menuClose") || "Close tab")
+            .setIcon("x")
+            .onClick(() => {
+              void this.closeNoteTab(notePath);
+            }),
+        );
+        menu.showAtPosition({ x: e.clientX, y: e.clientY });
+      };
+
+      tabEl.addEventListener("contextmenu", onContextMenu);
+      btn.addEventListener("contextmenu", onContextMenu);
     }
 
     // Divider

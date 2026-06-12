@@ -554,6 +554,8 @@ const translations: Record<Language, Record<string, string>> = {
     "noteDash.searchPlaceholder": "Search...",
     "noteDash.noDashboardFiles":
       'No files with columns found. Add "columns" to a note\'s frontmatter first.',
+    "noteDash.menuOpen": "Open note",
+    "noteDash.menuClose": "Close tab",
 
     // Commands
     "command.openDashboard": "Open Dashboard",
@@ -1098,6 +1100,8 @@ const translations: Record<Language, Record<string, string>> = {
     "noteDash.searchPlaceholder": "搜索...",
     "noteDash.noDashboardFiles":
       "未找到含 columns 的文件。请在笔记 frontmatter 中添加 columns 属性。",
+    "noteDash.menuOpen": "打开笔记",
+    "noteDash.menuClose": "关闭标签",
 
     // Commands
     "command.openDashboard": "打开工作台",
