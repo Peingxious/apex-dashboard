@@ -1,4 +1,4 @@
-﻿import { ItemView, WorkspaceLeaf, setIcon, Notice, TFile } from "obsidian";
+import { ItemView, WorkspaceLeaf, setIcon, Notice, TFile } from "obsidian";
 import type DashboardPlugin from "./main";
 import type { DashboardData, DashboardCard, CardSize } from "./types";
 import { SyncEngine } from "./sync";
@@ -83,7 +83,9 @@ export class SidebarView extends ItemView {
       return;
     }
 
-    const wrapper = container.createDiv({ cls: "peingxious-dashboard-sidebar" });
+    const wrapper = container.createDiv({
+      cls: "peingxious-dashboard-sidebar",
+    });
 
     // Header with icon and title
     const header = wrapper.createDiv({ cls: "sidebar-header" });
@@ -156,7 +158,10 @@ export class SidebarView extends ItemView {
         return;
       }
     } catch (err) {
-      console.error("[peingxious-dashboard] Error parsing note for overlay:", err);
+      console.error(
+        "[peingxious-dashboard] Error parsing note for overlay:",
+        err,
+      );
       new Notice("Error reading note content");
       this.exitOverlayMode();
       return;
@@ -225,6 +230,9 @@ export class SidebarView extends ItemView {
       onTaskReorder: () => {},
       onTaskMoveToCard: () => {},
       onTaskEdit: () => {
+        this.plugin.refreshAllDashboards();
+      },
+      onTaskHideCompletedChange: () => {
         this.plugin.refreshAllDashboards();
       },
       onCardAdd: () => {},
@@ -401,6 +409,7 @@ export class SidebarView extends ItemView {
             gridRows: 0,
             gridCol: 0,
             gridRow: 0,
+            hideCompleted: false,
           };
           col.cards.push(newCard);
           await saveAndRefresh();
@@ -565,6 +574,13 @@ export class SidebarView extends ItemView {
         const found = findCard(cardId);
         if (found && found.card.tasks[taskIndex]) {
           found.card.tasks[taskIndex].reminder = reminder;
+          await saveAndRefresh();
+        }
+      },
+      onTaskHideCompletedChange: async (cardId: string, hide: boolean) => {
+        const found = findCard(cardId);
+        if (found) {
+          found.card.hideCompleted = hide;
           await saveAndRefresh();
         }
       },

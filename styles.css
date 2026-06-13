@@ -1,4 +1,4 @@
-﻿/* =================================================================
+/* =================================================================
    Dashboard Plugin — Multi-Theme Design System
    ================================================================= */
 
@@ -1047,7 +1047,9 @@
   gap: 8px;
 }
 
-/* Allow card hover translate without clipping top border */
+/* Hover no longer translates cards, but the section row still needs
+   overflow: visible so the focus dropdown / card shadow can paint
+   outside the row bounds without being clipped. */
 .peingxious-dashboard-root[data-theme="tundra"] .dashboard-section-cards,
 .peingxious-dashboard-root[data-theme="haze"] .dashboard-section-cards,
 .peingxious-dashboard-root[data-theme="blossom"] .dashboard-section-cards,
@@ -4491,7 +4493,6 @@
 .fortune-category-btn:hover {
   background: rgba(196, 30, 58, 0.08);
   border-color: #8b2500;
-  transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(139, 37, 0, 0.12);
 }
 
@@ -4999,7 +5000,6 @@
 .dashboard-qa-item:hover {
   background: var(--db-bg-btn-hover);
   border-color: var(--db-accent);
-  transform: translateY(-1px);
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -5726,7 +5726,6 @@
    dropdown can be clipped by section overflow rules in the embedded mode. */
 
 .dashboard-card:hover {
-  transform: translateY(-2px);
   box-shadow: var(--db-shadow-card-hover);
   background: var(--db-bg-card-hover);
 }
@@ -5835,6 +5834,18 @@
   color: var(--db-danger) !important;
 }
 
+/* Active/pressed state for toggle buttons (e.g. hide-completed). The
+   button stays the same size but picks up the accent color so the user
+   can see at a glance whether the toggle is engaged. */
+.dashboard-card-btn--active {
+  color: var(--db-accent) !important;
+}
+
+.dashboard-card-btn--active:hover {
+  color: var(--db-accent) !important;
+  opacity: 0.85;
+}
+
 .dashboard-card-body {
   font-size: 0.95em;
   color: var(--db-text-muted);
@@ -5860,6 +5871,24 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Cap the visible list at ~3 single-line items; multi-line tasks push
+     the cap down a bit but the scrollable container still constrains
+     unbounded growth. The add-row + progress bar live OUTSIDE this
+     container so they remain pinned at the bottom. */
+  max-height: 190px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  /* Mouse wheel / trackpad still scrolls; the visible chrome is suppressed
+     on purpose because a thin scrollbar near a small card looks noisy and
+     makes the card height visibly "bounce" when the scrollbar appears. */
+  scrollbar-width: none;
+}
+
+.dashboard-task-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 
 .dashboard-task-list--drop-target {
@@ -7410,7 +7439,8 @@
   box-shadow: 0 0 16px rgba(139, 92, 246, 0.08);
 }
 
-.peingxious-dashboard-root[data-theme="aurora"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="aurora"]
+  .dashboard-section-row--drag-over {
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.06);
 }
@@ -7443,7 +7473,8 @@
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.peingxious-dashboard-root[data-theme="prism"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="prism"]
+  .dashboard-section-row--drag-over {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 20px rgba(244, 63, 94, 0.06);
 }
@@ -7483,7 +7514,9 @@
   border-radius: 8px;
 }
 
-.theme-dark .peingxious-dashboard-root[data-theme="nordic"] .dashboard-add-section {
+.theme-dark
+  .peingxious-dashboard-root[data-theme="nordic"]
+  .dashboard-add-section {
   border-color: rgba(100, 116, 139, 0.25);
 }
 
@@ -7502,7 +7535,6 @@
   box-shadow:
     0 5px 0 0 #98b894,
     0 8px 24px rgba(74, 103, 65, 0.15);
-  transform: translateY(-2px);
   border-color: #82b87e;
 }
 
@@ -7510,7 +7542,9 @@
   box-shadow: 0 4px 0 0 #2a4a2e;
 }
 
-.theme-dark .peingxious-dashboard-root[data-theme="island"] .dashboard-card:hover {
+.theme-dark
+  .peingxious-dashboard-root[data-theme="island"]
+  .dashboard-card:hover {
   box-shadow:
     0 5px 0 0 #2a4a2e,
     0 6px 16px rgba(0, 0, 0, 0.2);
@@ -7530,7 +7564,8 @@
     0 0 0 3px rgba(255, 204, 0, 0.15);
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-section-row--drag-over {
   border-color: #19c8b9;
   box-shadow: 0 0 0 2px rgba(25, 200, 185, 0.15);
 }
@@ -7549,7 +7584,6 @@
 .peingxious-dashboard-root[data-theme="island"] .dashboard-add-section:hover {
   border-color: #19c8b9;
   background: rgba(25, 200, 185, 0.06);
-  transform: translateY(-1px);
   box-shadow: 0 4px 0 0 #a8c8a5;
 }
 
@@ -7625,11 +7659,9 @@
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 [data-theme="island"] .dashboard-modal-actions button:hover {
-  transform: translateY(-1px);
   box-shadow: 0 5px 0 0 #98b894;
 }
 [data-theme="island"] .dashboard-modal-actions button:active {
-  transform: translateY(2px);
   box-shadow: 0 1px 0 0 #a8c8a5;
 }
 [data-theme="island"] .dashboard-modal-actions .mod-cta {
@@ -7685,23 +7717,28 @@
 }
 
 /* Island: NookPhone-style pastel tints on memo cards */
-.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="memo"] {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-card[data-type="memo"] {
   border-left: 4px solid #82d5bb;
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="todo"] {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-card[data-type="todo"] {
   border-left: 4px solid #6fba2c;
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="project"] {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-card[data-type="project"] {
   border-left: 4px solid #889df0;
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="link"] {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-card[data-type="link"] {
   border-left: 4px solid #f8a6b2;
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="notes"] {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-card[data-type="notes"] {
   border-left: 4px solid #f7cd67;
 }
 
@@ -7800,7 +7837,8 @@
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
 }
 
-.peingxious-dashboard-root[data-theme="haze"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="haze"]
+  .dashboard-section-row--drag-over {
   border-color: rgba(0, 240, 255, 0.6);
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
 }
@@ -7901,7 +7939,8 @@
   border-color: rgba(244, 63, 94, 0.2);
 }
 
-.peingxious-dashboard-root[data-theme="blossom"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="blossom"]
+  .dashboard-memo-textarea:focus {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
@@ -7911,7 +7950,8 @@
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.peingxious-dashboard-root[data-theme="blossom"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="blossom"]
+  .dashboard-section-row--drag-over {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 20px rgba(244, 63, 94, 0.06);
 }
@@ -8006,7 +8046,8 @@
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 16px rgba(143, 170, 152, 0.08);
 }
-.peingxious-dashboard-root[data-theme="matcha"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="matcha"]
+  .dashboard-section-row--drag-over {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 20px rgba(143, 170, 152, 0.06);
 }
@@ -8098,7 +8139,8 @@
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 16px rgba(184, 160, 200, 0.08);
 }
-.peingxious-dashboard-root[data-theme="lilac"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="lilac"]
+  .dashboard-section-row--drag-over {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 20px rgba(184, 160, 200, 0.06);
 }
@@ -9342,7 +9384,6 @@
 
 .widget-type-btn:hover {
   border-color: var(--db-accent);
-  transform: translateY(-2px);
 }
 
 .widget-type-btn-icon {
@@ -10362,7 +10403,6 @@
 .dashboard-library-card:hover {
   background: var(--db-bg-card-hover, rgba(255, 255, 255, 0.1));
   border-color: var(--db-accent, var(--interactive-accent));
-  transform: translateY(-1px);
 }
 
 .dashboard-library-card-title {

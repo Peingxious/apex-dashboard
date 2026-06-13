@@ -1,4 +1,4 @@
-﻿import { App, TFile, setIcon } from "obsidian";
+import { App, TFile, setIcon, Menu, Notice } from "obsidian";
 import type { LibraryConfig, PropertyFilter, LibraryViewMode } from "./types";
 import { t, getLanguage } from "./i18n";
 
@@ -246,7 +246,9 @@ function showCalendarPopup(
     cls: "dashboard-task-reminder-popup dashboard-library-calendar-popup",
   });
 
-  const dashboardRoot = anchor.closest(".peingxious-dashboard-root") as HTMLElement;
+  const dashboardRoot = anchor.closest(
+    ".peingxious-dashboard-root",
+  ) as HTMLElement;
   if (dashboardRoot) {
     const rs = getComputedStyle(dashboardRoot);
     const themeVars = [
@@ -968,6 +970,178 @@ function openFile(app: App, file: TFile): void {
   app.workspace.getLeaf(false).openFile(file);
 }
 
+// Show the same native file context menu Obsidian shows in the File
+// Explorer (Open in new tab/pane/window, Rename, Move to…, Star, Delete,
+// Reveal in OS, etc.). Library rows are plain <div>s, not markdown links,
+// so Obsidian's "show on internal-link" hook never sees them — we have
+// to fire "file-menu" ourselves. Core + every plugin that listens for
+// that event (Page Preview, Recent Files, Excalidraw, …) then contributes
+// its items, giving the user the exact menu they'd get from a real
+// file-explorer right-click.
+//
+// We *also* seed the menu with the standard items ourselves, because
+// `workspace.trigger("file-menu", …)` only fans out to listeners — if
+// Obsidian core hasn't registered a file-menu callback (or the plugin
+// is running on a build/version where that handler is missing), the
+// menu would be empty and the right-click would appear to "do nothing".
+// Seeding here guarantees Open / Open in new tab / Open to the right /
+// Copy link / Reveal in file explorer always appear, even on stripped-
+// down Obsidian builds.
+function showFileContextMenu(
+  e: MouseEvent,
+  file: TFile,
+  app: App,
+  fallbackLinkText: string,
+): void {
+  e.preventDefault();
+  e.stopPropagation();
+
+  // Build the same wikilink-style menu the user gets on a real internal
+  // link in markdown. Library cards represent real TFiles, so we have
+  // everything Obsidian's built-in link-menu would offer, plus the file.
+  const linkText = fallbackLinkText;
+  const fileName = file?.basename ?? linkText;
+  const filePath = file?.path ?? linkText;
+
+  const menu = new Menu();
+
+  // Open (current leaf) — mirrors Obsidian's "Follow link" behavior
+  menu.addItem((item) =>
+    item
+      .setTitle(t("renderer.openLink") || "Open link")
+      .setIcon("file-text")
+      .onClick(() => {
+        if (file) void app.workspace.getLeaf(false).openFile(file);
+        else void app.workspace.openLinkText(linkText, "", false);
+      }),
+  );
+  // Open to the right (vertical split)
+  menu.addItem((item) =>
+    item
+      .setTitle(t("renderer.openLinkSplit") || "Open link to the right")
+      .setIcon("split-square-vertical")
+      .onClick(() => {
+        if (file) {
+          const leaf = app.workspace.getLeaf("split", "vertical");
+          void leaf.openFile(file);
+        } else {
+          void app.workspace.openLinkText(linkText, "", false, {
+            split: true,
+          } as Parameters<typeof app.workspace.openLinkText>[3]);
+        }
+      }),
+  );
+  // Open in a new tab / new pane
+  menu.addItem((item) =>
+    item
+      .setTitle(t("renderer.openLinkNewTab") || "Open link in new pane")
+      .setIcon("external-link")
+      .onClick(() => {
+        if (file) {
+          const leaf = app.workspace.getLeaf("tab");
+          void leaf.openFile(file);
+        } else {
+          void app.workspace.openLinkText(linkText, "", false, {
+            newLeaf: true,
+          } as Parameters<typeof app.workspace.openLinkText>[3]);
+        }
+      }),
+  );
+  // Open in a new window
+  menu.addItem((item) =>
+    item
+      .setTitle("Open in new window")
+      .setIcon("maximize-2")
+      .onClick(() => {
+        if (file) {
+          const leaf = app.workspace.openPopoutLeaf();
+          void leaf.openFile(file);
+        } else {
+          void app.workspace.openLinkText(linkText, "", false, {
+            openInNewWindow: true,
+          } as unknown as Parameters<typeof app.workspace.openLinkText>[3]);
+        }
+      }),
+  );
+
+  menu.addSeparator();
+
+  // Copy link as [[wikilink]] to clipboard
+  menu.addItem((item) =>
+    item
+      .setTitle(t("renderer.copyLink") || "Copy link")
+      .setIcon("copy")
+      .onClick(() => {
+        const linkMd = `[[${fileName}]]`;
+        void navigator.clipboard.writeText(linkMd);
+        new Notice(t("renderer.linkCopied") || "Link copied");
+      }),
+  );
+  // Copy Obsidian URL (obsidian://…)
+  if (file) {
+    menu.addItem((item) =>
+      item
+        .setTitle("Copy Obsidian URL")
+        .setIcon("link")
+        .onClick(() => {
+          const url =
+            "obsidian://open?path=" +
+            encodeURIComponent(filePath) +
+            (file ? `&file=${encodeURIComponent(file.name)}` : "");
+          void navigator.clipboard.writeText(url);
+          new Notice("Obsidian URL copied");
+        }),
+    );
+  }
+
+  // Reveal in File Explorer (only useful when the file actually exists
+  // in the vault, which it does for library rows).
+  if (file) {
+    menu.addItem((item) =>
+      item
+        .setTitle("Reveal in file explorer")
+        .setIcon("folder-open")
+        .onClick(() => {
+          // openFileExplorerForFile is the official API for this; fall
+          // back to executing the file-explorer reveal command if the
+          // helper isn't available on this Obsidian version.
+          const fm = (
+            app as App & {
+              fileManager?: { openFileExplorerForFile?: (f: TFile) => void };
+            }
+          ).fileManager;
+          if (fm?.openFileExplorerForFile) {
+            fm.openFileExplorerForFile(file);
+          } else {
+            // The "reveal" command focuses the file under the cursor
+            // target, so we have to point it at our file first.
+            (
+              app.workspace as unknown as {
+                setActiveFile?: (f: TFile) => void;
+              }
+            ).setActiveFile?.(file);
+            void (
+              app as unknown as {
+                commands: { executeCommandById: (id: string) => unknown };
+              }
+            ).commands.executeCommandById("file-explorer:reveal-file");
+          }
+        }),
+    );
+  }
+
+  // Fire the "file-menu" workspace event LAST, so any plugin that
+  // extends the file menu (Page Preview, Recent Files, Excalidraw,
+  // various add-on plugins, …) gets a chance to append their items to
+  // the menu we've already built. We pass an empty sourcePath because
+  // there's no single "containing note" for a library card — it's just
+  // a vault-level file listing.
+  const sourcePath = app.workspace.getActiveFile()?.path ?? "";
+  app.workspace.trigger("file-menu", menu, file ?? undefined, sourcePath);
+
+  menu.showAtMouseEvent(e);
+}
+
 function renderBadgeRow(
   container: HTMLElement,
   fm: Record<string, unknown>,
@@ -1268,6 +1442,10 @@ function renderTableView(
         td.addEventListener("click", (e) => {
           e.stopPropagation();
           openFile(app, result.file);
+        });
+        td.addEventListener("contextmenu", (e) => {
+          e.stopPropagation();
+          showFileContextMenu(e, result.file, app, result.basename);
         });
       } else if (col === "modified") {
         td.textContent = formatDate(result.mtime);

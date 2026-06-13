@@ -1,4 +1,4 @@
-﻿import {
+import {
   ItemView,
   Menu,
   Notice,
@@ -564,7 +564,9 @@ export class DashboardView extends ItemView {
           clickTimer = null;
         }
         if (isDouble) {
-          console.log("[peingxious-dashboard] main tab dblclick", { mainNavGen });
+          console.log("[peingxious-dashboard] main tab dblclick", {
+            mainNavGen,
+          });
           void openAsMarkdown(null);
           return;
         }
@@ -862,7 +864,9 @@ export class DashboardView extends ItemView {
 
   /** Load a note's dashboard data and render it embedded in the main view */
   async embedNoteDashboard(notePath: string): Promise<void> {
-    console.log("[peingxious-dashboard] embedNoteDashboard called", { notePath });
+    console.log("[peingxious-dashboard] embedNoteDashboard called", {
+      notePath,
+    });
     const file = this.app.vault.getAbstractFileByPath(notePath);
     console.log("[peingxious-dashboard] embedNoteDashboard file lookup", {
       notePath,
@@ -1109,6 +1113,7 @@ export class DashboardView extends ItemView {
             gridRows: 0,
             gridCol: 0,
             gridRow: 0,
+            hideCompleted: false,
           });
           await self.saveEmbeddedAndRefresh();
         } else {
@@ -1308,6 +1313,13 @@ export class DashboardView extends ItemView {
         const found = self.findEmbeddedCard(cardId);
         if (found) {
           found.card.size = size as import("./types").CardSize;
+          await self.saveEmbeddedAndRefresh();
+        }
+      },
+      onTaskHideCompletedChange: async (cardId: string, hide: boolean) => {
+        const found = self.findEmbeddedCard(cardId);
+        if (found) {
+          found.card.hideCompleted = hide;
           await self.saveEmbeddedAndRefresh();
         }
       },
@@ -1665,6 +1677,7 @@ export class DashboardView extends ItemView {
           gridRows: 0,
           gridCol: 0,
           gridRow: 0,
+          hideCompleted: false,
         });
         await self.saveEmbeddedAndRefresh();
       },
@@ -1859,6 +1872,7 @@ export class DashboardView extends ItemView {
         gridRows: 0,
         gridCol: 0,
         gridRow: 0,
+        hideCompleted: false,
       });
       this.saveEmbeddedAndRefresh();
     });
@@ -1894,6 +1908,7 @@ export class DashboardView extends ItemView {
           gridRows: 0,
           gridCol: 0,
           gridRow: 0,
+          hideCompleted: false,
         });
         this.saveEmbeddedAndRefresh();
       },
@@ -2382,6 +2397,8 @@ export class DashboardView extends ItemView {
         this.sync.updateCardWidth(cardId, width),
       onCardSizeChange: (cardId: string, size: string) =>
         this.sync.updateCardSize(cardId, size as import("./types").CardSize),
+      onTaskHideCompletedChange: (cardId: string, hide: boolean) =>
+        this.sync.updateCardHideCompleted(cardId, hide),
       onCardGridChange: (cardId: string, gridCols: number, gridRows: number) =>
         this.sync.updateCardGrid(cardId, gridCols, gridRows),
       onCardGridMove: (cardId: string, gridCol: number, gridRow: number) =>
@@ -2465,6 +2482,7 @@ export class DashboardView extends ItemView {
           gridRows: 0,
           gridCol: 0,
           gridRow: 0,
+          hideCompleted: false,
         });
       },
       onAddFromTemplate: (columnName: string) =>
@@ -2748,7 +2766,10 @@ export class DashboardView extends ItemView {
       const currentData = this.sync.getData();
       if (currentData) this.render(currentData);
     } catch (err) {
-      console.error("[peingxious-dashboard] Error reloading embedded note:", err);
+      console.error(
+        "[peingxious-dashboard] Error reloading embedded note:",
+        err,
+      );
     }
   }
 

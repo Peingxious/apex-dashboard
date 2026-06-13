@@ -294,6 +294,9 @@ export function serialize(data: DashboardData, app?: App): string {
       if (card.gridRow > 0) {
         metadataLines.push(`grow: ${card.gridRow}`);
       }
+      if (card.hideCompleted) {
+        metadataLines.push(`hideCompleted: true`);
+      }
       if (card.weatherConfig) {
         const wc = card.weatherConfig;
         metadataLines.push(`lat: ${wc.latitude}`);
@@ -350,6 +353,12 @@ export function serialize(data: DashboardData, app?: App): string {
       // into `[[11]]` and caused "plain text gets cleaned up to a
       // wikilink" on save.
       const toWikiLink = (rawPath: string): string => {
+        // Defensive: even though the parameter is typed as `string`,
+        // projectDocs synthesis may receive a non-string value (e.g.
+        // a ProjectDocNode object passed in by accident from older
+        // code paths). Treat anything that isn't a string as empty
+        // instead of throwing ".includes is not a function".
+        if (typeof rawPath !== "string") return "";
         if (rawPath.includes("[[")) return rawPath;
         if (!rawPath.includes("/") && !rawPath.toLowerCase().endsWith(".md")) {
           return rawPath;
@@ -378,7 +387,24 @@ export function serialize(data: DashboardData, app?: App): string {
             synthesized.push(`- ${toWikiLink(doc.path)}`);
             if (Array.isArray(doc.children)) {
               for (const child of doc.children) {
-                synthesized.push(`\t- ${toWikiLink(child)}`);
+                // Defensive: children may be plain strings (legacy
+                // / hand-written projectDocs) OR ProjectDocNode
+                // objects (the schema's own shape — children are
+                // always ProjectDocNode[]). Extract the path from
+                // either shape so the on-disk markdown still
+                // round-trips, and so we never call `.includes` on
+                // an object (which was the source of the
+                // "d.includes is not a function" crash on dragging
+                // the last project item out of a card).
+                const childPath =
+                  typeof child === "string"
+                    ? child
+                    : child &&
+                        typeof (child as { path?: unknown }).path === "string"
+                      ? (child as { path: string }).path
+                      : "";
+                if (!childPath) continue;
+                synthesized.push(`\t- ${toWikiLink(childPath)}`);
               }
             }
           }
@@ -513,6 +539,7 @@ export function generateDefaultMarkdown(): string {
             gridRows: 0,
             gridCol: 0,
             gridRow: 0,
+            hideCompleted: false,
           },
           {
             id: generateId(t("default.todoTitle2"), "Todo"),
@@ -1190,6 +1217,7 @@ function parseCard(
     gridRow: parseInt(metadata.grow ?? "0", 10) || 0,
     weatherConfig,
     trackerConfig,
+    hideCompleted: metadata.hideCompleted === "true",
   };
 }
 

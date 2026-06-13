@@ -39,30 +39,6 @@ export default class DashboardPlugin extends Plugin {
       this.activateView();
     });
 
-    // Command to open dashboard (with hotkey: Ctrl+Alt+Shift+Z)
-    this.addCommand({
-      id: "open-dashboard",
-      name: t("command.openDashboard"),
-      hotkeys: [
-        {
-          modifiers: ["Mod", "Alt", "Shift"],
-          key: "Z",
-        },
-      ],
-      callback: () => {
-        this.activateView();
-      },
-    });
-
-    // Command: Toggle the shared dashboard sidebar
-    this.addCommand({
-      id: "toggle-dashboard-sidebar",
-      name: t("command.toggleSidebar"),
-      callback: () => {
-        this.toggleSidebar();
-      },
-    });
-
     // Command: Convert current note headings to dashboard columns (no page open)
     this.addCommand({
       id: "convert-note-to-dashboard",
@@ -72,22 +48,6 @@ export default class DashboardPlugin extends Plugin {
         if (activeFile) {
           if (!checking) {
             this.convertNoteToDashboard(activeFile.path);
-          }
-          return true;
-        }
-        return false;
-      },
-    });
-
-    // Command: Restore note from dashboard view (remove dashboard frontmatter)
-    this.addCommand({
-      id: "restore-note-from-dashboard",
-      name: t("command.restoreFromDashboard"),
-      checkCallback: (checking) => {
-        const activeFile = this.app.workspace.getActiveFile();
-        if (activeFile) {
-          if (!checking) {
-            this.restoreNoteFromDashboard(activeFile.path);
           }
           return true;
         }
@@ -110,35 +70,6 @@ export default class DashboardPlugin extends Plugin {
         if (activeFile && activeFile.extension === "md") {
           if (!checking) {
             this.embedNoteInDashboard(activeFile.path);
-          }
-          return true;
-        }
-        return false;
-      },
-    });
-
-    // Command: Undo last delete (restores card / task / project item / column)
-    this.addCommand({
-      id: "undo-last-delete",
-      name: t("undo.command"),
-      hotkeys: [
-        {
-          modifiers: ["Mod"],
-          key: "Z",
-        },
-      ],
-      checkCallback: (checking) => {
-        const leaves = this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE);
-        const view = leaves[0]?.view as DashboardView | undefined;
-        if (view && view.canUndo()) {
-          if (!checking) {
-            void view.undoLast().then((label) => {
-              if (label) {
-                new Notice(label);
-              } else {
-                new Notice(t("undo.nothing"));
-              }
-            });
           }
           return true;
         }

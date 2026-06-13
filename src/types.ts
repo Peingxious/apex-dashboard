@@ -206,6 +206,9 @@ export interface DashboardCard {
   gridRows: number;
   gridCol: number;
   gridRow: number;
+  /** When true, the todo card hides tasks with `checked === true` from its visible list.
+   *  Persisted as `hideCompleted: true` in card metadata. */
+  hideCompleted?: boolean;
   chartConfig?: never;
   weatherConfig?: WeatherConfig;
   trackerConfig?: TrackerConfig;
@@ -284,6 +287,8 @@ export interface RenderCallbacks {
   onCheckboxToggle(cardId: string, taskIndex: number, checked: boolean): void;
   onTaskAdd(cardId: string, text: string): void;
   onTaskDelete(cardId: string, taskIndex: number): void;
+  /** Toggle the "hide completed tasks" state on a todo card. */
+  onTaskHideCompletedChange(cardId: string, hide: boolean): void;
   onTaskReorder(cardId: string, fromIndex: number, toIndex: number): void;
   onTaskMoveToCard(
     srcCardId: string,

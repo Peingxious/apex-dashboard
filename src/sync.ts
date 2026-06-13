@@ -425,6 +425,7 @@ export class SyncEngine {
         | "gridRows"
         | "gridCol"
         | "gridRow"
+        | "hideCompleted"
       >
     >,
   ): Promise<void> {
@@ -535,6 +536,7 @@ export class SyncEngine {
       gridRows: 0,
       gridCol: 0,
       gridRow: 0,
+      hideCompleted: false,
       ...overrides,
     };
 
@@ -945,6 +947,14 @@ export class SyncEngine {
     if (!this.data) return;
 
     let movedSection = "";
+    // Track the moved projectDoc node (if any) so we can mirror the
+    // move into the structured projectDocs array on the dest card.
+    // Without this, dragging the last item out of a card leaves
+    // body="" while projectDocs still references the moved item.
+    // The serializer would then fall back to projectDocs synthesis
+    // and crash on ".includes is not a function" for ProjectDocNode
+    // children.
+    let movedDoc: import("./types").ProjectDocNode | undefined;
 
     this.data = {
       ...this.data,
@@ -956,6 +966,19 @@ export class SyncEngine {
           if (itemIndex < 0 || itemIndex >= sections.length) return card;
           movedSection = sections[itemIndex]!;
           sections.splice(itemIndex, 1);
+
+          // Mirror the removal into projectDocs (if the card
+          // carries them) so the two data sources stay in lockstep.
+          const existingDocs = (card as { projectDocs?: unknown })
+            .projectDocs;
+          if (Array.isArray(existingDocs)) {
+            const docs = existingDocs as import("./types").ProjectDocNode[];
+            if (itemIndex >= 0 && itemIndex < docs.length) {
+              const [extracted] = docs.splice(itemIndex, 1);
+              if (extracted) movedDoc = extracted;
+            }
+          }
+
           return { ...card, body: sections.join("\n") };
         }),
       })),
@@ -972,6 +995,26 @@ export class SyncEngine {
           const sections = this.splitProjectSections(card.body);
           const insertIdx = Math.min(destIndex, sections.length);
           sections.splice(insertIdx, 0, movedSection);
+
+          // Mirror the insertion into projectDocs (if the dest
+          // card carries them) so renderer + serializer stay in
+          // sync with body.
+          if (movedDoc) {
+            const existingDocs = (card as { projectDocs?: unknown })
+              .projectDocs;
+            const docs: import("./types").ProjectDocNode[] = Array.isArray(
+              existingDocs,
+            )
+              ? (existingDocs as import("./types").ProjectDocNode[]).map((d) => ({
+                  path: d.path,
+                  children: d.children ?? [],
+                }))
+              : [];
+            const clamped = Math.min(destIndex, docs.length);
+            docs.splice(clamped, 0, movedDoc);
+            return { ...card, body: sections.join("\n"), projectDocs: docs };
+          }
+
           return { ...card, body: sections.join("\n") };
         }),
       })),
@@ -1242,6 +1285,13 @@ export class SyncEngine {
     size: import("./types").CardSize,
   ): Promise<void> {
     await this.updateCard(cardId, { size });
+  }
+
+  async updateCardHideCompleted(
+    cardId: string,
+    hideCompleted: boolean,
+  ): Promise<void> {
+    await this.updateCard(cardId, { hideCompleted });
   }
 
   async updateCardGrid(

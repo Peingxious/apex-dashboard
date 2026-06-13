@@ -1,4 +1,4 @@
-﻿import { App, Notice, setIcon } from "obsidian";
+import { App, Menu, Notice, setIcon } from "obsidian";
 import type {
   DashboardData,
   DashboardColumn,
@@ -3153,7 +3153,10 @@ function renderCard(
       titleEl.addClass("dashboard-card-title--linked");
     }
   } catch (err) {
-    console.error("[peingxious-dashboard] title renderTextWithLinks FAILED:", err);
+    console.error(
+      "[peingxious-dashboard] title renderTextWithLinks FAILED:",
+      err,
+    );
     titleEl.setText(card.title);
   }
 
@@ -3276,6 +3279,34 @@ function renderCard(
     editBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       callbacks.onCardEdit(card);
+    });
+  }
+
+  // Task/todo cards: toggle button to hide completed items from the list.
+  // Persisted via onTaskHideCompletedChange (writes the card.hideCompleted flag
+  // back to disk). Icon flips between "eye-off" (active — hiding) and "eye"
+  // (inactive — showing everything) so the user always knows the current state.
+  if (isTask) {
+    const hideCompleted = card.hideCompleted === true;
+    const hideBtn = actions.createEl("button", {
+      cls: "dashboard-card-btn",
+      attr: {
+        "aria-label": hideCompleted
+          ? t("renderer.showCompletedTasks")
+          : t("renderer.hideCompletedTasks"),
+        "aria-pressed": hideCompleted ? "true" : "false",
+        title: hideCompleted
+          ? t("renderer.showCompletedTasks")
+          : t("renderer.hideCompletedTasks"),
+      },
+    });
+    setIcon(hideBtn, hideCompleted ? "eye-off" : "eye");
+    if (hideCompleted) {
+      hideBtn.addClass("dashboard-card-btn--active");
+    }
+    hideBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      callbacks.onTaskHideCompletedChange(card.id, !hideCompleted);
     });
   }
 
@@ -3476,7 +3507,18 @@ function renderTaskBody(
   const list = container.createDiv({ cls: "dashboard-task-list" });
   list.dataset.cardId = card.id;
 
-  card.tasks.forEach((task, index) => {
+  // Filter hidden completed tasks (controlled by the card's hideCompleted flag).
+  // We still keep the original index mapping for callbacks so uncheck/redo
+  // keeps the same checkbox state; filteredOut tracks the indices we skipped
+  // so onCheckboxToggle still receives the correct source index.
+  const hideCompleted = card.hideCompleted === true;
+  const visibleTasks = hideCompleted
+    ? card.tasks
+        .map((t, i) => ({ task: t, index: i }))
+        .filter((x) => !x.task.checked)
+    : card.tasks.map((t, i) => ({ task: t, index: i }));
+
+  visibleTasks.forEach(({ task, index }) => {
     const item = list.createDiv({ cls: "dashboard-task-item" });
     item.setAttribute("draggable", "true");
     item.dataset.taskIndex = String(index);
@@ -4152,6 +4194,73 @@ function renderWikilink(
     e.stopPropagation();
     // Use native Obsidian link resolution for proper fragment/heading navigation
     app.workspace.openLinkText(linkText, "", false, { active: true });
+  });
+
+  // Native right-click context menu. The dashboard renders wikilinks as
+  // plain spans, not via the markdown post-processor, so Obsidian's
+  // global "show on internal-link" hook never sees them. We re-create
+  // the *file* context menu by hand — the one the user gets when
+  // right-clicking a note in the File Explorer (Open in new tab / pane
+  // / window, Rename, Move to, Star, Delete, Reveal in OS, etc.).
+  //
+  // The trick: resolve the wikilink text to a real TFile, then fire the
+  // "file-menu" workspace event. Obsidian core + every community plugin
+  // (Page Preview, Recent Files, Excalidraw, ...) listens for that event
+  // and contributes its entries, so we get the exact same menu as a
+  // real file-explorer right-click — without us having to add a single
+  // item by hand.
+  link.addEventListener("contextmenu", (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const sourcePath = app.workspace.getActiveFile()?.path ?? "";
+
+    // fragment-only links (e.g. current-note headings) and unresolved
+    // wikilinks have no backing file — fall back to Obsidian's own
+    // link-menu (with our built-in defaults below) for those, so the
+    // user still gets a useful menu.
+    const linkPath = fragment ? path : linkText;
+    const file = app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+    if (file) {
+      const menu = new Menu();
+      app.workspace.trigger("file-menu", menu, file, sourcePath);
+      menu.showAtMouseEvent(e);
+      return;
+    }
+
+    // Fallback for unresolved links: built-in "Open" actions.
+    const fallback = new Menu();
+    fallback.addItem((item) =>
+      item
+        .setTitle(t("renderer.openLink") || "Open link")
+        .setIcon("file-text")
+        .onClick(() => {
+          void app.workspace.openLinkText(linkText, "", false);
+        }),
+    );
+    fallback.addItem((item) =>
+      item
+        .setTitle(t("renderer.openLinkNewTab") || "Open link in new pane")
+        .setIcon("external-link")
+        .onClick(() => {
+          void app.workspace.openLinkText(linkText, "", false, {
+            newLeaf: true,
+          } as Parameters<typeof app.workspace.openLinkText>[3]);
+        }),
+    );
+    fallback.addSeparator();
+    fallback.addItem((item) =>
+      item
+        .setTitle(t("renderer.copyLink") || "Copy link")
+        .setIcon("copy")
+        .onClick(() => {
+          const linkMd = alias
+            ? `[[${linkPart}${fragment ? `#${fragment}` : ""}|${alias}]]`
+            : `[[${linkText}]]`;
+          void navigator.clipboard.writeText(linkMd);
+          new Notice(t("renderer.linkCopied") || "Link copied");
+        }),
+    );
+    fallback.showAtMouseEvent(e);
   });
 
   // Hover-driven native Page Preview (Obsidian internal-link style).

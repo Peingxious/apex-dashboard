@@ -207,6 +207,52 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ---
 
+## 修复 2026-06-13：拖动最后一个 project item 报错 `d.includes is not a function`
+
+**现象**（用户日志）：
+
+```
+plugin:peingxious-dashboard:136 Uncaught (in promise) TypeError: d.includes is not a function
+     at o (plugin:peingxious-dashboard:136:54733)
+     at mi (plugin:peingxious-dashboard:136:55089)
+     at Dn.writeToDisk (plugin:peingxious-dashboard:176:2870)
+     at Dn.moveProjectItemToCard (plugin:peingxious-dashboard:171:22)
+     at Object.onProjectItemMoveToCard (plugin:peingxious-dashboard:202:11595)
+     at HTMLDivElement.eval (plugin:peingxious-dashboard:182:141)
+
+工作台，project拖最后一个，报错
+```
+
+**根因**（两个 bug 叠加）：
+
+### Bug 1：serialize 把 `ProjectDocNode` 当字符串传给了 `toWikiLink`
+
+`types.ts:ProjectDocNode.children` 类型是 `ProjectDocNode[]`（对象数组），但 [parser.ts:serialize](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts#L355) 内的 `toWikiLink` 假设 `rawPath` 是 `string`。在合成 projectDocs body 路径里，循环 `for (const child of doc.children)` 把每个 child 直接传给 `toWikiLink(child)`，于是当 child 是对象时 `rawPath.includes("[[")` 抛 `TypeError: d.includes is not a function`。
+
+### Bug 2：`sync.moveProjectItemToCard` 没有同步 `projectDocs`
+
+[sync.ts:moveProjectItemToCard](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L941) 只更新 `body`，不更新 `projectDocs`。当拖出**最后一个** item 时，源卡片 `body = ""`，但 `projectDocs` 仍包含被移走的那一项。
+
+随后 `serialize` 看到「body 为空 + projectDocs 有数据」→ 进入 projectDocs **合成分支** → 命中 Bug 1 → 崩溃。
+
+之前的 reorder / delete 操作都同步了 projectDocs，唯独 move 漏掉了。
+
+**修复**：
+
+1. **[parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts)** 双重防御：
+   - `toWikiLink` 入口加 `if (typeof rawPath !== "string") return ""` —— 即便被误传对象也不崩
+   - 合成 children 循环增加类型分支：string 直接用；对象则取 `child.path`（要二次判断 `typeof === "string"`）；其他跳过
+2. **[sync.ts:moveProjectItemToCard](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L941)** 同步 `projectDocs`：源卡片 splice 出节点（与 body index 对齐），目标卡片 splice 进去（带 `clamp` 保护 + 重新规整 `children`）。这样 body / projectDocs 始终一致，serialize 永远不需要回退到 projectDocs 合成路径
+
+**验证清单**：
+
+- [x] parser.ts: toWikiLink 增加非字符串防御
+- [x] parser.ts: children 循环支持 string / ProjectDocNode 两种形态
+- [x] sync.ts: moveProjectItemToCard 同步 projectDocs
+- [x] `npx tsc --noEmit` 通过
+- [x] `npm run build` 通过
+
+
 ## 新增 2026-06-12：分区标题尾数分离为角标（兼容旧列表）
 
 **背景**：旧版本的工作台列表曾以**纯数字**作为分区名（例：`11`、`121`），本质是"列表编号"。新版本允许任意文本作为分区名后，旧的纯数字分区在标题里显得突兀。需要在保留原始 column.name（保证 sync / serialize 兼容）的前提下，把尾部的数字视觉上**抽离为角标**显示在标题之后。
@@ -644,3 +690,71 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 
 - 侧边栏小组件完整实现（天气/热力图/番茄钟/倒计时/农历）
 - 城市搜索 geocoding 自动补全
+
+---
+
+## 新增 2026-06-13：Todo 默认隐藏已完成任务
+
+**用户原话**：
+> `hideCompleted: true` 像这样属性的一律不出现在 md 文件中；这个可以写入设置中，默认开启隐藏，这个按钮，就是临时使用，看看制作到什么程度了
+
+**目标**：
+- 全局设置 `settings.defaultHideCompleted: boolean`（**默认 `true`**）：todo card 创建时如果没显式设置 `hideCompleted`，按此值渲染
+- md 文件中**完全不写** `hideCompleted:` 字段（serialize 跳过，parse 也不读，保持"md 中无此字段"的契约）
+- 卡片右上角 eye/eye-off 按钮**保留**作为**临时切换**（仅改内存中 `card.hideCompleted`，下次 reload 回到设置默认值；不持久化）
+
+**实现分步**：
+
+### Step 1：类型 + 设置 + Settings Tab UI
+
+**`src/types.ts`**：
+- `DashboardSettings` 接口新增 `defaultHideCompleted: boolean`
+- `DEFAULT_SETTINGS` 加 `defaultHideCompleted: true`
+
+**`src/settings.ts`**：
+- 在 `projectHideNestedDocs` toggle 之后新增 toggle：
+  - 名称：`Todo 默认隐藏已完成任务` / `Hide completed tasks in Todo cards by default`
+  - 描述：`关闭后，新创建的 Todo 卡片会显示所有任务；卡片右上角的"眼"按钮可临时切换单卡片。` / `When off, new Todo cards show all tasks. The eye button on each card can still toggle the hidden state for that card only.`
+  - 变更时调 `plugin.refreshAllDashboards()` 让所有 dashboard 立即重渲染
+
+**`src/i18n.ts`**：
+- 中英文新增 `settings.defaultHideCompleted` / `settings.defaultHideCompletedDesc`
+
+### Step 2：parser 完全不读也不写 hideCompleted
+
+**`src/parser.ts`**：
+- 删除 [parser.ts:297](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L297) 的 `if (card.hideCompleted) { metadataLines.push('hideCompleted: true'); }` 整段
+- 删除 [parser.ts:1220](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L1220) 的 `hideCompleted: metadata.hideCompleted === "true"`（parse 不再读这个 key；卡片初始 `hideCompleted` 字段为 undefined，渲染时回退到全局设置）
+- 在文件顶部加注释说明契约：`hideCompleted` 字段是**纯内存字段**，禁止在 md 中持久化
+
+### Step 3：renderer 应用全局默认
+
+**`src/renderer.ts`**：
+- 在 `renderCard` 顶部加：`const defaultHide = settings?.defaultHideCompleted ?? true;`
+- 替换 [renderer.ts:3290](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3290) 的 `const hideCompleted = card.hideCompleted === true;` 为 `const hideCompleted = card.hideCompleted ?? defaultHide;`
+- 替换 [renderer.ts:3514](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3514) 同样
+- `view.ts` / `sidebar-view.ts` 已经在 `onTaskHideCompletedChange` 改完 `card.hideCompleted` 后调 `saveAndRefresh()` —— 渲染时会用新值（因为 settings?.defaultHideCompleted 没改）；下次 reload 从 md 解析后 `card.hideCompleted` 又是 undefined，回退到设置默认 —— 满足"临时切换"语义
+
+### Step 4：README/CHANGELOG/版本号
+
+- `README.md` + `README_ZH.md` Configuration 章节新增 `Default hide completed tasks` / `Todo 默认隐藏已完成任务` 条目（描述 + 默认值 `true`）
+- `CHANGELOG.md` 新增 `1.3.0` 段落（minor：新增设置项）
+- `manifest.json` `version` `1.2.1` → `1.3.0`
+- `package.json` `version` `1.2.1` → `1.3.0`
+- `Target.md`：
+  - §5.2 插件设置新增 `defaultHideCompleted: boolean // Todo 卡片默认隐藏已完成任务，默认 true`
+  - §4.1 Todo 行补一句"卡片右上角眼按钮临时切换 + 全局默认由 settings 控制"
+  - §8 版本历史新增 1.3.0 行
+
+**验证清单**：
+- [ ] Step 1：Settings Tab 出现新 toggle，关闭后 `plugin.settings.defaultHideCompleted` 为 false，立即刷新所有 dashboard
+- [ ] Step 2：md 文件中**没有任何** `hideCompleted:` 字段（serialize 出去的文件干净）
+- [ ] Step 3：默认 `true` 时新建 todo 卡只显示未完成任务；按钮点击后立即切换；reload 后回到默认
+- [ ] Step 4：所有文档同步
+- [ ] `npx tsc --noEmit` 通过
+- [ ] `npm run build` 通过
+
+**对现有功能影响**：
+- 1.2.0/1.2.1 已经迁入了 `hideCompleted: true` 字段到部分用户的 md 文件 —— Step 2 之后这些字段变成"幽灵字段"，md 文件大小不变（serialize 仍会写出——不对，要删除 serialize 的写代码），所以 md 干净度提升 ✅
+- 但旧字段被忽略不会破坏行为（render 时回退到 `defaultHideCompleted`）✅
+- eye 按钮：未变 ✅

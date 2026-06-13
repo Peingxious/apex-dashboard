@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 (2026-06-13)
+
+### Fixed
+
+- **Dragging the last project item out of a card no longer crashes with `d.includes is not a function`** — Two stacked bugs surfaced when the user dragged the final project item from a card in the main workbench. (1) `serialize()` in `parser.ts` had a `toWikiLink` helper that called `.includes` on its input unconditionally, and the projectDocs body-synthesis path passed each `ProjectDocNode` child into it as if it were a string — throwing `TypeError` when a child was an object. (2) `SyncEngine.moveProjectItemToCard` in `sync.ts` only updated `card.body` and never mirrored the move into `card.projectDocs`, so dragging the last item left `body === ""` while `projectDocs` still referenced it — that triggered the buggy synthesis path on the next save. The fix adds a `typeof` guard at the top of `toWikiLink`, makes the children iteration handle both `string[]` and `ProjectDocNode[]` shapes, and makes `moveProjectItemToCard` mirror the move into `projectDocs` (with the same bounds-check + clamp + child normalisation that `removeProjectItem` already uses). Verified with `npx tsc --noEmit` and `npm run build` (both pass clean)
+
 ## 1.2.0 (2026-06-13)
 
 ### Changed
