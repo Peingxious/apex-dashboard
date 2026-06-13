@@ -1,4 +1,4 @@
-import type DashboardPlugin from './main';
+﻿import type DashboardPlugin from './main';
 
 export interface BookInfo {
 	title: string;
@@ -26,8 +26,8 @@ export interface ReadingRecord {
 	durationSeconds: number;
 }
 
-const STORAGE_KEY = 'apex-dashboard-reading-records';
-const BOOKS_KEY = 'apex-dashboard-reading-books';
+const STORAGE_KEY = 'peingxious-dashboard-reading-records';
+const BOOKS_KEY = 'peingxious-dashboard-reading-books';
 
 export class ReadingService {
 	private plugin: DashboardPlugin;

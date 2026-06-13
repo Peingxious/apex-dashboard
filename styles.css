@@ -1,4 +1,4 @@
-/* =================================================================
+﻿/* =================================================================
    Dashboard Plugin — Multi-Theme Design System
    ================================================================= */
 
@@ -20,7 +20,7 @@
    ================================================================= */
 
 /* ----- DEFAULT: Use Obsidian native theme colors ----- */
-.apex-dashboard-root {
+.peingxious-dashboard-root {
   --db-bg: var(--background-primary);
   --db-bg-section: var(--background-secondary);
   --db-bg-card: var(--background-primary);
@@ -80,7 +80,7 @@
 }
 
 /* ----- 1. AURORA (极光) ----- */
-.apex-dashboard-root[data-theme="aurora"] {
+.peingxious-dashboard-root[data-theme="aurora"] {
   --db-bg: #0f0a1e;
   --db-bg-section: rgba(139, 92, 246, 0.05);
   --db-bg-card: rgba(255, 255, 255, 0.06);
@@ -148,7 +148,7 @@
   --db-aurora-size: 400% 400%;
   --db-aurora-speed: 12s;
 }
-.theme-light .apex-dashboard-root[data-theme="aurora"] {
+.theme-light .peingxious-dashboard-root[data-theme="aurora"] {
   --db-bg: #f3f0ff;
   --db-bg-section: rgba(139, 92, 246, 0.06);
   --db-bg-card-hover: rgba(255, 255, 255, 0.7);
@@ -192,7 +192,7 @@
   );
 }
 /* ----- 2. PRISM (棱镜) ----- */
-.apex-dashboard-root[data-theme="prism"] {
+.peingxious-dashboard-root[data-theme="prism"] {
   --db-bg: #12081a;
   --db-bg-section: rgba(244, 63, 94, 0.04);
   --db-bg-card: rgba(255, 255, 255, 0.06);
@@ -259,7 +259,7 @@
   --db-aurora-size: 400% 400%;
   --db-aurora-speed: 14s;
 }
-.theme-light .apex-dashboard-root[data-theme="prism"] {
+.theme-light .peingxious-dashboard-root[data-theme="prism"] {
   --db-bg: #faf5f8;
   --db-bg-section: rgba(244, 63, 94, 0.05);
   --db-bg-card: rgba(255, 255, 255, 0.55);
@@ -317,7 +317,7 @@
 }
 
 /* ----- 4. EARTH ----- */
-.apex-dashboard-root[data-theme="earth"] {
+.peingxious-dashboard-root[data-theme="earth"] {
   --db-bg: #f5efe6;
   --db-bg-section: #ede5d8;
   --db-bg-card: #faf6f0;
@@ -371,7 +371,7 @@
   --db-quote-border: #d97706;
   --db-link: #d97706;
 }
-.theme-dark .apex-dashboard-root[data-theme="earth"] {
+.theme-dark .peingxious-dashboard-root[data-theme="earth"] {
   --db-bg: #1c1812;
   --db-bg-section: #252018;
   --db-bg-card: #1e1a14;
@@ -411,7 +411,7 @@
 }
 
 /* ----- 5. NORDIC ----- */
-.apex-dashboard-root[data-theme="nordic"] {
+.peingxious-dashboard-root[data-theme="nordic"] {
   --db-bg: #f8fafc;
   --db-bg-section: #f1f5f9;
   --db-bg-card: #ffffff;
@@ -465,7 +465,7 @@
   --db-quote-border: #0ea5e9;
   --db-link: #3b82f6;
 }
-.theme-dark .apex-dashboard-root[data-theme="nordic"] {
+.theme-dark .peingxious-dashboard-root[data-theme="nordic"] {
   --db-bg: #0f172a;
   --db-bg-section: #1e293b;
   --db-bg-card: #1e293b;
@@ -505,7 +505,7 @@
 }
 
 /* ----- 6. ISLAND (动物森友会 — 淡彩无人岛) ----- */
-.apex-dashboard-root[data-theme="island"] {
+.peingxious-dashboard-root[data-theme="island"] {
   /* 背景：奶油白底，区块/侧栏用淡绿淡蓝 */
   --db-bg: #f8f8f0;
   --db-bg-section: #e6f4e8;
@@ -570,7 +570,7 @@
   --db-quote-border: #82d5bb;
   --db-link: #19c8b9;
 }
-.theme-dark .apex-dashboard-root[data-theme="island"] {
+.theme-dark .peingxious-dashboard-root[data-theme="island"] {
   --db-bg: #1a2a1e;
   --db-bg-section: #223428;
   --db-bg-card: #263830;
@@ -610,7 +610,7 @@
 }
 
 /* ----- 7. TUNDRA (苔原 — Earth clone, transparent sections) ----- */
-.apex-dashboard-root[data-theme="tundra"] {
+.peingxious-dashboard-root[data-theme="tundra"] {
   --db-bg: #eef0ec;
   --db-bg-section: transparent;
   --db-bg-card: #faf6f0;
@@ -677,7 +677,7 @@
   --db-aurora-size: 400% 400%;
   --db-aurora-speed: 14s;
 }
-.theme-dark .apex-dashboard-root[data-theme="tundra"] {
+.theme-dark .peingxious-dashboard-root[data-theme="tundra"] {
   --db-bg: #141816;
   --db-bg-section: transparent;
   --db-bg-card: rgba(107, 143, 94, 0.1);
@@ -731,7 +731,7 @@
 }
 
 /* ----- 8. HAZE (薄雾 — Neon clone, transparent sections) ----- */
-.apex-dashboard-root[data-theme="haze"] {
+.peingxious-dashboard-root[data-theme="haze"] {
   --db-bg: #0a0d14;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -788,7 +788,7 @@
   --db-quote-border: #ff00aa;
   --db-link: #00f0ff;
 }
-.theme-light .apex-dashboard-root[data-theme="haze"] {
+.theme-light .peingxious-dashboard-root[data-theme="haze"] {
   --db-bg: #e8ecf2;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -829,7 +829,7 @@
 }
 
 /* ----- 9. BLOSSOM (花漾 — Prism clone, transparent sections) ----- */
-.apex-dashboard-root[data-theme="blossom"] {
+.peingxious-dashboard-root[data-theme="blossom"] {
   --db-bg: #12081a;
   --db-bg-section: transparent;
   --db-bg-card: rgba(255, 255, 255, 0.06);
@@ -896,7 +896,7 @@
   --db-aurora-size: 400% 400%;
   --db-aurora-speed: 14s;
 }
-.theme-light .apex-dashboard-root[data-theme="blossom"] {
+.theme-light .peingxious-dashboard-root[data-theme="blossom"] {
   --db-bg: #faf5f8;
   --db-bg-section: transparent;
   --db-bg-card: rgba(255, 255, 255, 0.55);
@@ -954,13 +954,13 @@
 }
 
 /* Blossom: static gradient background (like prism) */
-.apex-dashboard-root[data-theme="blossom"] {
+.peingxious-dashboard-root[data-theme="blossom"] {
   background: var(--db-aurora-bg);
   transition: color 0.3s ease;
 }
 
 /* Tundra: aurora animation — cold gray + avocado green */
-.apex-dashboard-root[data-theme="tundra"] {
+.peingxious-dashboard-root[data-theme="tundra"] {
   background: var(--db-aurora-bg);
   background-size: var(--db-aurora-size);
   animation: db-aurora-shift var(--db-aurora-speed) ease-in-out infinite;
@@ -969,7 +969,7 @@
 }
 
 /* Haze: smoky mist gradient — white top, blue bottom */
-.apex-dashboard-root[data-theme="haze"] {
+.peingxious-dashboard-root[data-theme="haze"] {
   background:
     radial-gradient(
       ellipse at 20% 10%,
@@ -994,7 +994,7 @@
     linear-gradient(180deg, #e8ecf2 0%, #c8d4e8 30%, #6882a8 70%, #0a0d14 100%);
   transition: color 0.3s ease;
 }
-.theme-dark .apex-dashboard-root[data-theme="haze"] {
+.theme-dark .peingxious-dashboard-root[data-theme="haze"] {
   background:
     radial-gradient(
       ellipse at 30% 15%,
@@ -1015,11 +1015,11 @@
 }
 
 /* ===== Shared: transparent sections for tundra, haze, blossom, matcha, lilac ===== */
-.apex-dashboard-root[data-theme="tundra"] .dashboard-section-row,
-.apex-dashboard-root[data-theme="haze"] .dashboard-section-row,
-.apex-dashboard-root[data-theme="blossom"] .dashboard-section-row,
-.apex-dashboard-root[data-theme="matcha"] .dashboard-section-row,
-.apex-dashboard-root[data-theme="lilac"] .dashboard-section-row {
+.peingxious-dashboard-root[data-theme="tundra"] .dashboard-section-row,
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-section-row,
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-section-row,
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-section-row,
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-section-row {
   background: transparent;
   border: none;
   backdrop-filter: none;
@@ -1027,11 +1027,11 @@
   padding: 6px;
 }
 
-.apex-dashboard-root[data-theme="tundra"] .dashboard-section,
-.apex-dashboard-root[data-theme="haze"] .dashboard-section,
-.apex-dashboard-root[data-theme="blossom"] .dashboard-section,
-.apex-dashboard-root[data-theme="matcha"] .dashboard-section,
-.apex-dashboard-root[data-theme="lilac"] .dashboard-section {
+.peingxious-dashboard-root[data-theme="tundra"] .dashboard-section,
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-section,
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-section,
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-section,
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-section {
   background: transparent;
   border: none;
   backdrop-filter: none;
@@ -1039,28 +1039,28 @@
 }
 
 /* Tighter kanban gap for transparent-section themes */
-.apex-dashboard-root[data-theme="tundra"] .dashboard-kanban,
-.apex-dashboard-root[data-theme="haze"] .dashboard-kanban,
-.apex-dashboard-root[data-theme="blossom"] .dashboard-kanban,
-.apex-dashboard-root[data-theme="matcha"] .dashboard-kanban,
-.apex-dashboard-root[data-theme="lilac"] .dashboard-kanban {
+.peingxious-dashboard-root[data-theme="tundra"] .dashboard-kanban,
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-kanban,
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-kanban,
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-kanban,
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-kanban {
   gap: 8px;
 }
 
 /* Allow card hover translate without clipping top border */
-.apex-dashboard-root[data-theme="tundra"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="haze"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="blossom"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="matcha"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="lilac"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="ember"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="jade"] .dashboard-section-cards,
-.apex-dashboard-root[data-theme="carbon"] .dashboard-section-cards {
+.peingxious-dashboard-root[data-theme="tundra"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="ember"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="jade"] .dashboard-section-cards,
+.peingxious-dashboard-root[data-theme="carbon"] .dashboard-section-cards {
   overflow: visible;
 }
 
 /* ----- 10. EMBER (余烬) — Warm smoke, cloned from Haze ----- */
-.apex-dashboard-root[data-theme="ember"] {
+.peingxious-dashboard-root[data-theme="ember"] {
   --db-bg: #f5f0ea;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -1114,7 +1114,7 @@
   --db-quote-border: #f5c16c;
   --db-link: #e07a4a;
 }
-.theme-dark .apex-dashboard-root[data-theme="ember"] {
+.theme-dark .peingxious-dashboard-root[data-theme="ember"] {
   --db-bg: #18120e;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -1153,7 +1153,7 @@
   --db-link: #e07a4a;
 }
 /* Ember: warm smoke gradient */
-.apex-dashboard-root[data-theme="ember"] {
+.peingxious-dashboard-root[data-theme="ember"] {
   background:
     radial-gradient(
       ellipse at 20% 10%,
@@ -1178,7 +1178,7 @@
     linear-gradient(180deg, #f5f0ea 0%, #e8d4c0 30%, #8a4a28 70%, #18120e 100%);
   transition: color 0.3s ease;
 }
-.theme-dark .apex-dashboard-root[data-theme="ember"] {
+.theme-dark .peingxious-dashboard-root[data-theme="ember"] {
   background:
     radial-gradient(
       ellipse at 30% 15%,
@@ -1199,7 +1199,7 @@
 }
 
 /* ----- 12. JADE (翡翠) — Green bamboo mist, cloned from Haze ----- */
-.apex-dashboard-root[data-theme="jade"] {
+.peingxious-dashboard-root[data-theme="jade"] {
   --db-bg: #f0f5f2;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -1253,7 +1253,7 @@
   --db-quote-border: #fbbf24;
   --db-link: #10b981;
 }
-.theme-dark .apex-dashboard-root[data-theme="jade"] {
+.theme-dark .peingxious-dashboard-root[data-theme="jade"] {
   --db-bg: #0a1210;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -1292,7 +1292,7 @@
   --db-link: #10b981;
 }
 /* Jade: green bamboo mist gradient */
-.apex-dashboard-root[data-theme="jade"] {
+.peingxious-dashboard-root[data-theme="jade"] {
   background:
     radial-gradient(
       ellipse at 20% 10%,
@@ -1317,7 +1317,7 @@
     linear-gradient(180deg, #f0f5f2 0%, #c8e0d4 30%, #2a6850 70%, #0a1210 100%);
   transition: color 0.3s ease;
 }
-.theme-dark .apex-dashboard-root[data-theme="jade"] {
+.theme-dark .peingxious-dashboard-root[data-theme="jade"] {
   background:
     radial-gradient(
       ellipse at 30% 15%,
@@ -1334,7 +1334,7 @@
 }
 
 /* ----- 13. MATCHA (抹茶) — Morandi green, solid warm ----- */
-.apex-dashboard-root[data-theme="matcha"] {
+.peingxious-dashboard-root[data-theme="matcha"] {
   --db-bg: #b8c8ac;
   --db-bg-section: transparent;
   --db-bg-card: #dde4d0;
@@ -1400,7 +1400,7 @@
   --db-aurora-size: 400% 400%;
   --db-aurora-speed: 14s;
 }
-.theme-light .apex-dashboard-root[data-theme="matcha"] {
+.theme-light .peingxious-dashboard-root[data-theme="matcha"] {
   --db-bg: #dde6d8;
   --db-bg-section: transparent;
   --db-bg-card: #e8efe4;
@@ -1457,13 +1457,13 @@
 }
 
 /* Matcha: gradient background */
-.apex-dashboard-root[data-theme="matcha"] {
+.peingxious-dashboard-root[data-theme="matcha"] {
   background: var(--db-aurora-bg);
   transition: color 0.3s ease;
 }
 
 /* ----- 14. LILAC (丁香) — Morandi purple, solid warm ----- */
-.apex-dashboard-root[data-theme="lilac"] {
+.peingxious-dashboard-root[data-theme="lilac"] {
   --db-bg: #a898b4;
   --db-bg-section: transparent;
   --db-bg-card: #d4cce0;
@@ -1529,7 +1529,7 @@
   --db-aurora-size: 400% 400%;
   --db-aurora-speed: 14s;
 }
-.theme-light .apex-dashboard-root[data-theme="lilac"] {
+.theme-light .peingxious-dashboard-root[data-theme="lilac"] {
   --db-bg: #ddd4e4;
   --db-bg-section: transparent;
   --db-bg-card: #e4dce8;
@@ -1586,13 +1586,13 @@
 }
 
 /* Lilac: gradient background */
-.apex-dashboard-root[data-theme="lilac"] {
+.peingxious-dashboard-root[data-theme="lilac"] {
   background: var(--db-aurora-bg);
   transition: color 0.3s ease;
 }
 
 /* ----- 15. CARBON (日食) — Industrial monochrome ----- */
-.apex-dashboard-root[data-theme="carbon"] {
+.peingxious-dashboard-root[data-theme="carbon"] {
   --db-bg: #e8e8ea;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -1646,7 +1646,7 @@
   --db-quote-border: #71717a;
   --db-link: #a1a1aa;
 }
-.theme-dark .apex-dashboard-root[data-theme="carbon"] {
+.theme-dark .peingxious-dashboard-root[data-theme="carbon"] {
   --db-bg: #09090b;
   --db-bg-section: transparent;
   --db-bg-card: transparent;
@@ -1686,7 +1686,7 @@
   --db-link: #a1a1aa;
 }
 /* Carbon: industrial monochrome gradient */
-.apex-dashboard-root[data-theme="carbon"] {
+.peingxious-dashboard-root[data-theme="carbon"] {
   background:
     radial-gradient(
       ellipse at 20% 10%,
@@ -1711,7 +1711,7 @@
     linear-gradient(180deg, #e8e8ea 0%, #c8c8cc 30%, #3a3a40 70%, #09090b 100%);
   transition: color 0.3s ease;
 }
-.theme-dark .apex-dashboard-root[data-theme="carbon"] {
+.theme-dark .peingxious-dashboard-root[data-theme="carbon"] {
   background:
     radial-gradient(
       ellipse at 30% 15%,
@@ -1728,9 +1728,9 @@
 }
 
 /* ===== Shared: transparent sections for ember, jade, carbon ===== */
-.apex-dashboard-root[data-theme="ember"] .dashboard-section-row,
-.apex-dashboard-root[data-theme="jade"] .dashboard-section-row,
-.apex-dashboard-root[data-theme="carbon"] .dashboard-section-row {
+.peingxious-dashboard-root[data-theme="ember"] .dashboard-section-row,
+.peingxious-dashboard-root[data-theme="jade"] .dashboard-section-row,
+.peingxious-dashboard-root[data-theme="carbon"] .dashboard-section-row {
   background: transparent;
   border: none;
   backdrop-filter: none;
@@ -1738,9 +1738,9 @@
   padding: 6px;
 }
 
-.apex-dashboard-root[data-theme="ember"] .dashboard-section,
-.apex-dashboard-root[data-theme="jade"] .dashboard-section,
-.apex-dashboard-root[data-theme="carbon"] .dashboard-section {
+.peingxious-dashboard-root[data-theme="ember"] .dashboard-section,
+.peingxious-dashboard-root[data-theme="jade"] .dashboard-section,
+.peingxious-dashboard-root[data-theme="carbon"] .dashboard-section {
   background: transparent;
   border: none;
   backdrop-filter: none;
@@ -1748,9 +1748,9 @@
 }
 
 /* Tighter kanban gap for ember, jade, carbon */
-.apex-dashboard-root[data-theme="ember"] .dashboard-kanban,
-.apex-dashboard-root[data-theme="jade"] .dashboard-kanban,
-.apex-dashboard-root[data-theme="carbon"] .dashboard-kanban {
+.peingxious-dashboard-root[data-theme="ember"] .dashboard-kanban,
+.peingxious-dashboard-root[data-theme="jade"] .dashboard-kanban,
+.peingxious-dashboard-root[data-theme="carbon"] .dashboard-kanban {
   gap: 8px;
 }
 
@@ -1759,12 +1759,12 @@
    ================================================================= */
 
 /* Reset Obsidian view-content padding for dashboard */
-.workspace-leaf-content[data-type="apex-dashboard-view"] .view-content {
+.workspace-leaf-content[data-type="peingxious-dashboard-view"] .view-content {
   padding: 0 !important;
 }
 
 /* ===== Root ===== */
-.apex-dashboard-root {
+.peingxious-dashboard-root {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -1791,7 +1791,7 @@
 }
 
 /* Aurora gradient animation for aurora theme only */
-.apex-dashboard-root[data-theme="aurora"] {
+.peingxious-dashboard-root[data-theme="aurora"] {
   background: var(--db-aurora-bg);
   background-size: var(--db-aurora-size);
   animation: db-aurora-shift var(--db-aurora-speed) ease-in-out infinite;
@@ -1800,7 +1800,7 @@
 }
 
 /* Prism: static gradient background */
-.apex-dashboard-root[data-theme="prism"] {
+.peingxious-dashboard-root[data-theme="prism"] {
   background: var(--db-aurora-bg);
   transition: color 0.3s ease;
 }
@@ -2271,17 +2271,17 @@
 }
 
 /* ===== Note Dashboard embedded in main view: fill available space ===== */
-.apex-note-dashboard-root .dashboard-section-cards > .dashboard-card {
+.peingxious-note-dashboard-root .dashboard-section-cards > .dashboard-card {
   flex: 0 0 280px !important;
   min-width: 240px !important;
   max-width: 400px !important;
 }
 
-.apex-note-dashboard-root
+.peingxious-note-dashboard-root
   .dashboard-section-row[data-section-type="memo"]
   .dashboard-section-cards
   > .dashboard-card,
-.apex-note-dashboard-root
+.peingxious-note-dashboard-root
   .dashboard-section-row[data-section-type="todo"]
   .dashboard-section-cards
   > .dashboard-card {
@@ -2289,7 +2289,7 @@
   max-width: 360px !important;
 }
 
-.apex-note-dashboard-root
+.peingxious-note-dashboard-root
   .dashboard-section-row[data-section-type="projects"]
   .dashboard-section-cards
   > .dashboard-card {
@@ -2297,7 +2297,7 @@
   max-width: 400px !important;
 }
 
-.apex-note-dashboard-root
+.peingxious-note-dashboard-root
   .dashboard-section-row[data-section-type="notes"]
   .dashboard-section-cards
   > .dashboard-card {
@@ -2306,7 +2306,7 @@
 }
 
 /* Embedded mode: kanban fills all available space */
-.apex-note-dashboard-root .dashboard-kanban-wrapper {
+.peingxious-note-dashboard-root .dashboard-kanban-wrapper {
   flex: 1;
   overflow-y: auto;
 }
@@ -5715,8 +5715,8 @@
 
 /* When the dashboard is hosting an open file-suggest, allow cards to render
    outside their bounds so the dropdown is not clipped. */
-.apex-dashboard-root.has-open-suggest .dashboard-card,
-.apex-note-dashboard-root.has-open-suggest .dashboard-card,
+.peingxious-dashboard-root.has-open-suggest .dashboard-card,
+.peingxious-note-dashboard-root.has-open-suggest .dashboard-card,
 .has-open-suggest .dashboard-section-row,
 .has-open-suggest .dashboard-section-cards {
   overflow: visible;
@@ -7393,112 +7393,112 @@
 }
 
 /* -- Aurora: glass glow, soft rounded -- */
-.apex-dashboard-root[data-theme="aurora"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="aurora"] .dashboard-card:hover {
   box-shadow:
     0 6px 24px rgba(139, 92, 246, 0.12),
     0 0 16px rgba(168, 85, 247, 0.06);
   border-color: rgba(139, 92, 246, 0.2);
 }
 
-.apex-dashboard-root[data-theme="aurora"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="aurora"] .dashboard-memo-textarea:focus {
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow: 0 0 16px rgba(139, 92, 246, 0.08);
 }
 
-.apex-dashboard-root[data-theme="aurora"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="aurora"] .dashboard-modal-input:focus {
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow: 0 0 16px rgba(139, 92, 246, 0.08);
 }
 
-.apex-dashboard-root[data-theme="aurora"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="aurora"] .dashboard-section-row--drag-over {
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.06);
 }
 
-.apex-dashboard-root[data-theme="aurora"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="aurora"] .dashboard-add-section {
   border-radius: 14px;
   border-color: rgba(139, 92, 246, 0.15);
 }
 
-.apex-dashboard-root[data-theme="aurora"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="aurora"] .dashboard-add-section:hover {
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow: 0 0 12px rgba(139, 92, 246, 0.06);
 }
 
 /* -- Prism: rose glass glow, soft rounded -- */
-.apex-dashboard-root[data-theme="prism"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="prism"] .dashboard-card:hover {
   box-shadow:
     0 6px 24px rgba(244, 63, 94, 0.12),
     0 0 16px rgba(168, 85, 247, 0.06);
   border-color: rgba(244, 63, 94, 0.2);
 }
 
-.apex-dashboard-root[data-theme="prism"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="prism"] .dashboard-memo-textarea:focus {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.apex-dashboard-root[data-theme="prism"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="prism"] .dashboard-modal-input:focus {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.apex-dashboard-root[data-theme="prism"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="prism"] .dashboard-section-row--drag-over {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 20px rgba(244, 63, 94, 0.06);
 }
 
-.apex-dashboard-root[data-theme="prism"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="prism"] .dashboard-add-section {
   border-radius: 14px;
   border-color: rgba(244, 63, 94, 0.15);
 }
 
-.apex-dashboard-root[data-theme="prism"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="prism"] .dashboard-add-section:hover {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 12px rgba(244, 63, 94, 0.06);
 }
 
 /* -- Earth: pill-shaped, warm organic -- */
 
-.apex-dashboard-root[data-theme="earth"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="earth"] .dashboard-add-section {
   border-radius: 16px;
   border-color: rgba(217, 119, 6, 0.25);
 }
 
-.apex-dashboard-root[data-theme="earth"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="earth"] .dashboard-add-section:hover {
   border-color: #d97706;
 }
 
 /* -- Nordic: clean minimal with subtle accent border -- */
-.apex-dashboard-root[data-theme="nordic"] .dashboard-card {
+.peingxious-dashboard-root[data-theme="nordic"] .dashboard-card {
   border: 1px solid rgba(59, 130, 246, 0.1);
 }
 
-.theme-dark .apex-dashboard-root[data-theme="nordic"] .dashboard-card {
+.theme-dark .peingxious-dashboard-root[data-theme="nordic"] .dashboard-card {
   border-color: rgba(96, 165, 250, 0.15);
 }
 
-.apex-dashboard-root[data-theme="nordic"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="nordic"] .dashboard-add-section {
   border-color: rgba(148, 163, 184, 0.3);
   border-radius: 8px;
 }
 
-.theme-dark .apex-dashboard-root[data-theme="nordic"] .dashboard-add-section {
+.theme-dark .peingxious-dashboard-root[data-theme="nordic"] .dashboard-add-section {
   border-color: rgba(100, 116, 139, 0.25);
 }
 
-.apex-dashboard-root[data-theme="nordic"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="nordic"] .dashboard-add-section:hover {
   border-color: #3b82f6;
 }
 
 /* -- Island: Animal Crossing — forest greens, ocean accents, 3D press -- */
-.apex-dashboard-root[data-theme="island"] .dashboard-card {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card {
   border: 2px solid var(--db-border-card);
   box-shadow: 0 4px 0 0 #a8c8a5;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card:hover {
   box-shadow:
     0 5px 0 0 #98b894,
     0 8px 24px rgba(74, 103, 65, 0.15);
@@ -7506,47 +7506,47 @@
   border-color: #82b87e;
 }
 
-.theme-dark .apex-dashboard-root[data-theme="island"] .dashboard-card {
+.theme-dark .peingxious-dashboard-root[data-theme="island"] .dashboard-card {
   box-shadow: 0 4px 0 0 #2a4a2e;
 }
 
-.theme-dark .apex-dashboard-root[data-theme="island"] .dashboard-card:hover {
+.theme-dark .peingxious-dashboard-root[data-theme="island"] .dashboard-card:hover {
   box-shadow:
     0 5px 0 0 #2a4a2e,
     0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-memo-textarea:focus {
   border-color: #ffcc00;
   box-shadow:
     0 3px 0 0 #e0b800,
     0 0 0 3px rgba(255, 204, 0, 0.15);
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-modal-input:focus {
   border-color: #ffcc00;
   box-shadow:
     0 3px 0 0 #e0b800,
     0 0 0 3px rgba(255, 204, 0, 0.15);
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-section-row--drag-over {
   border-color: #19c8b9;
   box-shadow: 0 0 0 2px rgba(25, 200, 185, 0.15);
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-note-quote {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-note-quote {
   border-left-color: #82d5bb;
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-add-section {
   border-radius: 50px;
   border: 2px dashed rgba(25, 200, 185, 0.35);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-add-section:hover {
   border-color: #19c8b9;
   background: rgba(25, 200, 185, 0.06);
   transform: translateY(-1px);
@@ -7554,7 +7554,7 @@
 }
 
 .theme-dark
-  .apex-dashboard-root[data-theme="island"]
+  .peingxious-dashboard-root[data-theme="island"]
   .dashboard-add-section:hover {
   box-shadow: 0 4px 0 0 #2a4a2e;
 }
@@ -7657,67 +7657,67 @@
 }
 
 /* Island: checkbox — grass green */
-.apex-dashboard-root[data-theme="island"] .task-checkbox:checked {
+.peingxious-dashboard-root[data-theme="island"] .task-checkbox:checked {
   accent-color: #6fba2c;
 }
 
 /* Island: banner — forest frame */
-.apex-dashboard-root[data-theme="island"] .dashboard-banner {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-banner {
   border-radius: 20px;
   border: 2px solid #b5d4b0;
 }
 
 /* Island: card title — round, friendly */
-.apex-dashboard-root[data-theme="island"] .dashboard-card-title {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card-title {
   font-weight: 600;
   letter-spacing: 0.02em;
   color: #4a6741;
 }
 
 /* Island: section headers — forest accent */
-.apex-dashboard-root[data-theme="island"] .dashboard-section-header {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-section-header {
   color: #4a6741;
 }
 
 /* Island: sidebar links — ocean tint on hover */
-.apex-dashboard-root[data-theme="island"] .dashboard-quick-link:hover {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-quick-link:hover {
   background: #e4f0f8;
 }
 
 /* Island: NookPhone-style pastel tints on memo cards */
-.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="memo"] {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="memo"] {
   border-left: 4px solid #82d5bb;
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="todo"] {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="todo"] {
   border-left: 4px solid #6fba2c;
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="project"] {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="project"] {
   border-left: 4px solid #889df0;
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="link"] {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="link"] {
   border-left: 4px solid #f8a6b2;
 }
 
-.apex-dashboard-root[data-theme="island"] .dashboard-card[data-type="notes"] {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-card[data-type="notes"] {
   border-left: 4px solid #f7cd67;
 }
 
 /* Island: progress bar — teal to grass green gradient */
-.apex-dashboard-root[data-theme="island"] .dashboard-progress-fill {
+.peingxious-dashboard-root[data-theme="island"] .dashboard-progress-fill {
   background: linear-gradient(90deg, #19c8b9, #6fba2c);
 }
 
 /* -- Tundra: pill-shaped, warm organic (cloned from Earth) -- */
 
-.apex-dashboard-root[data-theme="tundra"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="tundra"] .dashboard-add-section {
   border-radius: 16px;
   border-color: rgba(217, 119, 6, 0.25);
 }
 
-.apex-dashboard-root[data-theme="tundra"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="tundra"] .dashboard-add-section:hover {
   border-color: #d97706;
 }
 
@@ -7783,40 +7783,40 @@
 }
 
 /* -- Haze: sharp edges, neon glow (cloned from Neon) -- */
-.apex-dashboard-root[data-theme="haze"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-card:hover {
   border-color: rgba(0, 240, 255, 0.4);
   box-shadow:
     0 0 12px rgba(0, 240, 255, 0.12),
     0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-.apex-dashboard-root[data-theme="haze"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-memo-textarea:focus {
   border-color: rgba(0, 240, 255, 0.6);
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
 }
 
-.apex-dashboard-root[data-theme="haze"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-modal-input:focus {
   border-color: rgba(0, 240, 255, 0.6);
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.15);
 }
 
-.apex-dashboard-root[data-theme="haze"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-section-row--drag-over {
   border-color: rgba(0, 240, 255, 0.6);
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
 }
 
-.apex-dashboard-root[data-theme="haze"] .dashboard-note-quote {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-note-quote {
   border-left-color: #ff00aa;
 }
 
-.apex-dashboard-root[data-theme="haze"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-add-section {
   border-radius: 2px;
   border-style: solid;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
-.apex-dashboard-root[data-theme="haze"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="haze"] .dashboard-add-section:hover {
   border-color: rgba(0, 240, 255, 0.5);
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
 }
@@ -7894,34 +7894,34 @@
 }
 
 /* -- Blossom: rose glass glow (cloned from Prism) -- */
-.apex-dashboard-root[data-theme="blossom"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-card:hover {
   box-shadow:
     0 6px 24px rgba(244, 63, 94, 0.12),
     0 0 16px rgba(168, 85, 247, 0.06);
   border-color: rgba(244, 63, 94, 0.2);
 }
 
-.apex-dashboard-root[data-theme="blossom"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-memo-textarea:focus {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.apex-dashboard-root[data-theme="blossom"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-modal-input:focus {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 16px rgba(244, 63, 94, 0.08);
 }
 
-.apex-dashboard-root[data-theme="blossom"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-section-row--drag-over {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 20px rgba(244, 63, 94, 0.06);
 }
 
-.apex-dashboard-root[data-theme="blossom"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-add-section {
   border-radius: 14px;
   border-color: rgba(244, 63, 94, 0.15);
 }
 
-.apex-dashboard-root[data-theme="blossom"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="blossom"] .dashboard-add-section:hover {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 12px rgba(244, 63, 94, 0.06);
 }
@@ -7992,29 +7992,29 @@
 }
 
 /* -- Matcha: gentle green glow -- */
-.apex-dashboard-root[data-theme="matcha"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-card:hover {
   box-shadow:
     0 6px 24px rgba(143, 170, 152, 0.12),
     0 0 16px rgba(200, 184, 144, 0.06);
   border-color: rgba(143, 170, 152, 0.2);
 }
-.apex-dashboard-root[data-theme="matcha"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-memo-textarea:focus {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 16px rgba(143, 170, 152, 0.08);
 }
-.apex-dashboard-root[data-theme="matcha"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-modal-input:focus {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 16px rgba(143, 170, 152, 0.08);
 }
-.apex-dashboard-root[data-theme="matcha"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-section-row--drag-over {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 20px rgba(143, 170, 152, 0.06);
 }
-.apex-dashboard-root[data-theme="matcha"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-add-section {
   border-radius: 14px;
   border-color: rgba(143, 170, 152, 0.15);
 }
-.apex-dashboard-root[data-theme="matcha"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="matcha"] .dashboard-add-section:hover {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 12px rgba(143, 170, 152, 0.06);
 }
@@ -8084,29 +8084,29 @@
 }
 
 /* -- Lilac: gentle purple glow -- */
-.apex-dashboard-root[data-theme="lilac"] .dashboard-card:hover {
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-card:hover {
   box-shadow:
     0 6px 24px rgba(184, 160, 200, 0.12),
     0 0 16px rgba(208, 184, 184, 0.06);
   border-color: rgba(184, 160, 200, 0.2);
 }
-.apex-dashboard-root[data-theme="lilac"] .dashboard-memo-textarea:focus {
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-memo-textarea:focus {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 16px rgba(184, 160, 200, 0.08);
 }
-.apex-dashboard-root[data-theme="lilac"] .dashboard-modal-input:focus {
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-modal-input:focus {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 16px rgba(184, 160, 200, 0.08);
 }
-.apex-dashboard-root[data-theme="lilac"] .dashboard-section-row--drag-over {
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-section-row--drag-over {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 20px rgba(184, 160, 200, 0.06);
 }
-.apex-dashboard-root[data-theme="lilac"] .dashboard-add-section {
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-add-section {
   border-radius: 14px;
   border-color: rgba(184, 160, 200, 0.15);
 }
-.apex-dashboard-root[data-theme="lilac"] .dashboard-add-section:hover {
+.peingxious-dashboard-root[data-theme="lilac"] .dashboard-add-section:hover {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 12px rgba(184, 160, 200, 0.06);
 }
@@ -8402,7 +8402,7 @@
   }
 
   /* Root: allow vertical scrolling */
-  .apex-dashboard-root {
+  .peingxious-dashboard-root {
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -8971,7 +8971,7 @@
   color: var(--db-text, var(--text-normal));
 }
 
-/* Countdown calendar popup (outside apex-dashboard-root, use Obsidian theme vars) */
+/* Countdown calendar popup (outside peingxious-dashboard-root, use Obsidian theme vars) */
 .dashboard-countdown-calendar-popup {
   background: var(--background-primary);
   color: var(--text-normal);
@@ -11100,7 +11100,7 @@
 }
 
 /* ===== Shared Sidebar View ===== */
-.apex-dashboard-sidebar-root {
+.peingxious-dashboard-sidebar-root {
   height: 100%;
   overflow: hidden;
 }
@@ -11141,7 +11141,7 @@
 }
 
 /* ===== Dashboard Overlay Mode ===== */
-.apex-dashboard-overlay-root {
+.peingxious-dashboard-overlay-root {
   height: 100%;
   overflow: hidden;
   background: var(--bg-primary, var(--background-primary));

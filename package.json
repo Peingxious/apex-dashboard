@@ -1,7 +1,7 @@
 {
-  "name": "apex-dashboard",
-  "version": "1.1.19",
-  "description": "Your personal command center for Obsidian — memos, todos, projects, and quick links in one stunning glassmorphism dashboard.",
+  "name": "peingxious-dashboard",
+  "version": "1.2.0",
+  "description": "Peingxious Dashboard — a personal command center for Obsidian. Memos, todos, projects, library, weather, and quick links in a unified glassmorphism interface.",
   "main": "main.js",
   "type": "module",
   "scripts": {

@@ -1,4 +1,4 @@
-import { App, TFile, setIcon } from "obsidian";
+﻿import { App, TFile, setIcon } from "obsidian";
 import type { LibraryConfig, PropertyFilter, LibraryViewMode } from "./types";
 import { t, getLanguage } from "./i18n";
 
@@ -246,7 +246,7 @@ function showCalendarPopup(
     cls: "dashboard-task-reminder-popup dashboard-library-calendar-popup",
   });
 
-  const dashboardRoot = anchor.closest(".apex-dashboard-root") as HTMLElement;
+  const dashboardRoot = anchor.closest(".peingxious-dashboard-root") as HTMLElement;
   if (dashboardRoot) {
     const rs = getComputedStyle(dashboardRoot);
     const themeVars = [
@@ -546,7 +546,7 @@ export function renderLibrarySection(
 
     // Inherit theme from dashboard
     const dashboardRoot = filterBtn.closest(
-      ".apex-dashboard-root",
+      ".peingxious-dashboard-root",
     ) as HTMLElement;
     if (dashboardRoot) {
       const rs = getComputedStyle(dashboardRoot);

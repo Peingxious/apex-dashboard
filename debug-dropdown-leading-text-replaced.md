@@ -1,4 +1,4 @@
-# debug-dropdown-leading-text-replaced
+﻿# debug-dropdown-leading-text-replaced
 
 **状态**: [OPEN]
 **会话 ID**: dropdown-leading-text-replaced
@@ -12,12 +12,12 @@
 >
 > 同时附上控制台日志：
 > ```
-> [apex-dashboard] render start {navGen: 9, passedDataColumns: 5, ...}
-> [apex-dashboard] renderViewNavBar {navGen: 10, embeddedNotePath: 'apex-dashboard（修改）/dash01.md', mainIsActive: false}
-> [apex-dashboard] render start {navGen: 10, ...}
-> [apex-dashboard] renderViewNavBar {navGen: 11, ...}
-> [apex-dashboard] render start {navGen: 11, ...}
-> [apex-dashboard] renderViewNavBar {navGen: 12, ...}
+> [peingxious-dashboard] render start {navGen: 9, passedDataColumns: 5, ...}
+> [peingxious-dashboard] renderViewNavBar {navGen: 10, embeddedNotePath: 'peingxious-dashboard（修改）/dash01.md', mainIsActive: false}
+> [peingxious-dashboard] render start {navGen: 10, ...}
+> [peingxious-dashboard] renderViewNavBar {navGen: 11, ...}
+> [peingxious-dashboard] render start {navGen: 11, ...}
+> [peingxious-dashboard] renderViewNavBar {navGen: 12, ...}
 > ```
 
 **前置背景**：

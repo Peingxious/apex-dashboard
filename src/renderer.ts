@@ -1,4 +1,4 @@
-import { App, Notice, setIcon } from "obsidian";
+﻿import { App, Notice, setIcon } from "obsidian";
 import type {
   DashboardData,
   DashboardColumn,
@@ -72,7 +72,7 @@ export function destroyAllCharts(): void {
 }
 
 function getCSSVar(name: string): string {
-  const el = document.querySelector(".apex-dashboard-root");
+  const el = document.querySelector(".peingxious-dashboard-root");
   if (!el) return "";
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
@@ -1226,7 +1226,7 @@ export function renderSidebarCountdown(
             >;
           };
         }
-      ).plugins?.plugins?.["apex-dashboard"];
+      ).plugins?.plugins?.["peingxious-dashboard"];
       if (plugin?.settings) {
         Object.assign(plugin.settings!, updates);
         await plugin.saveSettings?.();
@@ -2736,7 +2736,7 @@ export function renderDashboard(
   });
 }
 
-const COLLAPSED_KEY = "apex-dashboard-collapsed";
+const COLLAPSED_KEY = "peingxious-dashboard-collapsed";
 
 function getCollapsedSections(): Set<string> {
   try {
@@ -3153,7 +3153,7 @@ function renderCard(
       titleEl.addClass("dashboard-card-title--linked");
     }
   } catch (err) {
-    console.error("[apex-dashboard] title renderTextWithLinks FAILED:", err);
+    console.error("[peingxious-dashboard] title renderTextWithLinks FAILED:", err);
     titleEl.setText(card.title);
   }
 
@@ -4130,7 +4130,7 @@ function renderWikilink(
       }
     } catch (err) {
       console.error(
-        "[apex-dashboard] renderWikilink getSearchableFiles FAILED:",
+        "[peingxious-dashboard] renderWikilink getSearchableFiles FAILED:",
         err,
       );
       displayName = noteName;
@@ -4200,7 +4200,7 @@ function renderWikilink(
             source: string,
           ) => void;
         }
-      ).trigger("link-hover", event, link, linkText, "apex-dashboard");
+      ).trigger("link-hover", event, link, linkText, "peingxious-dashboard");
     }, 200);
   });
   link.addEventListener("mouseout", clearHoverTimer);
@@ -4285,7 +4285,7 @@ function showReminderPopup(
 
   // Inherit theme variables from dashboard root (popup is on body, outside theme scope)
   const dashboardRoot = anchorBtn.closest(
-    ".apex-dashboard-root",
+    ".peingxious-dashboard-root",
   ) as HTMLElement;
   if (dashboardRoot) {
     const rs = getComputedStyle(dashboardRoot);

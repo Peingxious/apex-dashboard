@@ -1,10 +1,10 @@
-# Apex Dashboard
+# Peingxious Dashboard
 
 > Stop switching between Obsidian notes. One page. Everything you need. Memo your thoughts, crush your todos, track your projects — and make it look incredible doing it. [【中文版】](README_ZH.md)
 
 ## Screenshot
 
-![Apex Dashboard](screenshot1.png)
+![Peingxious Dashboard](screenshot1.png)
 
 ## Features
 
@@ -72,18 +72,18 @@ The dashboard automatically inherits your Obsidian theme colors, seamlessly adap
 ### From Obsidian Community Plugins
 
 1. Open Settings > Community Plugins
-2. Browse and search for "Apex Dashboard"
+2. Browse and search for "Peingxious Dashboard"
 3. Click Install, then Enable
 
 ### Manual Installation
 
-1. Download the latest release from [GitHub Releases](https://github.com/pandorareads/apex-dashboard/releases)
-2. Extract into your vault's `.obsidian/plugins/apex-dashboard/` folder
-3. Open Settings > Community Plugins and enable "Apex Dashboard"
+1. Download the latest release from [GitHub Releases](https://github.com/pandorareads/peingxious-dashboard/releases)
+2. Extract into your vault's `.obsidian/plugins/peingxious-dashboard/` folder
+3. Open Settings > Community Plugins and enable "Peingxious Dashboard"
 
 ## Usage
 
-1. Open the dashboard via the ribbon icon (home icon) or command palette: `Apex Dashboard: Open dashboard`
+1. Open the dashboard via the ribbon icon (home icon) or command palette: `Peingxious Dashboard: Open dashboard`
 2. A `dashboard.md` file is automatically created in your vault root
 3. All changes are saved directly to the file — it's your data, in plain text
 
@@ -95,7 +95,7 @@ The dashboard uses an indented bullet-list format:
 ## Memo
 
 - 2026-06-08 memo
-  - Welcome to Apex Dashboard! Click here to edit your first memo.
+  - Welcome to Peingxious Dashboard! Click here to edit your first memo.
 
 ## Todo
 
@@ -120,6 +120,12 @@ The dashboard uses an indented bullet-list format:
 > **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
+
+### 1.2.0
+
+- **Plugin renamed: Apex Dashboard → Peingxious Dashboard** — The plugin ID (`peingxious-dashboard`), display name, author, and description have all been updated. The npm package name is now `peingxious-dashboard`. Internal class names (`.peingxious-dashboard-root`, `.peingxious-note-dashboard-root`), view types (`peingxious-dashboard-view`, `peingxious-dashboard-sidebar`), `localStorage` keys, the `peingxious-dashboard-template` YAML marker, and the `[peingxious-dashboard]` log tag all follow the new naming
+- **Author changed to Peingxious** — `manifest.json` `author` field is now `Peingxious`
+- **Description rewritten** — New copy reflects the expanded surface (memos, todos, projects, library, weather, quick links) under the new brand
 
 ### 1.1.17
 

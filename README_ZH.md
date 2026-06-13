@@ -1,10 +1,10 @@
-# Apex Dashboard
+# Peingxious Dashboard
 
 > Obsidian 一页纸工作台。一个页面，搞定一切。随手记灵感、管理待办、追踪项目 — 而且好看得不像实力派。
 
 ## 截图预览
 
-![Apex Dashboard](screenshot1.png)
+![Peingxious Dashboard](screenshot1.png)
 
 ## 功能特色
 
@@ -59,18 +59,18 @@ Dashboard 自动跟随 Obsidian 原生主题色，完美适配所有社区主题
 ### 从 Obsidian 社区插件市场安装
 
 1. 打开 设置 > 第三方插件
-2. 浏览并搜索 "Apex Dashboard"
+2. 浏览并搜索 "Peingxious Dashboard"
 3. 点击安装，然后启用
 
 ### 手动安装
 
-1. 从 [GitHub Releases](https://github.com/pandorareads/apex-dashboard/releases) 下载最新版本
-2. 解压到 Vault 的 `.obsidian/plugins/apex-dashboard/` 目录
-3. 打开 设置 > 第三方插件，启用 "Apex Dashboard"
+1. 从 [GitHub Releases](https://github.com/pandorareads/peingxious-dashboard/releases) 下载最新版本
+2. 解压到 Vault 的 `.obsidian/plugins/peingxious-dashboard/` 目录
+3. 打开 设置 > 第三方插件，启用 "Peingxious Dashboard"
 
 ## 使用方法
 
-1. 通过左侧功能区图标（主页图标）或命令面板打开：`Apex Dashboard: Open dashboard`
+1. 通过左侧功能区图标（主页图标）或命令面板打开：`Peingxious Dashboard: Open dashboard`
 2. 首次使用会在 Vault 根目录自动创建 `dashboard.md` 文件
 3. 所有更改直接保存到文件 — 纯文本格式，你的数据完全属于你
 
@@ -82,7 +82,7 @@ Dashboard 使用缩进 bullet 列表格式组织数据：
 ## Memo
 
 - 2026-06-08 备忘
-  - 欢迎使用 Apex Dashboard！点击此处编辑你的第一条备忘。
+  - 欢迎使用 Peingxious Dashboard！点击此处编辑你的第一条备忘。
 
 ## Todo
 
@@ -107,6 +107,12 @@ Dashboard 使用缩进 bullet 列表格式组织数据：
 > **提示：** 每个分区标题右侧有垃圾桶按钮，可直接在 Dashboard 界面中删除分区。
 
 ## 更新日志
+
+### 1.2.0
+
+- **重命名：Apex Dashboard → Peingxious Dashboard** — 插件 ID（`peingxious-dashboard`）、显示名、作者、描述全部更新。npm 包名变更为 `peingxious-dashboard`。内部类名（`.peingxious-dashboard-root`、`.peingxious-note-dashboard-root`）、视图类型（`peingxious-dashboard-view`、`peingxious-dashboard-sidebar`）、`localStorage` 键、`peingxious-dashboard-template` YAML 标记、`[peingxious-dashboard]` 日志 tag 全部跟随新命名
+- **作者变更为 Peingxious** — `manifest.json` `author` 字段现为 `Peingxious`
+- **重写插件描述** — 新文案反映扩展后的功能面（备忘、待办、项目、资料库、天气、快捷链接）并贴合新品牌
 
 ### 1.1.17
 

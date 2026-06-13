@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, setIcon, Notice, TFile } from "obsidian";
+﻿import { ItemView, WorkspaceLeaf, setIcon, Notice, TFile } from "obsidian";
 import type DashboardPlugin from "./main";
 import type { DashboardData, DashboardCard, CardSize } from "./types";
 import { SyncEngine } from "./sync";
@@ -16,7 +16,7 @@ import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
 import { parse as parseMarkdown, serialize } from "./parser";
 
-export const SIDEBAR_VIEW_TYPE = "apex-dashboard-sidebar";
+export const SIDEBAR_VIEW_TYPE = "peingxious-dashboard-sidebar";
 
 export class SidebarView extends ItemView {
   private plugin: DashboardPlugin;
@@ -83,7 +83,7 @@ export class SidebarView extends ItemView {
       return;
     }
 
-    const wrapper = container.createDiv({ cls: "apex-dashboard-sidebar" });
+    const wrapper = container.createDiv({ cls: "peingxious-dashboard-sidebar" });
 
     // Header with icon and title
     const header = wrapper.createDiv({ cls: "sidebar-header" });
@@ -156,7 +156,7 @@ export class SidebarView extends ItemView {
         return;
       }
     } catch (err) {
-      console.error("[apex-dashboard] Error parsing note for overlay:", err);
+      console.error("[peingxious-dashboard] Error parsing note for overlay:", err);
       new Notice("Error reading note content");
       this.exitOverlayMode();
       return;
@@ -166,7 +166,7 @@ export class SidebarView extends ItemView {
   }
 
   private renderOverlayMode(container: HTMLElement): void {
-    container.addClass("apex-dashboard-overlay-root");
+    container.addClass("peingxious-dashboard-overlay-root");
 
     const overlayEl = container.createDiv({ cls: "dashboard-overlay" });
 
@@ -291,7 +291,7 @@ export class SidebarView extends ItemView {
         await self.app.vault.modify(file, newContent);
         self.render();
       } catch (e) {
-        console.error("[apex-dashboard] Error saving overlay note:", e);
+        console.error("[peingxious-dashboard] Error saving overlay note:", e);
         new Notice("Error saving changes");
       }
     }

@@ -1,4 +1,4 @@
-import {
+﻿import {
   ItemView,
   Menu,
   Notice,
@@ -51,7 +51,7 @@ import { ReminderNoticeModal } from "./reminder-notice";
 import { t } from "./i18n";
 import { parse, pathToWikiLink } from "./parser";
 
-export const DASHBOARD_VIEW_TYPE = "apex-dashboard-view";
+export const DASHBOARD_VIEW_TYPE = "peingxious-dashboard-view";
 
 export class DashboardView extends ItemView {
   private plugin: DashboardPlugin;
@@ -70,7 +70,7 @@ export class DashboardView extends ItemView {
   private sidebarPinned: boolean;
   private sidebarExpanded = false;
   private bannerCollapsed =
-    localStorage.getItem("apex-dashboard-banner-collapsed") !== "false";
+    localStorage.getItem("peingxious-dashboard-banner-collapsed") !== "false";
   private pendingScrollCardId: string | null = null;
   private pendingScrollToLastCardOfColumn: string | null = null;
   private pomodoroService: PomodoroService | null = null;
@@ -119,7 +119,7 @@ export class DashboardView extends ItemView {
     this.plugin = plugin;
     this.sync = new SyncEngine(this.app, this.plugin.settings);
     // Use saved preference, or fall back to settings default
-    const saved = localStorage.getItem("apex-dashboard-sidebar-pinned");
+    const saved = localStorage.getItem("peingxious-dashboard-sidebar-pinned");
     this.sidebarPinned =
       saved !== null ? saved === "true" : plugin.settings.sidebarPinnedDefault;
   }
@@ -210,7 +210,7 @@ export class DashboardView extends ItemView {
 
     // Use embedded note data if in embedded mode
     const activeData = this.embeddedData ?? data;
-    console.log("[apex-dashboard] render start", {
+    console.log("[peingxious-dashboard] render start", {
       navGen: this.navBarGeneration,
       passedDataColumns: data?.columns?.length,
       activeDataColumns: activeData?.columns?.length,
@@ -248,7 +248,7 @@ export class DashboardView extends ItemView {
     // and would otherwise leak across re-renders.
     closeAllFileSuggests();
     container.empty();
-    container.addClass("apex-dashboard-root");
+    container.addClass("peingxious-dashboard-root");
 
     const bannerEl = renderBanner(
       container,
@@ -412,7 +412,7 @@ export class DashboardView extends ItemView {
     // will no longer match the class's current gen and the timer
     // will safely no-op.
     const navGen = ++this.navBarGeneration;
-    console.log("[apex-dashboard] renderViewNavBar", {
+    console.log("[peingxious-dashboard] renderViewNavBar", {
       navGen,
       embeddedNotePath: this.embeddedNotePath,
       mainIsActive: !this.embeddedNotePath,
@@ -434,7 +434,7 @@ export class DashboardView extends ItemView {
     /** Try to open the given md by replacing the active md leaf. */
     const openAsMarkdown = async (notePath: string | null): Promise<void> => {
       console.log(
-        "[apex-dashboard] dblclick open (replace active md leaf):",
+        "[peingxious-dashboard] dblclick open (replace active md leaf):",
         notePath,
       );
       // Main tab case: there is no embedded note path of course,
@@ -480,7 +480,7 @@ export class DashboardView extends ItemView {
               "No markdown window is open to replace. Open a note first, then double-click the tab.",
           );
           console.warn(
-            "[apex-dashboard] no active md leaf to replace; refusing to create a new leaf (per Plan.md ironclad rule)",
+            "[peingxious-dashboard] no active md leaf to replace; refusing to create a new leaf (per Plan.md ironclad rule)",
             { notePath: resolvedPath },
           );
           return;
@@ -488,11 +488,11 @@ export class DashboardView extends ItemView {
 
         await targetLeaf.openFile(file, { active: true });
         console.log(
-          "[apex-dashboard] replaced active md leaf with:",
+          "[peingxious-dashboard] replaced active md leaf with:",
           resolvedPath,
         );
       } catch (err) {
-        console.error("[apex-dashboard] open failed:", resolvedPath, err);
+        console.error("[peingxious-dashboard] open failed:", resolvedPath, err);
       }
     };
 
@@ -564,7 +564,7 @@ export class DashboardView extends ItemView {
           clickTimer = null;
         }
         if (isDouble) {
-          console.log("[apex-dashboard] main tab dblclick", { mainNavGen });
+          console.log("[peingxious-dashboard] main tab dblclick", { mainNavGen });
           void openAsMarkdown(null);
           return;
         }
@@ -663,7 +663,7 @@ export class DashboardView extends ItemView {
         const now = Date.now();
         const isDouble = now - lastClickTime < DBLCLICK_THRESHOLD_MS;
         lastClickTime = now;
-        console.log("[apex-dashboard] tab click", {
+        console.log("[peingxious-dashboard] tab click", {
           notePath,
           isDouble,
           isActive,
@@ -701,7 +701,7 @@ export class DashboardView extends ItemView {
           // their second click of a dblclick), silently
           // breaking the dblclick / right-click that follows.
           // We simply no-op.
-          console.log("[apex-dashboard] clickTimer firing", {
+          console.log("[peingxious-dashboard] clickTimer firing", {
             notePath,
             navGen,
             currentGen: this.navBarGeneration,
@@ -773,7 +773,7 @@ export class DashboardView extends ItemView {
             // Look for columns: or column: in YAML (not dashboard:)
             if (
               (yaml.includes("columns:") || yaml.includes("column:")) &&
-              !yaml.includes("apex-dashboard-template")
+              !yaml.includes("peingxious-dashboard-template")
             ) {
               columnFiles.push(f);
             }
@@ -862,9 +862,9 @@ export class DashboardView extends ItemView {
 
   /** Load a note's dashboard data and render it embedded in the main view */
   async embedNoteDashboard(notePath: string): Promise<void> {
-    console.log("[apex-dashboard] embedNoteDashboard called", { notePath });
+    console.log("[peingxious-dashboard] embedNoteDashboard called", { notePath });
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    console.log("[apex-dashboard] embedNoteDashboard file lookup", {
+    console.log("[peingxious-dashboard] embedNoteDashboard file lookup", {
       notePath,
       found: !!file,
       isTFile: file instanceof TFile,
@@ -876,18 +876,18 @@ export class DashboardView extends ItemView {
 
     try {
       const content = await this.app.vault.read(file);
-      console.log("[apex-dashboard] embedNoteDashboard content read", {
+      console.log("[peingxious-dashboard] embedNoteDashboard content read", {
         notePath,
         length: content.length,
       });
       this.embeddedData = parse(content);
-      console.log("[apex-dashboard] embedNoteDashboard parse result", {
+      console.log("[peingxious-dashboard] embedNoteDashboard parse result", {
         notePath,
         hasData: !!this.embeddedData,
         columns: this.embeddedData?.columns?.length,
       });
       this.embeddedNotePath = notePath;
-      console.log("[apex-dashboard] embedNoteDashboard before render", {
+      console.log("[peingxious-dashboard] embedNoteDashboard before render", {
         notePath,
         embeddedNotePath: this.embeddedNotePath,
         hasEmbeddedData: !!this.embeddedData,
@@ -904,20 +904,20 @@ export class DashboardView extends ItemView {
 
       // Re-render with embedded data
       const currentData = this.sync.getData();
-      console.log("[apex-dashboard] embedNoteDashboard currentData", {
+      console.log("[peingxious-dashboard] embedNoteDashboard currentData", {
         notePath,
         hasCurrentData: !!currentData,
       });
       if (currentData) this.render(currentData);
-      console.log("[apex-dashboard] embedNoteDashboard after render", {
+      console.log("[peingxious-dashboard] embedNoteDashboard after render", {
         notePath,
       });
 
-      // Add apex-note-dashboard-root class for fixed-width card styles
+      // Add peingxious-note-dashboard-root class for fixed-width card styles
       const root = this.containerEl.children[1] as HTMLElement;
-      root?.addClass("apex-note-dashboard-root");
+      root?.addClass("peingxious-note-dashboard-root");
     } catch (err) {
-      console.error("[apex-dashboard] Error loading note:", err);
+      console.error("[peingxious-dashboard] Error loading note:", err);
       new Notice(t("noteDash.loadError"));
     }
   }
@@ -934,7 +934,7 @@ export class DashboardView extends ItemView {
       this.plugin.settings.activeEmbeddedNoteTab = null;
       this.embeddedData = null;
       const root = this.containerEl.children[1] as HTMLElement;
-      root?.removeClass("apex-note-dashboard-root");
+      root?.removeClass("peingxious-note-dashboard-root");
     }
 
     await this.plugin.saveSettings();
@@ -955,7 +955,7 @@ export class DashboardView extends ItemView {
         data = parse(content);
         this.embeddedDataCache.set(notePath, data);
       } catch (err) {
-        console.error("[apex-dashboard] Error reloading note:", err);
+        console.error("[peingxious-dashboard] Error reloading note:", err);
         new Notice(t("noteDash.loadError"));
         return;
       }
@@ -967,7 +967,7 @@ export class DashboardView extends ItemView {
     if (currentData) this.render(currentData);
 
     const root = this.containerEl.children[1] as HTMLElement;
-    root?.addClass("apex-note-dashboard-root");
+    root?.addClass("peingxious-note-dashboard-root");
   }
 
   /** Exit embedded mode, return to main dashboard (keep tabs intact) */
@@ -978,7 +978,7 @@ export class DashboardView extends ItemView {
     // Keep cache and tabs intact — do NOT clear them
 
     const root = this.containerEl.children[1] as HTMLElement;
-    root?.removeClass("apex-note-dashboard-root");
+    root?.removeClass("peingxious-note-dashboard-root");
 
     const currentData = this.sync.getData();
     if (currentData) this.render(currentData);
@@ -1784,7 +1784,7 @@ export class DashboardView extends ItemView {
         }, 0);
       } catch (e) {
         this.isWritingEmbeddedFile = false;
-        console.error("[apex-dashboard] Error saving embedded note:", e);
+        console.error("[peingxious-dashboard] Error saving embedded note:", e);
         new Notice(t("noteDash.saveError"));
       }
     }
@@ -2043,7 +2043,7 @@ export class DashboardView extends ItemView {
       this.bannerCollapsed = !this.bannerCollapsed;
       bannerEl.toggleClass("dashboard-banner--collapsed", this.bannerCollapsed);
       localStorage.setItem(
-        "apex-dashboard-banner-collapsed",
+        "peingxious-dashboard-banner-collapsed",
         String(this.bannerCollapsed),
       );
     });
@@ -2228,7 +2228,7 @@ export class DashboardView extends ItemView {
       () => {
         this.sidebarPinned = !this.sidebarPinned;
         localStorage.setItem(
-          "apex-dashboard-sidebar-pinned",
+          "peingxious-dashboard-sidebar-pinned",
           String(this.sidebarPinned),
         );
         if (this.sidebarPinned) {
@@ -2748,7 +2748,7 @@ export class DashboardView extends ItemView {
       const currentData = this.sync.getData();
       if (currentData) this.render(currentData);
     } catch (err) {
-      console.error("[apex-dashboard] Error reloading embedded note:", err);
+      console.error("[peingxious-dashboard] Error reloading embedded note:", err);
     }
   }
 

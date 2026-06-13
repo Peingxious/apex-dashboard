@@ -1,6 +1,6 @@
-# Apex Dashboard 开发计划（Plan）
+# Peingxious Dashboard 开发计划（Plan）
 
-> 目标与范围以 [Target.md](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/Target.md) 为准。
+> 目标与范围以 [Target.md](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/Target.md) 为准。
 
 ---
 
@@ -39,20 +39,20 @@
 
 ## 新增 2026-06-12：表格/列表视图属性筛选显示 + 看板视图专属设置隔离
 
-**背景**：当前 [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-section.ts) 的 `renderTableView` 会自动从前 20 条结果的 frontmatter 抓取最多 6 个 key 作为列，无法由用户控制；`renderListView` 只显示文件名 + 创建时间，无元数据扩展位。本次新增「属性筛选显示」功能，让用户能按需勾选要展示的属性字段。
+**背景**：当前 [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/library-section.ts) 的 `renderTableView` 会自动从前 20 条结果的 frontmatter 抓取最多 6 个 key 作为列，无法由用户控制；`renderListView` 只显示文件名 + 创建时间，无元数据扩展位。本次新增「属性筛选显示」功能，让用户能按需勾选要展示的属性字段。
 
 ### 方案
 
 | 维度         | 改动                                                                                                                                                                                                                                                                                                                                                        |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **数据模型** | [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts) `LibraryConfig` 新增 `visibleProperties?: string[]`；未设置/空数组表示全量显示（向后兼容）                                                                                                                                                                 |
-| **配置 UI**  | [library-config-modal.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-config-modal.ts) 在「视图模式」与「排序/分页」之间新增「显示属性」section：**仅当 `viewMode === 'table'` 或 `viewMode === 'list'` 时显示**，多选 checkbox 列表（基于 `extractFrontmatterProperties` 的全部 key + 内置 name/modified/created） |
+| **数据模型** | [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts) `LibraryConfig` 新增 `visibleProperties?: string[]`；未设置/空数组表示全量显示（向后兼容）                                                                                                                                                                 |
+| **配置 UI**  | [library-config-modal.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/library-config-modal.ts) 在「视图模式」与「排序/分页」之间新增「显示属性」section：**仅当 `viewMode === 'table'` 或 `viewMode === 'list'` 时显示**，多选 checkbox 列表（基于 `extractFrontmatterProperties` 的全部 key + 内置 name/modified/created） |
 | **看板专属** | 「分组依据」section 继续仅在 `viewMode === 'kanban'` 时显示（已有逻辑保持）                                                                                                                                                                                                                                                                                 |
-| **表格渲染** | [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/library-section.ts) `renderTableView` 优先用 `config.visibleProperties` 决定列；未设置时降级为旧逻辑（filters + 前 20 条 frontmatter 自动收集）                                                                                                            |
+| **表格渲染** | [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/library-section.ts) `renderTableView` 优先用 `config.visibleProperties` 决定列；未设置时降级为旧逻辑（filters + 前 20 条 frontmatter 自动收集）                                                                                                            |
 | **列表渲染** | `renderListView` 在 name 与 date 之间插入属性 chip 行；只显示 `config.visibleProperties` 中勾选了的字段（数组为空则不显示任何 chip）                                                                                                                                                                                                                        |
-| **持久化**   | [parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts) `serialize` 增加 `visibleProperties: [a, b, c]` YAML 输出；`parseLibraryConfig` 反向解析回数组                                                                                                                                                           |
-| **i18n**     | [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts) 新增 `library.visibleProperties` / `library.visiblePropertiesDesc` / `library.showAll` 中英文键                                                                                                                                                              |
-| **样式**     | [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css) 新增 `.dashboard-library-list-meta` / `.dashboard-library-list-meta-value` 样式（无 chip 边框，纯文本 + 末位时间）                                                                                                                                         |
+| **持久化**   | [parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts) `serialize` 增加 `visibleProperties: [a, b, c]` YAML 输出；`parseLibraryConfig` 反向解析回数组                                                                                                                                                           |
+| **i18n**     | [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/i18n.ts) 新增 `library.visibleProperties` / `library.visiblePropertiesDesc` / `library.showAll` 中英文键                                                                                                                                                              |
+| **样式**     | [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css) 新增 `.dashboard-library-list-meta` / `.dashboard-library-list-meta-value` 样式（无 chip 边框，纯文本 + 末位时间）                                                                                                                                         |
 | **版本**     | 1.1.5 → 1.1.6（patch：列表项 UI 调整）                                                                                                                                                                                                                                                                                                                      |
 | **文档**     | README.md / README_ZH.md / CHANGELOG.md / Target.md 同步                                                                                                                                                                                                                                                                                                    |
 
@@ -71,7 +71,7 @@
 
 ## 修复 2026-06-12：删除最后一个 project 项会恢复
 
-**根因**：主工作台 body 写入在 [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts) 中使用了两种不同的格式：
+**根因**：主工作台 body 写入在 [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts) 中使用了两种不同的格式：
 
 - `addDocToCard` 写入 `- [[x]]`（带 `- ` 前缀）
 - `reorderDocPaths` / `moveDocToCard` / `updateProjectDocs` / `removeProjectDoc` 写入 `[[x]]`（无 `- ` 前缀）
@@ -80,16 +80,16 @@
 
 **修复**：
 
-1. [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts) 全部 5 个写入 body 的函数统一为 `- [[x]]` 格式，并对输入做兼容（同时识别 `- [[x]]` 和 `[[x]]` 两种格式）
-2. [sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L804) 增加可选 `itemPath` 参数，index 失败时回退到 wikilink 文本匹配
-3. [view.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1806) 主工作台 callback 透传 `itemPath`
-4. [view.ts:嵌入视图 onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1008) 同样支持 path 兜底，且 `projectDocs` splice 优先 path 匹配再 fallback index
-5. [renderer.ts:TitleInfo](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3567) 新增 `path` 字段，捕获原始 wikilink target；删除按钮把 `title.path` 作为兜底标识传入
-6. [types.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L318) 接口扩展接受可选 `itemPath`
+1. [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts) 全部 5 个写入 body 的函数统一为 `- [[x]]` 格式，并对输入做兼容（同时识别 `- [[x]]` 和 `[[x]]` 两种格式）
+2. [sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L804) 增加可选 `itemPath` 参数，index 失败时回退到 wikilink 文本匹配
+3. [view.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L1806) 主工作台 callback 透传 `itemPath`
+4. [view.ts:嵌入视图 onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L1008) 同样支持 path 兜底，且 `projectDocs` splice 优先 path 匹配再 fallback index
+5. [renderer.ts:TitleInfo](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L3567) 新增 `path` 字段，捕获原始 wikilink target；删除按钮把 `title.path` 作为兜底标识传入
+6. [types.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts#L318) 接口扩展接受可选 `itemPath`
 
 ## 修复 2026-06-12：删除最后一个 project item "删不掉 / 会恢复"
 
-**根因**：[sync.ts:writeToDisk](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1102) 内部有一个**全局 size check**：
+**根因**：[sync.ts:writeToDisk](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L1102) 内部有一个**全局 size check**：
 
 ```ts
 if (current.length > 0 && content.length < current.length * 0.3) {
@@ -107,7 +107,7 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 **修复**：
 
-1. [sync.ts:writeToDisk](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1102) 把"全局 30% size check"替换为"**banner 段**长度对比"（[sync.ts:extractBannerSectionLength](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1207)）。当且仅当 banner image 段在新内容里被截断超过 50% 时才跳过写入
+1. [sync.ts:writeToDisk](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L1102) 把"全局 30% size check"替换为"**banner 段**长度对比"（[sync.ts:extractBannerSectionLength](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L1207)）。当且仅当 banner image 段在新内容里被截断超过 50% 时才跳过写入
 2. 这保留了原始保护（防止 banner dataURL 在 mutate 中被意外清空），同时允许用户的合法删除操作（body 缩小）正常落盘
 3. 用户现在可以删除最后一个 item → 卡片变为空 project（body 留空）→ 文件正常写入 → 重新打开保持空状态
 
@@ -117,12 +117,12 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 **根因**（banner check 修复后暴露的第二层 bug）：
 
-[sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L804) 之前**只更新 `body` 不更新 `projectDocs`**。流程：
+[sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L804) 之前**只更新 `body` 不更新 `projectDocs`**。流程：
 
 1. 用户点 × → `removeProjectItem` 把 `card.body` 改空（或去掉对应行）
 2. 内存 `card.projectDocs` 数组**没有同步删除**对应 entry
 3. `writeToDisk` 写盘成功（banner check 放行）
-4. **下一次渲染** 走 [renderer.ts:renderProjectBody](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3503)：
+4. **下一次渲染** 走 [renderer.ts:renderProjectBody](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L3503)：
    - `if (card.body)` → `body = ""` 为 falsy，**不进入 body 分支**
    - 进入 `else if (Array.isArray(projectDocObjects) && projectDocObjects.length > 0 ...)` 分支，从 `card.projectDocs` 重新合成 lines
    - `projectDocs` 没被清空 → **旧 item "复活"**
@@ -130,8 +130,8 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 **修复**：
 
-1. [sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L804) 在 splice body 行后**同步**清理 `card.projectDocs`：先按 wikilink path 匹配删除，失败则按 `itemIndex` 删除，最后 normalize 回 `ProjectDocNode[]`
-2. 嵌入视图的 [view.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1024) 已经有 `projectDocs` splice 逻辑（之前 path 匹配 + index 兜底）保持不动；其 path fallback 增加 leading-tab 剥离（defense-in-depth）以匹配 parseCard 可能带前导 tab 的 body 行
+1. [sync.ts:removeProjectItem](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L804) 在 splice body 行后**同步**清理 `card.projectDocs`：先按 wikilink path 匹配删除，失败则按 `itemIndex` 删除，最后 normalize 回 `ProjectDocNode[]`
+2. 嵌入视图的 [view.ts:onProjectItemDelete](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L1024) 已经有 `projectDocs` splice 逻辑（之前 path 匹配 + index 兜底）保持不动；其 path fallback 增加 leading-tab 剥离（defense-in-depth）以匹配 parseCard 可能带前导 tab 的 body 行
 3. 验证：现在删除最后一个 project item → 内存 `body` 与 `projectDocs` 同步清空 → 渲染走 body 分支（`body = ""` falsy）走 `projectDocs` 分支但都空 → 不渲染任何 item → 文件写入空 body → 重新打开保持空状态
 
 ---
@@ -141,7 +141,7 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 **现象**（用户日志）：
 
 - 在嵌入到笔记的 dashboard 视图中拖拽 project item，dragstart 触发、drop 事件目标正确（`SPAN class=dashboard-project-item-title`），但 callback 未被调用 → 拖拽"不工作"
-- 同时 `[apex-dashboard] render start` 出现 3 次（navGen 23/24/25），每次都伴随一次 `renderViewNavBar`，渲染频繁
+- 同时 `[peingxious-dashboard] render start` 出现 3 次（navGen 23/24/25），每次都伴随一次 `renderViewNavBar`，渲染频繁
 
 ### 补充修复（第二轮）：onProjectItemReorder 触发 synthesizeProjectBodyFromDocs 时崩溃
 
@@ -156,7 +156,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 **根因**：`onProjectItemReorder` 在 `splice(fromIndex, 1)` 越界或 `projectDocs` 已包含 `undefined` 元素时，会得到 `undefined` 并把它 `splice(toIndex, 0, undefined!)` 推进数组。随后 `synthesizeProjectBodyFromDocs` 遍历到 `undefined`，访问 `doc.path` 崩溃。
 
-**修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts)）：
+**修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts)）：
 
 1. **`onProjectItemReorder` / `onProjectItemMoveToCard` / `onProjectDocsReorder` / `onDocMoveToCard`**：bounds check（`from < 0 || from >= length || to < 0 || to > length`）+ `if (!movedDoc) return` 守卫，splice 永远不注入 undefined
 2. **`synthesizeProjectBodyFromDocs.renderDoc`**：`if (!doc || typeof doc !== "object") return` + `if (typeof d.path !== "string" || d.path.length === 0) return` + 外层 `if (doc == null) continue` —— 双重防御，脏数据也不会再崩
@@ -166,7 +166,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ### Bug A：drop handler 类名不匹配
 
-[renderer.ts:417](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L417) `drop` handler 寻找 `.dashboard-project-item-list`，但 [renderer.ts:3327](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3327) 实际创建的是 `.dashboard-project-list`。同样问题在 [renderer.ts:307](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L307) 的 `dragleave` 和 [renderer.ts:3350](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3350) 的 card body `dragover`/`drop` 中也存在。
+[renderer.ts:417](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L417) `drop` handler 寻找 `.dashboard-project-item-list`，但 [renderer.ts:3327](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L3327) 实际创建的是 `.dashboard-project-list`。同样问题在 [renderer.ts:307](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L307) 的 `dragleave` 和 [renderer.ts:3350](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L3350) 的 card body `dragover`/`drop` 中也存在。
 
 虽然该 bug 不会直接阻断「拖拽到具体 item 上」的场景（因为有 `closest(".dashboard-project-item")` 的分支在前面），但会**导致空 project 列表的 drop 检测失败**，并且 card body 区域的兜底 dragover/drop 排除逻辑错误。
 
@@ -174,7 +174,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ### Bug B：`saveEmbeddedAndRefresh` 写入触发 `modify` 事件 → `reloadEmbeddedFromDisk` 重渲染
 
-[view.ts:saveEmbeddedAndRefresh](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1554) 调用 `app.vault.modify(file, newContent)`，这会触发 vault `modify` 事件。事件监听器 [view.ts:2481](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L2481) 判定文件是当前 embedded note 后，会调用 `reloadEmbeddedFromDisk` 异步**重新解析文件并 render**。而 `saveEmbeddedAndRefresh` **自己**也调用 `this.render(currentData)`。
+[view.ts:saveEmbeddedAndRefresh](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L1554) 调用 `app.vault.modify(file, newContent)`，这会触发 vault `modify` 事件。事件监听器 [view.ts:2481](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L2481) 判定文件是当前 embedded note 后，会调用 `reloadEmbeddedFromDisk` 异步**重新解析文件并 render**。而 `saveEmbeddedAndRefresh` **自己**也调用 `this.render(currentData)`。
 
 **结果**：每次 embedded mode 的 mutation（拖拽排序、编辑、添加/删除等）都会产生**两次 render**：
 
@@ -189,7 +189,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 而用户日志中的 3 次 render = saveEmbeddedAndRefresh 自身 1 次 + modify 事件 1 次 + 不知来源的 1 次（怀疑是 modify 事件在 Obsidian 内部被同步触发了一次 + 我们自己又触发一次）。
 
-**修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts)）：
+**修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts)）：
 
 1. 新增 `private isWritingEmbeddedFile = false` 标志位
 2. `saveEmbeddedAndRefresh` 在 `await this.app.vault.modify(file, newContent)` **之前**设置 `isWritingEmbeddedFile = true`
@@ -250,7 +250,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 - **mouseleave / keydown 取消定时器** — 鼠标移走或松开 Ctrl/Cmd 即时撤销
 - **`link.isConnected` 检查** — render 重新构建 DOM 时旧 link 已 detach，timer 触发时跳过派发，避免在已卸载节点上派发
 - **`!ctrlKey && !metaKey` 早退** — 普通 hover 不触发（与原生行为一致）
-- **`source: "apex-dashboard"`** — 给 Page Preview 一个可识别的 source 字符串，未来排查多插件派发时方便定位
+- **`source: "peingxious-dashboard"`** — 给 Page Preview 一个可识别的 source 字符串，未来排查多插件派发时方便定位
 
 ### 子任务
 
@@ -343,20 +343,20 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ### 修复 1：下拉框最小可用高度（≈ 2 行）
 
-- [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `positionDropdown`
+- [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts) `positionDropdown`
   - 重新引入 `minH = min(96, maxH)`，把下拉框最小高度限制在「约 2 行 + 6px 内边距」左右
   - 上限仍然是 `maxH`（受可视区剩余空间约束），所以不会出现上版的「260px 固定空背景」
 
 ### 修复 2：前导文本在 pick 时丢失
 
-- [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `replaceWikilinkFragment`
+- [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts) `replaceWikilinkFragment`
   - 签名改为 `(linkText) => string | null`，**直接返回** `next` 字符串，避免在 `input` 事件派发后再次读取 `input.value`（同步 `update()` 监听器可能把字段改回去）
 - 同文件 `pick`
   - 改用 `const replaced = replaceWikilinkFragment(...)`，`onPick(replaced ?? input.value, file)`，确保任务 / 笔记消费者拿到的是「前导文字 + 完整 [[name]]」
 
 ### 验证
 
-- [tests/wikilink-context.test.mjs](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/tests/wikilink-context.test.mjs)：27/27 通过（其中 4 个直接覆盖「前导文字保留」+「混合括号」场景）
+- [tests/wikilink-context.test.mjs](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/tests/wikilink-context.test.mjs)：27/27 通过（其中 4 个直接覆盖「前导文字保留」+「混合括号」场景）
 - `npm run build`：tsc + esbuild 均通过，`main.js` 重新生成（2026-06-13 08:58）
 
 ---
@@ -372,7 +372,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 | 文件                                                                                                                           | 改动                                                                                                                       |
 | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| [src/renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) `renderColumnTitle` | 新增 `app: App` 参数；当 name 包含 `[[` 时调用现有的 `renderTextWithLinks`（已支持别名 / 片段），否则走 `setText` 快速路径 |
+| [src/renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts) `renderColumnTitle` | 新增 `app: App` 参数；当 name 包含 `[[` 时调用现有的 `renderTextWithLinks`（已支持别名 / 片段），否则走 `setText` 快速路径 |
 | 同上 `renderSection` 调用 `renderColumnTitle` 处                                                                               | 传入 `app`；rename 取消分支的 `renderColumnTitle(titleEl, currentName, app)` 同样更新                                      |
 
 底层机制沿用现有的 `renderWikilink`：`internal-link` class + `data-href` / `href` 属性 + `mouseover` 派发 `link-hover` 事件，让原生 Page Preview 接管。render / rename / 取消三条路径都走同一函数，行为完全一致。
@@ -381,7 +381,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 | 文件                                                                                                                        | 改动                                                                                                                                         |
 | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `update` | 改用新增的 `findWikilinkContext(value, caret)`：返回 `null` 时直接 `close()`；返回 `{ start, query }` 才打开 / 更新 dropdown                 |
+| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts) `update` | 改用新增的 `findWikilinkContext(value, caret)`：返回 `null` 时直接 `close()`；返回 `{ start, query }` 才打开 / 更新 dropdown                 |
 | 同上 `filterFiles`                                                                                                          | 空 query（刚输入 `[[` 时）改为返回前 20 个文件，让用户能看到可选列表；非空 query 行为不变                                                    |
 | 同上 新增 `findWikilinkContext` 私有函数                                                                                    | 找最后一个 caret 之前的 `[[`；若有 `]]` 在 `[[` 和 caret 之间则返回 `null`；query 包含换行也返回 `null`；兼容 `[[[abc` 这种带前导 `[` 的情况 |
 | 同上 新增 `replaceWikilinkFragment` 私有函数                                                                                | pick 时按 `ctx.start` 到 caret（含光标后已输入的 `]]`）整段替换为 `[[basename]]`；若光标后已有 `]]` 自动去掉避免 `[[path]]]`                 |
@@ -415,17 +415,17 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 | 文件                                                                                                                             | 改动                                                                                                                                   |
 | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| [src/banner.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/banner.ts)                           | `BannerEditModal.save` 不再无条件写 `images: undefined`；只有 `localImages.length > 0` 时才把 `images` 放进 updates 对象               |
-| [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) `openEmbeddedBannerEditModal` | 消费者不再用 `Object.assign(banner, updates)`；改为按 key 循环，仅当 `value !== undefined` 时才赋值（即标准"safe merge partial" 模式） |
+| [src/banner.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/banner.ts)                           | `BannerEditModal.save` 不再无条件写 `images: undefined`；只有 `localImages.length > 0` 时才把 `images` 放进 updates 对象               |
+| [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts) `openEmbeddedBannerEditModal` | 消费者不再用 `Object.assign(banner, updates)`；改为按 key 循环，仅当 `value !== undefined` 时才赋值（即标准"safe merge partial" 模式） |
 
 ### 修复 1b：保存时不再清空用户自有的 frontmatter 字段
 
-**根因**：[src/parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts) `serialize()` 只输出 6 个插件自有的顶层 key（`banner` / `quickActions` / `quickActionOrder` / `hiddenPresets` / `columns` / 旧式 `quickLinks`），其它 frontmatter 字段（`Type: dashboard` / `cssclass: ...` / `tags: [...]` / `aliases: [...]` 等）从未被 `parse()` 收进 `DashboardData`，因此下一次保存就静默丢失了。
+**根因**：[src/parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts) `serialize()` 只输出 6 个插件自有的顶层 key（`banner` / `quickActions` / `quickActionOrder` / `hiddenPresets` / `columns` / 旧式 `quickLinks`），其它 frontmatter 字段（`Type: dashboard` / `cssclass: ...` / `tags: [...]` / `aliases: [...]` 等）从未被 `parse()` 收进 `DashboardData`，因此下一次保存就静默丢失了。
 
 **修复**：
 
-- [src/types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts) `DashboardData` 新增 `extraFrontmatter?: Record<string, unknown>` 字段
-- [src/parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts) 新增 `KNOWN_FRONTMATTER_KEYS` 集合；`parse()` 把不在该集合内的所有顶层 key 收进 `data.extraFrontmatter`
+- [src/types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts) `DashboardData` 新增 `extraFrontmatter?: Record<string, unknown>` 字段
+- [src/parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts) 新增 `KNOWN_FRONTMATTER_KEYS` 集合；`parse()` 把不在该集合内的所有顶层 key 收进 `data.extraFrontmatter`
 - `serialize()` 在 `---` 后、`banner:` 之前，用 `yaml.stringify` 把 `extraFrontmatter` 整块写回，保留嵌套结构和引号
 - 用户自有的字段在 round-trip 后仍然存在，验证脚本（parse → mutate → serialize → re-parse）已 PASS：`Type: dashboard` + `tags: [dashboard, apex]` 都完整保留
 
@@ -433,14 +433,14 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 | 文件                                                                                                                        | 改动                                                                                                                                             |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) `registerVaultListeners` | `vault.on("modify")` 检测到 `file.path === this.embeddedNotePath` 时调用 `reloadEmbeddedFromDisk()`                                              |
+| [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts) `registerVaultListeners` | `vault.on("modify")` 检测到 `file.path === this.embeddedNotePath` 时调用 `reloadEmbeddedFromDisk()`                                              |
 | 同上                                                                                                                        | 新增私有方法 `reloadEmbeddedFromDisk()`：从 vault 读最新内容 → `parse()` 解析 → 更新 `embeddedData` 与 `embeddedDataCache` → `render()` 重新绘制 |
 
 ### 修复 3：下拉列表无"2 面板"
 
 | 文件                                                                                                                        | 改动                                                                                                                                 |
 | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `render` | 选中行：移除 `inset 0 0 0 1px ...` 那个 1px 内边框；只保留 `rgba(99, 102, 241, 0.22)` 半透明背景。alpha 微微提高到 0.22 让选中更明显 |
+| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts) `render` | 选中行：移除 `inset 0 0 0 1px ...` 那个 1px 内边框；只保留 `rgba(99, 102, 241, 0.22)` 半透明背景。alpha 微微提高到 0.22 让选中更明显 |
 | 同上                                                                                                                        | 未选中行：`box-shadow: "none"`，避免 1px transparent 阴影被某些主题画成亚像素发丝线                                                  |
 
 ### 子任务
@@ -468,7 +468,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ### 根因
 
-[src/view.ts:1360](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1360) 嵌入视图 `onFileDrop` 处理项目卡片时**只 push 到 `projectDocs`，没有 append 到 `card.body`**。两条链路错位：
+[src/view.ts:1360](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L1360) 嵌入视图 `onFileDrop` 处理项目卡片时**只 push 到 `projectDocs`，没有 append 到 `card.body`**。两条链路错位：
 
 - `serialize()` 优先用 `card.body`，只在 body 为空时才从 `projectDocs` 兜底合成
 - 第 1 次拖入（body 空）→ serialize 走兜底 → 文件落地为 `- [[file1]]` ✅
@@ -477,11 +477,11 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 而「没有 `[[ ]]` 形态」是另一面：旧代码把 `filePath` 原样塞进 `projectDocs`，下一轮 render 的 projectDocs 分支会按「新规则」判断：path 不含 `/` 也不以 `.md` 结尾时（边缘 case 比如 `note` 这种纯 basename）走平文本分支 `- ${d.path}`，所以 body 里就是 `- note`，没有 `[[ ]]`。
 
-主工作台 ([sync.ts:addDocToCard](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L830)) 没有这个 bug，因为它**直接 append 到 `card.body`**，body 永远是事实来源。
+主工作台 ([sync.ts:addDocToCard](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L830)) 没有这个 bug，因为它**直接 append 到 `card.body`**，body 永远是事实来源。
 
 ### 修复
 
-[src/view.ts:onFileDrop](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1358) 嵌入视图项目卡片分支改为**同时**更新 `projectDocs` 和 `card.body`，并沿用主工作台 [sync.ts:855](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L855) 的 wikilink wrap 规则：
+[src/view.ts:onFileDrop](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L1358) 嵌入视图项目卡片分支改为**同时**更新 `projectDocs` 和 `card.body`，并沿用主工作台 [sync.ts:855](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts#L855) 的 wikilink wrap 规则：
 
 ```ts
 // projectDocs (structured) and body (markdown) MUST be in lockstep
@@ -541,23 +541,23 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 - [x] 文件格式改为缩进 bullet-list 格式（v1.1.4）
 - [x] 主题系统简化，自动适配 Obsidian 原生主题
 
-- [x] **修复 Bug A（移除 Memo 色板）**：[renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2873) 移除 Memo 卡片顶部的调色板按钮，色板仅保留给 Weather / Tracker 小工具使用
+- [x] **修复 Bug A（移除 Memo 色板）**：[renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L2873) 移除 Memo 卡片顶部的调色板按钮，色板仅保留给 Weather / Tracker 小工具使用
 - [x] **修复 Bug B（排除主工作台文件）**：
-  - [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts) 新增 `excludedNotePaths: string[]`，默认排除 `dashboard`
-  - [settings.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/settings.ts) 新增设置项（逗号分隔），支持中英 i18n
-  - [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts) 添加 `settings.excludedNotePaths / .excludedNotePathsDesc`
-  - [view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L443-L454) `showColumnFilePicker` 读取排除列表并在扫描时跳过
-- [x] **修复 Bug C（筛选弹窗主题适配）**：[styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css#L10141-L10282) 替换所有硬编码颜色（`#fff`/`#1a1a1a`/`#ddd`/`#7c3aed` 等）为 Obsidian 主题变量；新增缺失的 `.dashboard-library-quickfilter-row`、`.quickfilter-label`、`.filter-popup-clear` 样式
+  - [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts) 新增 `excludedNotePaths: string[]`，默认排除 `dashboard`
+  - [settings.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/settings.ts) 新增设置项（逗号分隔），支持中英 i18n
+  - [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/i18n.ts) 添加 `settings.excludedNotePaths / .excludedNotePathsDesc`
+  - [view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts#L443-L454) `showColumnFilePicker` 读取排除列表并在扫描时跳过
+- [x] **修复 Bug C（筛选弹窗主题适配）**：[styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css#L10141-L10282) 替换所有硬编码颜色（`#fff`/`#1a1a1a`/`#ddd`/`#7c3aed` 等）为 Obsidian 主题变量；新增缺失的 `.dashboard-library-quickfilter-row`、`.quickfilter-label`、`.filter-popup-clear` 样式
 - [x] **修复 Bug D（任务输入框增强 + Wiki 链接 Obsidian 预览）**：
-  - [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css#L5951-L5979) `.dashboard-task-input` 加上边框、圆角、hover/focus 视觉
-  - [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3840-L3847) Wiki 链接增加 `internal-link` class + `data-href`/`href` 属性，触发 Obsidian 原生 hover preview
+  - [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css#L5951-L5979) `.dashboard-task-input` 加上边框、圆角、hover/focus 视觉
+  - [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L3840-L3847) Wiki 链接增加 `internal-link` class + `data-href`/`href` 属性，触发 Obsidian 原生 hover preview
 - [x] **修复 Bug E（自动补全下拉框被裁切）**：
-  - [file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts#L45-L99) dropdown 强制 220-260px 高度、所有布局属性 inline style 强制（绕过任何 host-theme 重置）
-  - [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css#L2309-L2370) `.dashboard-file-suggest` 完全不透明 + 深色 box-shadow；`has-open-suggest` class 让 dashboard card 临时 `overflow: visible`
-  - [file-suggest.ts:119](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts#L119) `open()` 时给祖先 `.dashboard-card` 加 `has-open-suggest`；`close()` 时移除
-  - [file-suggest.ts:101](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts#L101) 每个 item 用 `<div role="option">` + 强制 `height: 40px`（避免 button 默认行高塌缩）
+  - [file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts#L45-L99) dropdown 强制 220-260px 高度、所有布局属性 inline style 强制（绕过任何 host-theme 重置）
+  - [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css#L2309-L2370) `.dashboard-file-suggest` 完全不透明 + 深色 box-shadow；`has-open-suggest` class 让 dashboard card 临时 `overflow: visible`
+  - [file-suggest.ts:119](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts#L119) `open()` 时给祖先 `.dashboard-card` 加 `has-open-suggest`；`close()` 时移除
+  - [file-suggest.ts:101](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts#L101) 每个 item 用 `<div role="option">` + 强制 `height: 40px`（避免 button 默认行高塌缩）
 - [x] **修复 Bug F（嵌入视图项目卡片 Enter 无反应）**：
-  - [renderer.ts:3486](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3486) `renderProjectBody` 现在同时读 `card.body`（主工作台用）和 `card.projectDocs`（嵌入视图用），统一为 `lines` 数组渲染
+  - [renderer.ts:3486](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts#L3486) `renderProjectBody` 现在同时读 `card.body`（主工作台用）和 `card.projectDocs`（嵌入视图用），统一为 `lines` 数组渲染
   - 修复后嵌入视图（dash01.md）的项目卡片按 Enter 后，新添加的文件 suggestion 会立即显示在项目列表中
 
 ---
@@ -577,16 +577,16 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 
 ### 高优先级
 
-- [x] **修复 Bug 1**：[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) `showColumnFilePicker` 改为以 `navBar` 为定位父元素（`position: absolute; top: 100%`），让「+ 打开」下拉框紧贴按钮显示，不再「下移」
+- [x] **修复 Bug 1**：[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts) `showColumnFilePicker` 改为以 `navBar` 为定位父元素（`position: absolute; top: 100%`），让「+ 打开」下拉框紧贴按钮显示，不再「下移」
 
-- [x] **修复 Bug 2**：[styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css) `.dashboard-file-suggest` 补齐内部子元素样式、设置兜底 `background-color`、提高 `z-index` 到 9999，使 Todo/Project 输入框的内部文件自动补全下拉框能稳定显示
+- [x] **修复 Bug 2**：[styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css) `.dashboard-file-suggest` 补齐内部子元素样式、设置兜底 `background-color`、提高 `z-index` 到 9999，使 Todo/Project 输入框的内部文件自动补全下拉框能稳定显示
 
 - [x] **修复 Bug 3**：
-  - [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts) `RenderCallbacks` 新增 `onProjectItemDelete`
-  - [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) `renderProjectBody` 添加 hover 时显示的删除按钮
-  - [view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) 嵌入视图回调中实现「删除第 N 个 top-level 项目」（含其缩进子项）
-  - [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts) 新增 `removeProjectItem`，主 Dashboard 视图使用
-  - [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css) 新增 `.dashboard-project-item-delete` 样式
+  - [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts) `RenderCallbacks` 新增 `onProjectItemDelete`
+  - [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts) `renderProjectBody` 添加 hover 时显示的删除按钮
+  - [view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts) 嵌入视图回调中实现「删除第 N 个 top-level 项目」（含其缩进子项）
+  - [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts) 新增 `removeProjectItem`，主 Dashboard 视图使用
+  - [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css) 新增 `.dashboard-project-item-delete` 样式
 
 ### 高优先级
 
@@ -595,7 +595,7 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
   - 建议：使用 Nager.Date API（免费，无需 key）
 
 - [ ] **Workspace API 规范化**：替换兼容写法，减少 `unknown as`
-  - 文件：[main.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/main.ts) 第 155-160 行
+  - 文件：[main.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/main.ts) 第 155-160 行
   - 当前：`getLeaf('tab')` / `getLeaf('tab', 'right')` 使用兼容写法
   - 建议：研究 Obsidian 1.x 标准 Workspace API
 

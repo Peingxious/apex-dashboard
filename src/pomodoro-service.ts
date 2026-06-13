@@ -1,4 +1,4 @@
-import type DashboardPlugin from './main';
+﻿import type DashboardPlugin from './main';
 
 // Activity color palette
 const ACTIVITY_COLORS = [
@@ -32,7 +32,7 @@ export interface PomodoroRecord {
 	duration: number; // minutes
 }
 
-const STORAGE_KEY = 'apex-dashboard-pomodoro-records';
+const STORAGE_KEY = 'peingxious-dashboard-pomodoro-records';
 
 export class PomodoroService {
 	private plugin: DashboardPlugin;

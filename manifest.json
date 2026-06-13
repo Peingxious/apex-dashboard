@@ -1,9 +1,9 @@
 {
-  "id": "apex-dashboard",
-  "name": "Apex Dashboard",
-  "version": "1.1.19",
+  "id": "peingxious-dashboard",
+  "name": "Peingxious Dashboard",
+  "version": "1.2.0",
   "minAppVersion": "0.15.0",
-  "description": "Your personal command center \u2014 memos, todos, and projects in one stunning glassmorphism dashboard.",
-  "author": "PandoraReads",
+  "description": "Peingxious Dashboard — your personal command center in Obsidian. Memos, todos, projects, library, weather, and quick links in a unified glassmorphism interface.",
+  "author": "Peingxious",
   "isDesktopOnly": false
 }

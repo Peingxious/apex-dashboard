@@ -107,10 +107,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Default dashboard content
     "default.memoTitle": "{date} memo",
     "default.memoBody":
-      "Welcome to Apex Dashboard! Click here to edit your first memo.",
+      "Welcome to Peingxious Dashboard! Click here to edit your first memo.",
     "default.memoPathTitle": "Tip: Dashboard File Path",
     "default.memoPathBody":
-      "You can change the dashboard file path in Settings > Apex Dashboard.",
+      "You can change the dashboard file path in Settings > Peingxious Dashboard.",
     "default.memoDeleteTitle": "Tip: Delete Sections",
     "default.memoDeleteBody":
       "To delete a section, edit the dashboard.md file directly — remove the corresponding section block.",
@@ -663,10 +663,11 @@ const translations: Record<Language, Record<string, string>> = {
     // Renderer
     // Default dashboard content
     "default.memoTitle": "{date} 备忘",
-    "default.memoBody": "欢迎使用 Apex Dashboard！点击此处编辑你的第一条备忘。",
+    "default.memoBody":
+      "欢迎使用 Peingxious Dashboard！点击此处编辑你的第一条备忘。",
     "default.memoPathTitle": "提示：Dashboard 文件路径",
     "default.memoPathBody":
-      "你可以在 设置 > Apex Dashboard 中修改 dashboard 文件路径。",
+      "你可以在 设置 > Peingxious Dashboard 中修改 dashboard 文件路径。",
     "default.memoDeleteTitle": "提示：删除分区",
     "default.memoDeleteBody":
       "如需删除某个分区，请直接编辑 dashboard.md 文件，删除对应的分区内容块即可。",

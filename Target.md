@@ -1,16 +1,16 @@
-# Apex Dashboard 插件目标（Target）
+# Peingxious Dashboard 插件目标（Target）
 
 ## 1. 插件基本信息
 
-| 字段                   | 值                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------------- |
-| **ID**                 | `apex-dashboard`                                                                                  |
-| **名称**               | Apex Dashboard                                                                                    |
-| **版本**               | 1.1.16                                                                                            |
-| **最低 Obsidian 版本** | 0.15.0                                                                                            |
-| **作者**               | PandoraReads                                                                                      |
-| **许可证**             | MIT                                                                                               |
-| **描述**               | Your personal command center — memos, todos, and projects in one stunning glassmorphism dashboard |
+| 字段                   | 值                                                                                                                                                               |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ID**                 | `peingxious-dashboard`                                                                                                                                           |
+| **名称**               | Peingxious Dashboard                                                                                                                                             |
+| **版本**               | 1.2.0                                                                                                                                                            |
+| **最低 Obsidian 版本** | 0.15.0                                                                                                                                                           |
+| **作者**               | Peingxious                                                                                                                                                       |
+| **许可证**             | MIT                                                                                                                                                              |
+| **描述**               | Peingxious Dashboard — your personal command center in Obsidian. Memos, todos, projects, library, weather, and quick links in a unified glassmorphism interface. |
 
 ---
 
@@ -96,7 +96,7 @@
 ## Memo
 
 - 2026-06-08 memo
-  - Welcome to Apex Dashboard! Click here to edit your first memo.
+  - Welcome to Peingxious Dashboard! Click here to edit your first memo.
 
 ## Todo
 
@@ -183,29 +183,29 @@ interface DashboardSettings {
 
 ## 6. 代码架构（代码地图）
 
-| 模块           | 文件                                                                                                                   | 职责                             |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **入口**       | [main.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/main.ts)                         | 插件生命周期、命令注册、视图管理 |
-| **主视图**     | [view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts)                         | Dashboard 主视图渲染             |
-| **侧边栏视图** | [sidebar-view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sidebar-view.ts)         | 共享侧边栏视图                   |
-| **渲染器**     | [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts)                 | 卡片渲染、拖拽、交互             |
-| **解析器**     | [parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts)                     | Markdown → 数据结构              |
-| **同步器**     | [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts)                         | 文件读写同步、哈希校验防竞态     |
-| **设置页**     | [settings.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/settings.ts)                 | Settings Tab UI                  |
-| **类型定义**   | [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts)                       | 接口与默认配置                   |
-| **国际化**     | [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts)                         | 中英文翻译                       |
-| **Banner**     | [banner.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/banner.ts)                     | Banner 组件                      |
-| **拖拽**       | [dnd.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/dnd.ts)                           | 拖拽排序逻辑                     |
-| **卡片编辑**   | [card-edit-modal.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/card-edit-modal.ts)   | 卡片编辑弹窗                     |
-| **天气服务**   | [weather-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/weather-service.ts)   | Open-Meteo API 封装              |
-| **追踪服务**   | [tracker-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/tracker-service.ts)   | 热力图数据获取                   |
-| **番茄钟**     | [pomodoro-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/pomodoro-service.ts) | 计时器逻辑                       |
-| **阅读追踪**   | [reading-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/reading-service.ts)   | 豆瓣搜索/阅读计时                |
-| **农历组件**   | [lunar-widget.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/lunar-widget.ts)         | 农历显示                         |
-| **节假日**     | [holiday-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/holiday-service.ts)   | 节假日数据（降级空数据）         |
-| **求签**       | [fortune-stick.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/fortune-stick.ts)       | 求签逻辑与数据                   |
-| **最近文档**   | [recent.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/recent.ts)                     | 最近编辑文件列表                 |
-| **提醒**       | [reminder-notice.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/reminder-notice.ts)   | 任务到期提醒                     |
+| 模块           | 文件                                                                                                                         | 职责                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **入口**       | [main.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/main.ts)                         | 插件生命周期、命令注册、视图管理 |
+| **主视图**     | [view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts)                         | Dashboard 主视图渲染             |
+| **侧边栏视图** | [sidebar-view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sidebar-view.ts)         | 共享侧边栏视图                   |
+| **渲染器**     | [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts)                 | 卡片渲染、拖拽、交互             |
+| **解析器**     | [parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts)                     | Markdown → 数据结构              |
+| **同步器**     | [sync.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/sync.ts)                         | 文件读写同步、哈希校验防竞态     |
+| **设置页**     | [settings.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/settings.ts)                 | Settings Tab UI                  |
+| **类型定义**   | [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts)                       | 接口与默认配置                   |
+| **国际化**     | [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/i18n.ts)                         | 中英文翻译                       |
+| **Banner**     | [banner.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/banner.ts)                     | Banner 组件                      |
+| **拖拽**       | [dnd.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/dnd.ts)                           | 拖拽排序逻辑                     |
+| **卡片编辑**   | [card-edit-modal.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/card-edit-modal.ts)   | 卡片编辑弹窗                     |
+| **天气服务**   | [weather-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/weather-service.ts)   | Open-Meteo API 封装              |
+| **追踪服务**   | [tracker-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/tracker-service.ts)   | 热力图数据获取                   |
+| **番茄钟**     | [pomodoro-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/pomodoro-service.ts) | 计时器逻辑                       |
+| **阅读追踪**   | [reading-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/reading-service.ts)   | 豆瓣搜索/阅读计时                |
+| **农历组件**   | [lunar-widget.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/lunar-widget.ts)         | 农历显示                         |
+| **节假日**     | [holiday-service.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/holiday-service.ts)   | 节假日数据（降级空数据）         |
+| **求签**       | [fortune-stick.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/fortune-stick.ts)       | 求签逻辑与数据                   |
+| **最近文档**   | [recent.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/recent.ts)                     | 最近编辑文件列表                 |
+| **提醒**       | [reminder-notice.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/reminder-notice.ts)   | 任务到期提醒                     |
 
 ---
 
@@ -224,27 +224,27 @@ interface DashboardSettings {
 
 ## 8. 版本历史（关键里程碑）
 
-| 版本   | 日期       | 主要变化                                                                                                                                  |
-| ------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 版本   | 日期       | 主要变化                                                                                                                                                                                                   |
+| ------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.1.18 | 2026-06-13 | 修复 1.1.17 回归：下拉框单匹配时塌成 32px（恢复 ≈96px 最小高度但保留内容驱动）；修复 pick 时 `input` 事件后 `input.value` 被同步 update 改写导致前导文本丢失（`replaceWikilinkFragment` 直接返回新字符串） |
-| 1.1.14 | 2026-06-12 | 项目项 wikilink 普通 hover 触发 Page Preview（200ms 延迟）；卡片标题/task/note 不启用 hover；撤销 1.1.12 分区标题尾号角标，分区名完整渲染 |
-| 1.1.13 | 2026-06-12 | 项目项 wikilink 支持 Ctrl/Cmd+悬浮原生文件预览（手动派发 workspace `link-hover` 事件，200ms 延迟）                                        |
-| 1.1.11 | 2026-06-12 | File-suggest 输入时无预选第一项；高亮从 1.1.10 的"渐变+粗边框+加粗"改为"软底色+1px 内嵌边线"克制版                                        |
-| 1.1.10 | 2026-06-12 | 修复：File-suggest 下拉 ↑/↓ 高亮不可见 — 移除 inline `background: transparent` 覆盖，改用渐变+左边框+加粗高亮；hover 同步恢复             |
-| 1.1.9  | 2026-06-12 | 修复：File-suggest 下拉按 Enter 不再自动选中第一项；高亮与"已确认选择"分离，需先按 ↑/↓ 才能回车确认                                       |
-| 1.1.8  | 2026-06-12 | 工作台支持 Ctrl/Cmd+Z 撤销最近一次删除（卡片/任务/项目项/分区），栈深 50，命令面板同步入口                                                |
-| 1.1.7  | 2026-06-12 | 统一 todo 与 project 的 X 删除按钮样式（红色小胶囊，hover 出现）；点击直接删除，无确认弹窗                                                |
-| 1.1.6  | 2026-06-12 | 列表视图属性值以胶囊样式（无 key 标签）紧邻时间值；时间保持最末；列序与表格一致                                                           |
-| 1.1.5  | 2026-06-12 | Library 表格/列表视图新增「显示属性」可配置列；看板视图保持「分组依据」专属配置；向后兼容                                                 |
-| 1.1.4  | 2025-06-09 | 主题系统简化（自动适配 Obsidian 主题）；文件格式改为缩进 bullet-list                                                                      |
-| 1.1.3  | -          | 移动端小组件栏重新设计；自定义弹窗替代浏览器 dialog                                                                                       |
-| 1.1.1  | 2025-05-29 | 修复 Library 配置丢失、卡片网格位置未保存、写操作竞态条件                                                                                 |
-| 1.1.0  | -          | 阅读追踪完整功能；番茄钟活动选择器；甜甜圈统计图                                                                                          |
-| 1.0.8  | 2025-05-25 | 侧边栏小组件完整实现（天气/热力图/番茄钟/倒计时/农历）                                                                                    |
-| 1.0.7  | -          | 任务提醒、日历选择器、过期指示器、6 个新主题                                                                                              |
-| 1.0.6  | -          | 多语录轮播、图片轮播、卡片间拖拽、章节折叠                                                                                                |
-| 1.0.4  | -          | Quick Actions、4 种分区类型、多格式文档支持                                                                                               |
-| 1.0.2  | -          | 分区管理、移动端优化                                                                                                                      |
+| 1.1.14 | 2026-06-12 | 项目项 wikilink 普通 hover 触发 Page Preview（200ms 延迟）；卡片标题/task/note 不启用 hover；撤销 1.1.12 分区标题尾号角标，分区名完整渲染                                                                  |
+| 1.1.13 | 2026-06-12 | 项目项 wikilink 支持 Ctrl/Cmd+悬浮原生文件预览（手动派发 workspace `link-hover` 事件，200ms 延迟）                                                                                                         |
+| 1.1.11 | 2026-06-12 | File-suggest 输入时无预选第一项；高亮从 1.1.10 的"渐变+粗边框+加粗"改为"软底色+1px 内嵌边线"克制版                                                                                                         |
+| 1.1.10 | 2026-06-12 | 修复：File-suggest 下拉 ↑/↓ 高亮不可见 — 移除 inline `background: transparent` 覆盖，改用渐变+左边框+加粗高亮；hover 同步恢复                                                                              |
+| 1.1.9  | 2026-06-12 | 修复：File-suggest 下拉按 Enter 不再自动选中第一项；高亮与"已确认选择"分离，需先按 ↑/↓ 才能回车确认                                                                                                        |
+| 1.1.8  | 2026-06-12 | 工作台支持 Ctrl/Cmd+Z 撤销最近一次删除（卡片/任务/项目项/分区），栈深 50，命令面板同步入口                                                                                                                 |
+| 1.1.7  | 2026-06-12 | 统一 todo 与 project 的 X 删除按钮样式（红色小胶囊，hover 出现）；点击直接删除，无确认弹窗                                                                                                                 |
+| 1.1.6  | 2026-06-12 | 列表视图属性值以胶囊样式（无 key 标签）紧邻时间值；时间保持最末；列序与表格一致                                                                                                                            |
+| 1.1.5  | 2026-06-12 | Library 表格/列表视图新增「显示属性」可配置列；看板视图保持「分组依据」专属配置；向后兼容                                                                                                                  |
+| 1.1.4  | 2025-06-09 | 主题系统简化（自动适配 Obsidian 主题）；文件格式改为缩进 bullet-list                                                                                                                                       |
+| 1.1.3  | -          | 移动端小组件栏重新设计；自定义弹窗替代浏览器 dialog                                                                                                                                                        |
+| 1.1.1  | 2025-05-29 | 修复 Library 配置丢失、卡片网格位置未保存、写操作竞态条件                                                                                                                                                  |
+| 1.1.0  | -          | 阅读追踪完整功能；番茄钟活动选择器；甜甜圈统计图                                                                                                                                                           |
+| 1.0.8  | 2025-05-25 | 侧边栏小组件完整实现（天气/热力图/番茄钟/倒计时/农历）                                                                                                                                                     |
+| 1.0.7  | -          | 任务提醒、日历选择器、过期指示器、6 个新主题                                                                                                                                                               |
+| 1.0.6  | -          | 多语录轮播、图片轮播、卡片间拖拽、章节折叠                                                                                                                                                                 |
+| 1.0.4  | -          | Quick Actions、4 种分区类型、多格式文档支持                                                                                                                                                                |
+| 1.0.2  | -          | 分区管理、移动端优化                                                                                                                                                                                       |
 
 ---
 
@@ -279,7 +279,7 @@ npm run lint
 **发布目录结构：**
 
 ```
-apex-dashboard/
+peingxious-dashboard/
 ├── src/                    # 源代码（TypeScript）
 ├── main.js                 # 构建输出
 ├── manifest.json           # 插件清单
