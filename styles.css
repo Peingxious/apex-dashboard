@@ -2316,10 +2316,9 @@
   /* Solid background — using a theme variable with hard fallback. The
      dropdown must not be visually obscured by ancestor backdrop-filter
      blur, so we keep it fully opaque instead of translucent. */
-  background: var(--db-bg-card, var(--background-primary, #1f1f23));
-  border: 1px solid var(--db-border, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  border: 0 solid var(--db-border, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
   max-height: 320px;
   overflow-y: auto;
   /* The actual z-index is set inline (99999) to keep this above any

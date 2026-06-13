@@ -3839,8 +3839,13 @@ function renderProjectBody(
       // would produce nested wikilinks and drop the leading text.
       if (d.path.includes("[[")) {
         lines.push(`- ${d.path}`);
-      } else {
+      } else if (d.path.includes("/") || d.path.toLowerCase().endsWith(".md")) {
+        // Looks like a vault path — wrap as a wikilink
         lines.push(`- [[${d.path}]]`);
+      } else {
+        // Plain text (e.g. "11") written via the Enter fallback
+        // — keep it as a normal list line, no double brackets.
+        lines.push(`- ${d.path}`);
       }
       if (Array.isArray(d.children)) {
         for (const child of d.children) {

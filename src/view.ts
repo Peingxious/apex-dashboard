@@ -437,7 +437,20 @@ export class DashboardView extends ItemView {
         "[apex-dashboard] dblclick open (replace active md leaf):",
         notePath,
       );
-      if (!notePath) {
+      // Main tab case: there is no embedded note path of course,
+      // but the workspace IS backed by the dashboard file from
+      // settings. Resolve that file via the sync engine (which
+      // already created/loaded it during init) and open it in
+      // place of the active md leaf, so the user can edit the
+      // raw dashboard markdown. Only fall back to the
+      // "no underlying note" Notice if the sync engine truly
+      // has no file (init failure, etc.).
+      let resolvedPath = notePath;
+      if (!resolvedPath) {
+        const mainFile = this.sync.getFile();
+        if (mainFile) resolvedPath = mainFile.path;
+      }
+      if (!resolvedPath) {
         new Notice(
           t("noteDash.mainTabNoMd") ||
             "The main dashboard has no underlying note to open.",
@@ -445,7 +458,7 @@ export class DashboardView extends ItemView {
         return;
       }
       try {
-        const file = this.app.vault.getAbstractFileByPath(notePath);
+        const file = this.app.vault.getAbstractFileByPath(resolvedPath);
         if (!(file instanceof TFile)) {
           new Notice(t("noteDash.fileNotFound"));
           return;
@@ -468,15 +481,18 @@ export class DashboardView extends ItemView {
           );
           console.warn(
             "[apex-dashboard] no active md leaf to replace; refusing to create a new leaf (per Plan.md ironclad rule)",
-            { notePath },
+            { notePath: resolvedPath },
           );
           return;
         }
 
         await targetLeaf.openFile(file, { active: true });
-        console.log("[apex-dashboard] replaced active md leaf with:", notePath);
+        console.log(
+          "[apex-dashboard] replaced active md leaf with:",
+          resolvedPath,
+        );
       } catch (err) {
-        console.error("[apex-dashboard] open failed:", notePath, err);
+        console.error("[apex-dashboard] open failed:", resolvedPath, err);
       }
     };
 
@@ -1229,14 +1245,23 @@ export class DashboardView extends ItemView {
         if (found) {
           if (!found.card.projectDocs) found.card.projectDocs = [];
           found.card.projectDocs.push({ path: docPath, children: [] });
-          // docPath is now the full user-entered string (e.g.
-          // "11[[En3]]" with leading text preserved). Only wrap it in
-          // the wikilink pattern when it looks like a plain file path
-          // — otherwise the stored markdown ends up with nested
-          // brackets like `[[11[[En3]]]]`.
+          // Two input paths converge here:
+          //   1. file-suggest onPick — value already contains the
+          //      `[[...]]` block (possibly with leading text such
+          //      as "11[[En3]]"). Store as-is.
+          //   2. Enter fallback — value is whatever the user
+          //      typed verbatim. If it looks like a vault path
+          //      (contains "/" or ends with ".md") wrap it as a
+          //      wikilink; otherwise treat it as plain text and
+          //      keep the user's characters intact. The old code
+          //      always wrapped via pathToWikiLink, which forced
+          //      arbitrary text like "11" to become "[[11]]" — a
+          //      double-bracket the user never asked for.
           const newLine = docPath.includes("[[")
             ? `- ${docPath}`
-            : `- ${pathToWikiLink(docPath)}`;
+            : docPath.includes("/") || docPath.toLowerCase().endsWith(".md")
+              ? `- ${pathToWikiLink(docPath)}`
+              : `- ${docPath}`;
           found.card.body = found.card.body
             ? `${found.card.body}\n${newLine}`
             : newLine;
@@ -1638,10 +1663,7 @@ export class DashboardView extends ItemView {
     // branch, which is the correct canonical state.
     if (!Array.isArray(projectDocs) || projectDocs.length === 0) return "";
     const lines: string[] = [];
-    const renderDoc = (
-      doc: unknown,
-      depth: number,
-    ): void => {
+    const renderDoc = (doc: unknown, depth: number): void => {
       // Defensive: previous versions of this method assumed every
       // entry was a well-formed ProjectDocNode, but the data model
       // has been mutated by several code paths (drag reorder,
@@ -1656,12 +1678,15 @@ export class DashboardView extends ItemView {
       if (typeof d.path !== "string" || d.path.length === 0) return;
       const indent = "\t".repeat(depth);
       // path may already include the [[ ]] wrapper plus leading
-      // text (e.g. "11[[En3]]") — only wrap a bare path.
+      // text (e.g. "11[[En3]]") — only wrap a bare vault path
+      // (one with "/" or a ".md" suffix). Pure text like "11"
+      // stays as plain list text so we don't accidentally
+      // re-introduce brackets the user never asked for.
       const path = d.path.includes("[[")
         ? d.path
-        : d.path.includes(".md")
+        : d.path.includes("/") || d.path.toLowerCase().endsWith(".md")
           ? `[[${d.path.replace(/\.md$/, "")}]]`
-          : `[[${d.path}]]`;
+          : d.path;
       lines.push(`${indent}- ${path}`);
       if (Array.isArray(d.children)) {
         for (const child of d.children) {

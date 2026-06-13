@@ -102,6 +102,18 @@ export class SyncEngine {
     await this.load();
   }
 
+  /**
+   * Returns the underlying dashboard `TFile` for the workspace.
+   * Used by the main tab's double-click affordance to open the
+   * actual markdown note that backs the dashboard, in place of
+   * the bare "no underlying note" notice. Returns `null` only
+   * if `init()` has not finished yet or the file could not be
+   * located/created.
+   */
+  getFile(): TFile | null {
+    return this.file;
+  }
+
   destroy(): void {
     if (this.eventRef) {
       this.app.vault.offref(this.eventRef);
@@ -842,18 +854,28 @@ export class SyncEngine {
         ...col,
         cards: col.cards.map((card) => {
           if (card.id !== cardId) return card;
-          // Normalize the file path to the canonical wikilink form
-          // (basename only, no folder prefix, no ".md" suffix)
-          // before checking duplicates and writing the new line.
-          const link = pathToWikiLink(filePath);
+          // Two input paths converge here:
+          //   1. file-suggest onPick — value already contains the
+          //      `[[...]]` block (possibly with leading text).
+          //   2. Enter fallback — value is whatever the user
+          //      typed. Only treat it as a vault path when it
+          //      actually looks like one (contains "/" or ends
+          //      with ".md"); otherwise keep the user's plain
+          //      text intact instead of double-wrapping it.
+          const looksLikePath =
+            filePath.includes("/") || filePath.toLowerCase().endsWith(".md");
+          const newLine = filePath.includes("[[")
+            ? `- ${filePath}`
+            : looksLikePath
+              ? `- ${pathToWikiLink(filePath)}`
+              : `- ${filePath}`;
           if (
-            card.body.includes(link) ||
-            card.body.includes(link.slice(0, -2) + "|")
+            card.body.includes(newLine) ||
+            card.body.includes(pathToWikiLink(filePath).slice(0, -2) + "|")
           )
             return card;
           // Append as depth-0 entry in hierarchical format
           const existingBody = card.body.trim();
-          const newLine = `- ${link}`;
           const body = existingBody ? `${existingBody}\n${newLine}` : newLine;
           return { ...card, body };
         }),

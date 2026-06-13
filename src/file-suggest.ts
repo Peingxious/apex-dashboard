@@ -209,9 +209,16 @@ export function attachFileSuggest(
     dropdown.style.boxSizing = "border-box";
     dropdown.style.padding = "0";
     dropdown.style.margin = "0";
-    dropdown.style.border = "1px solid rgba(255,255,255,0.1)";
-    dropdown.style.borderRadius = "6px";
-    dropdown.style.background = "#1f1f23";
+    // Intentionally do NOT set `dropdown.style.border` or
+    // `dropdown.style.background` here. Earlier revisions stamped
+    // a hardcoded dark frame on every dropdown ("#1f1f23" +
+    // 1px white-alpha border), which clashed with the
+    // host surface (dashboard card, settings panel, etc.) and
+    // left an opaque panel floating over the rest of the UI.
+    // We now leave both properties unset so they resolve from
+    // `styles.css` (or fall back to the host's own background),
+    // and no `border` / `background` token ever lands in the
+    // element's inline `style` string.
     dropdown.style.color = "#e6e6e6";
     dropdown.style.fontSize = "14px";
     dropdown.style.lineHeight = "1.4";
