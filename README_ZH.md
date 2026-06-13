@@ -108,6 +108,13 @@ Dashboard 使用缩进 bullet 列表格式组织数据：
 
 ## 更新日志
 
+### 1.1.17
+
+- **修复：文件下拉框不再出现固定高度的空白背景** — 之前 `positionDropdown()` 硬性设置了 `min-height: 220px`，导致只有 1-2 个匹配项时下拉框下方留出一大块空黑区，看起来像「两个面板叠加」。现已改为内容驱动：只设 `maxHeight`（上限为输入框下方的可用空间），内部列表容器用 `flex: 0 1 auto` 跟随项数伸缩。单条结果时下拉框收紧到约 52px，不再有空白
+- **修复：输入 `【【`（全角双括号）也能触发下拉框** — 之前 `findWikilinkContext()` 只识别 ASCII `[[`，中文输入法环境下用全角括号根本弹不出下拉框。现在 ASCII 和全角都会触发；pick 时保留用户输入的那种括号风格（`[[` 配 `]]`，`【【` 配 `】】`）。混合输入（如 `【【abc]]`）视为已闭合，下拉框不会反复弹出
+- **修复：选中文件时保留 `[[` 之前已输入的前导文字** — 之前 replace 会把整个输入框覆盖掉，用户在 `[[` 前面打的「review 」「笔记 」之类的前缀全没了。现在 `applyWikilinkReplacement()` 只替换 `[[…` 片段，`review [[xyz` + 选中 → `review [[Foo]]`，而不是只剩 `[[Foo]]`。同时如果用户已经手动打出了 `]]` / `】】`，会一并清掉，避免出现 `[[Foo]]]` 这种多尾巴
+- **新增：wikilink 上下文纯逻辑单测** — 把检测 / 替换逻辑从 `src/file-suggest.ts` 抽到 `src/wikilink-context.ts`（不依赖 obsidian 包），新增 `tests/wikilink-context.test.mjs` 覆盖 27 个场景：空输入、单个括号、ASCII / 全角 opener、孤立前导括号、alias / section 语法、换行、光标在 query 中间、前后缀保留、混合闭合括号。运行方式：`npm test`
+
 ### 1.1.14
 
 - **项目项 wikilink：原生 Page Preview 在普通 hover 触发；卡片标题不启用** — 1.1.14 初版加了 `title` 属性导致普通 hover 显示浏览器原生 tooltip（包括卡片标题 "To Read" 上的小标签），与用户期望不一致，移除该属性。Page Preview（富弹窗）现在是唯一的 hover 行为，**普通 mouseover 200ms 后触发，不再需要 Ctrl/Cmd**。通过 `renderTextWithLinks(..., { enableHover: true })` 显式开启，目前只对 project-item 标题 span 启用；卡片标题、task 文本、note 文本均不启用，hover 它们不会有任何反应

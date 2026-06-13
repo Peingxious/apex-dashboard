@@ -263,6 +263,75 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 ---
 
+## 1.1.18：下拉框高度 + 前导文本保留回归修复
+
+**用户反馈**（2026-06-13，1.1.17 回归）：
+
+1. **下拉框在只有 1 个匹配项时高度被压扁成 32px 一条**：上一个迭代把 `min-height` 全部清空，单匹配时容器仅 1 行高度，看着像被裁掉一半
+2. **前导文本还是被替换掉**：在 `修复【【en3` 状态下选文件，memo / 任务里只剩文件名（甚至只有 `en3`），前面的「修复」+ 中文括号被丢掉
+
+### 修复 1：下拉框最小可用高度（≈ 2 行）
+
+- [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `positionDropdown`
+  - 重新引入 `minH = min(96, maxH)`，把下拉框最小高度限制在「约 2 行 + 6px 内边距」左右
+  - 上限仍然是 `maxH`（受可视区剩余空间约束），所以不会出现上版的「260px 固定空背景」
+
+### 修复 2：前导文本在 pick 时丢失
+
+- [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `replaceWikilinkFragment`
+  - 签名改为 `(linkText) => string | null`，**直接返回** `next` 字符串，避免在 `input` 事件派发后再次读取 `input.value`（同步 `update()` 监听器可能把字段改回去）
+- 同文件 `pick`
+  - 改用 `const replaced = replaceWikilinkFragment(...)`，`onPick(replaced ?? input.value, file)`，确保任务 / 笔记消费者拿到的是「前导文字 + 完整 [[name]]」
+
+### 验证
+
+- [tests/wikilink-context.test.mjs](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/tests/wikilink-context.test.mjs)：27/27 通过（其中 4 个直接覆盖「前导文字保留」+「混合括号」场景）
+- `npm run build`：tsc + esbuild 均通过，`main.js` 重新生成（2026-06-13 08:58）
+
+---
+
+## 1.1.16：分区名双链渲染 + 下拉框仅 `[[` 触发
+
+**用户反馈**（2026-06-13）：
+
+1. **分区名支持双链语法**：列名叫 `[[dash01]]` 时，应当像卡片标题 / 任务文本里的双链一样，渲染为真正的可点击链接（含原生 Page Preview 悬停）
+2. **下拉框仅在 `[[` 触发**：现在所有接了 `attachFileSuggest` 的输入框，正常打字也会冒出下拉（输入 "review report" 也会弹），需要改成只有当 caret 处于未关闭的 `[[…` 上下文时才显示
+
+### 修复 1：分区名 `[[…]]` 渲染为真正的双链
+
+| 文件                                                                                                                                     | 改动                                                                                                                                |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| [src/renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) `renderColumnTitle`           | 新增 `app: App` 参数；当 name 包含 `[[` 时调用现有的 `renderTextWithLinks`（已支持别名 / 片段），否则走 `setText` 快速路径            |
+| 同上 `renderSection` 调用 `renderColumnTitle` 处                                                                                          | 传入 `app`；rename 取消分支的 `renderColumnTitle(titleEl, currentName, app)` 同样更新                                                |
+
+底层机制沿用现有的 `renderWikilink`：`internal-link` class + `data-href` / `href` 属性 + `mouseover` 派发 `link-hover` 事件，让原生 Page Preview 接管。render / rename / 取消三条路径都走同一函数，行为完全一致。
+
+### 修复 2：下拉框仅在 `[[` 上下文打开
+
+| 文件                                                                                                                                       | 改动                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `update`                | 改用新增的 `findWikilinkContext(value, caret)`：返回 `null` 时直接 `close()`；返回 `{ start, query }` 才打开 / 更新 dropdown |
+| 同上 `filterFiles`                                                                                                                          | 空 query（刚输入 `[[` 时）改为返回前 20 个文件，让用户能看到可选列表；非空 query 行为不变                                    |
+| 同上 新增 `findWikilinkContext` 私有函数                                                                                                    | 找最后一个 caret 之前的 `[[`；若有 `]]` 在 `[[` 和 caret 之间则返回 `null`；query 包含换行也返回 `null`；兼容 `[[[abc` 这种带前导 `[` 的情况 |
+| 同上 新增 `replaceWikilinkFragment` 私有函数                                                                                                 | pick 时按 `ctx.start` 到 caret（含光标后已输入的 `]]`）整段替换为 `[[basename]]`；若光标后已有 `]]` 自动去掉避免 `[[path]]]`     |
+| 同上 `pick`                                                                                                                                 | 改用 `replaceWikilinkFragment`；保留 `onPick` 回调（任务 / note 消费者仍能正确添加）                                         |
+
+调用 `attachFileSuggest` 的三处（todo 任务添加 input / memo textarea / 项目笔记 input）自动同时获得新行为，无需逐处修改。
+
+### 子任务
+
+- [x] renderer.ts: `renderColumnTitle` 新增 `app: App` 参数，含 `[[` 走 `renderTextWithLinks`
+- [x] renderer.ts: `renderSection` 内的两处 `renderColumnTitle` 调用更新签名
+- [x] file-suggest.ts: `update` 改用 `findWikilinkContext` 判定开关
+- [x] file-suggest.ts: `findWikilinkContext` / `replaceWikilinkFragment` 私有函数
+- [x] file-suggest.ts: `pick` 改为替换 fragment
+- [x] file-suggest.ts: `filterFiles` 空 query 返回前 20 个
+- [x] 单元测试：11 个输入场景（plain text / 单 `[` / `[[` / `[[dash` / `[[dash]]` 末尾或中间 / 第二个 link / 别名 / 片段 / 换行 / 杂散 `[`）全部 PASS
+- [x] npm run build 通过
+- [x] 文档同步：CHANGELOG / Plan / Target 版本号 1.1.15 → 1.1.16
+
+---
+
 ## 1.1.15：三个稳定性 / 视觉修复
 
 **用户反馈**（2026-06-13）：

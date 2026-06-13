@@ -2320,16 +2320,15 @@
   border: 1px solid var(--db-border, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  max-height: 240px;
-  min-height: 32px;
+  max-height: 320px;
   overflow-y: auto;
-  /* The actual z-index is set inline (9999) to keep this above any
+  /* The actual z-index is set inline (99999) to keep this above any
      backdrop-filter stacking context created by dashboard cards. */
   isolation: isolate;
   color: var(--db-text, var(--text-normal, #e6e6e6));
-  padding: 4px;
   font-size: 14px; /* prevent host-theme font-size: 0 from collapsing children */
   line-height: 1.4;
+  padding: 0; /* padding is applied by the inner .suggestion-container */
 }
 
 .dashboard-file-suggest .suggestion-container {

@@ -26,6 +26,7 @@ import {
   renderSidebarPomodoro,
   renderSidebarReading,
 } from "./renderer";
+import { closeAllFileSuggests } from "./file-suggest";
 import { renderBanner, BannerEditModal, resolveVaultImage } from "./banner";
 import { getRecentDocs, renderRecentDocs } from "./recent";
 import {
@@ -233,6 +234,11 @@ export class DashboardView extends ItemView {
     });
 
     const container = this.containerEl.children[1] as HTMLElement;
+    // Layer 3 — drop all file-suggest dropdowns on document.body BEFORE
+    // the dashboard re-renders. The .empty() below only removes nodes
+    // inside the dashboard container; dropdowns live on document.body
+    // and would otherwise leak across re-renders.
+    closeAllFileSuggests();
     container.empty();
     container.addClass("apex-dashboard-root");
 
@@ -991,6 +997,14 @@ export class DashboardView extends ItemView {
         }
       },
       onTaskAdd: async (cardId: string, text: string) => {
+        // #region debug-point view-taskadd
+        console.log(
+          "[dbg-view] onTaskAdd cardId=" +
+            JSON.stringify(cardId) +
+            " text=" +
+            JSON.stringify(text),
+        );
+        // #endregion debug-point view-taskadd
         const found = self.findEmbeddedCard(cardId);
         if (found) {
           found.card.tasks.push({ text, checked: false });
@@ -1176,15 +1190,14 @@ export class DashboardView extends ItemView {
         if (found) {
           if (!found.card.projectDocs) found.card.projectDocs = [];
           found.card.projectDocs.push({ path: docPath, children: [] });
-          // Keep body in sync so the markdown round-trip preserves the
-          // new item even when body was non-empty (e.g. a hand-typed
-          // "- 12"). Without this, serialize() writes body verbatim
-          // and the new projectDocs item is lost on the next parse.
-          //
-          // Use the shared pathToWikiLink helper so the stored wikilink
-          // matches the format produced by serialize() — basename only,
-          // no folder prefix, no ".md" extension.
-          const newLine = `- ${pathToWikiLink(docPath)}`;
+          // docPath is now the full user-entered string (e.g.
+          // "11[[En3]]" with leading text preserved). Only wrap it in
+          // the wikilink pattern when it looks like a plain file path
+          // — otherwise the stored markdown ends up with nested
+          // brackets like `[[11[[En3]]]]`.
+          const newLine = docPath.includes("[[")
+            ? `- ${docPath}`
+            : `- ${pathToWikiLink(docPath)}`;
           found.card.body = found.card.body
             ? `${found.card.body}\n${newLine}`
             : newLine;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.16 (2026-06-13)
+
+### Added
+- **Section / column names now render as real wikilinks** — A column called `[[dash01]]` (or `[[dash01|alias]]`, or `[[dash01#section]]`) is no longer displayed as raw `[[dash01]]` text. `renderColumnTitle` now detects an `[[…]]` token inside the column name and routes it through the same `renderTextWithLinks` helper that already powers card titles, project items, and task lines. The inner part becomes a real `internal-link` `<span>`: clickable (opens the target via `workspace.openLinkText`), with the native Obsidian Page Preview popover on plain `mouseover` (200ms delay), and the standard `data-href` / `href` attributes for the post-processor to find. Plain-text column names still take the cheap `setText` path, so there's no overhead for the common case. The rename input on double-click still shows the FULL verbatim string (including the `[[` / `]]`) so the user can edit it just like before
+
+### Fixed
+- **File-suggest dropdown only opens on `[[`, not on any text** — The dropdown was previously driven by `if (!q.trim())` and would open for any non-empty input, so typing a normal task title like "review report" would pop the dropdown with fuzzy matches against every vault file. That made plain text input feel noisy and random. `attachFileSuggest` now uses a `findWikilinkContext(value, caret)` helper that returns `null` unless the caret sits inside an unclosed `[[…`. The result: the user can type a normal task title / memo line freely and the dropdown stays closed; the moment they press the two opening brackets the dropdown opens with the full file list; every char typed after narrows the list down (substring match on path or basename). The dropdown also closes automatically when the user types `]]` (caret moves past the close). On pick, the active `[[partial` fragment is replaced with `[[basename]]` (basename form matches the canonical wikilink format used everywhere else in the dashboard), and any pre-existing `]]` the user has already typed past the caret is dropped so the result is never `[[path]]]`. The `onPick` callback still fires after the replacement, so the task-add / note-add consumers add the item and then clear the input as before. The new behaviour is verified against 11 input scenarios (plain text, single `[`, `[[`, `[[dash`, `[[dash]]` at end / in middle, second link after a closed one, alias / fragment, newline in middle, stray leading `[`)
+
 ## 1.1.15 (2026-06-13)
 
 ### Fixed

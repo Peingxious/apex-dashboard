@@ -340,7 +340,8 @@ export function serialize(data: DashboardData, app?: App): string {
       // extension and the folder prefix so the markdown stays
       // short. We re-import locally here to avoid coupling
       // serialize() callers to the helper's name.
-      const toWikiLink = (rawPath: string): string => pathToWikiLink(rawPath);
+      const toWikiLink = (rawPath: string): string =>
+        rawPath.includes("[[") ? rawPath : pathToWikiLink(rawPath);
       let bodySource = card.body;
       const projectDocsAny = (card as any).projectDocs as
         | { path: string; children?: string[] }[]

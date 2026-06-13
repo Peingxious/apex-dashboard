@@ -121,6 +121,13 @@ The dashboard uses an indented bullet-list format:
 
 ## What's New
 
+### 1.1.17
+
+- **File suggest dropdown no longer shows a fixed-height empty background** — The `positionDropdown()` layout was setting a hard minimum height (e.g. 220px) that left a large blank panel when only 1-2 results matched. The dropdown now sizes to its content: `maxHeight` is bounded by the space below the input, and the inner list uses `flex: 0 1 auto` so it shrinks with the items. Single-item suggestions now render as a compact ~52px card with no empty area beneath them
+- **Full-width `【【` opener now triggers the wikilink dropdown** — `findWikilinkContext()` previously only matched ASCII `[[`. Both ASCII and full-width openers are now recognized as wikilink starters, and the matching closer (`]]` / `】】`) is preserved on pick. Mixed-bracket typing (e.g. `【【abc]]`) is treated as a closed link and won't reopen the dropdown
+- **Picking a file preserves the leading text typed before `[[`** — The replacement used to overwrite the entire input value, dropping any text the user had typed before the opener. `applyWikilinkReplacement()` now only swaps the `[[…` fragment, so `review [[xyz` + pick → `review [[Foo]]`, not just `[[Foo]]`. Trailing `]]` / `】】` already typed by the user are also dropped from the result so we never produce `[[Foo]]]`
+- **Pure-logic test suite for the wikilink context** — Extracted the context-detection and replacement helpers into `src/wikilink-context.ts` (no Obsidian dependency) and added `tests/wikilink-context.test.mjs` covering 27 cases (empty input, single bracket, ASCII / full-width openers, stray leading brackets, alias / section syntax, newlines, mid-query caret, leading + trailing text preservation, mixed-bracket closers). Run with `npm test`
+
 ### 1.1.14
 
 - **Project-item wikilink: native Page Preview on plain hover; card titles stay passive** — The earlier 1.1.14 pass added a `title` HTML attribute so plain hover showed a small browser tooltip; the user did not want that — it produced a tag-style "To Read" chip on the card title. Removed. Page Preview (the rich popover) is now the only hover affordance, fires on plain `mouseover` (200ms delay, no Ctrl required), and is opt-in per call site via `renderTextWithLinks(..., { enableHover: true })`. Only the project-item title span opts in; card titles, task text, and note text intentionally never trigger a preview

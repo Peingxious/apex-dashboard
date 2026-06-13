@@ -1,4 +1,65 @@
 import { App, FuzzySuggestModal, TFile } from "obsidian";
+import {
+  WIKILINK_OPENERS,
+  WIKILINK_CLOSERS,
+  findWikilinkContext,
+  applyWikilinkReplacement,
+  type WikilinkContext,
+} from "./wikilink-context";
+
+// Track the currently-open dropdown across all attachFileSuggest
+// instances. When the dashboard re-renders (e.g. after saving a task)
+// the old input element is removed from the DOM, which means the old
+// `attachFileSuggest` closure is orphaned and its `close()` is never
+// called — leaving the dropdown floating in the body. The next
+// `open()` sweeps that orphan away before creating a new one, so we
+// never see two stacked dropdowns.
+let activeDropdown: HTMLElement | null = null;
+
+/**
+ * Removes every `.dashboard-file-suggest` node from document.body and
+ * clears `has-open-suggest` markers from any cards. Called:
+ *   1) at the very start of open()
+ *   2) before a dashboard re-render (via closeAllFileSuggests)
+ *   3) when an input element is detected as detached from the DOM
+ */
+function sweepAllFileSuggestDropdowns(): void {
+  try {
+    document.querySelectorAll(".dashboard-file-suggest").forEach((el) => {
+      try {
+        (el as any).__cleanup?.();
+        el.remove();
+      } catch (_) {
+        /* already detached — ok */
+      }
+    });
+    document
+      .querySelectorAll(".has-open-suggest")
+      .forEach((el) => el.classList.remove("has-open-suggest"));
+    activeDropdown = null;
+  } catch (_) {
+    /* DOM read failures are non-fatal — just continue */
+  }
+}
+
+/**
+ * Public hook for the dashboard renderer — closes all floating
+ * file-suggest dropdowns before a re-render so stale nodes are not
+ * left behind on document.body.
+ */
+export function closeAllFileSuggests(): void {
+  sweepAllFileSuggestDropdowns();
+}
+
+// Re-export so existing consumers that imported these symbols from
+// "./file-suggest" keep working without changes.
+export {
+  WIKILINK_OPENERS,
+  WIKILINK_CLOSERS,
+  findWikilinkContext,
+  applyWikilinkReplacement,
+};
+export type { WikilinkContext };
 
 export interface FileSuggestHandle {
   isActive(): boolean;
@@ -11,26 +72,48 @@ export interface FileSuggestHandle {
  * Shows a dropdown with vault files, positioned right below the input.
  *
  * @param onPick  Optional: called immediately when user picks a suggestion item.
- *                If provided, the picked value is NOT written into input —
- *                the caller handles the action (e.g. adding a note).
- *                If omitted, behaviour falls back to filling input (legacy).
+ *                Receives the REPLACED input value (which includes any
+ *                leading text the user typed before `[[`, plus the
+ *                picked file's `[[basename]]` wikilink) and the TFile
+ *                that was picked. The caller decides which one to use:
+ *                task-add uses the replaced value (so the user's
+ *                leading prefix ends up in the task title);
+ *                project-doc-add uses the TFile's path to keep
+ *                strict file-reference semantics.
+ *                The caller is still responsible for clearing the
+ *                input afterwards.
  */
 export function attachFileSuggest(
   el: HTMLElement,
   app: App,
-  onPick?: (value: string) => void,
+  onPick?: (value: string, file: TFile) => void,
 ): FileSuggestHandle {
   const input = el as HTMLInputElement | HTMLTextAreaElement;
+
+  // Layer 1 — never attach twice to the same DOM element. Without
+  // this, every dashboard re-render adds another listener on the same
+  // input (when a card body is re-built with identical elements), and
+  // each instance independently creates its own dropdown node on
+  // document.body, producing the "two stacked dropdowns" bug.
+  const alreadyAttached = (input as any).__fileSuggestAttached;
+  if (alreadyAttached) {
+    console.log(
+      "[dbg-fs] skip double-attach on input.value=" +
+        JSON.stringify(input.value),
+    );
+    return alreadyAttached;
+  }
+
+  console.log(
+    "[dbg-fs] attachFileSuggest input.tag=" +
+      input.tagName +
+      " hasOnPick=" +
+      (onPick ? "yes" : "no"),
+  );
   let active = false;
   let dropdown: HTMLElement | null = null;
   let items: TFile[] = [];
-  /** Visual highlight row (follows the top match by default). */
   let selectedIndex = -1;
-  /**
-   * Row the user has explicitly committed to via ↑ / ↓ navigation.
-   * Starts at -1 and is reset to -1 on every query change, so a bare
-   * Enter never picks a suggestion — the user must navigate first.
-   */
   let pickedIndex = -1;
   let lastQuery = "";
 
@@ -64,9 +147,14 @@ export function attachFileSuggest(
 
   const filterFiles = (q: string): TFile[] => {
     const query = q.toLowerCase().trim();
-    if (!query) return [];
-
+    // Empty query (user just typed `[[` and hasn't started searching
+    // yet) — show the full list so the user can see what's available
+    // and pick without further typing. Once they type any char we
+    // narrow down to substring matches.
     const files = listFiles();
+    if (!query) {
+      return files.slice(0, 20);
+    }
     const matched = files
       .filter(
         (f) =>
@@ -81,11 +169,18 @@ export function attachFileSuggest(
     if (!dropdown) return;
     const rect = input.getBoundingClientRect();
     const viewportH = window.innerHeight;
-    // Compute how much vertical room is left below the input. Clamp to a
-    // generous minimum so we always have at least 220px of dropdown even
-    // when the input sits at the very bottom of the viewport.
+    // Cap the dropdown's overall height at the available space below
+    // the input (or 320px, whichever is smaller). We do NOT set a
+    // min-height: when there's only 1-2 items, the dropdown should
+    // shrink to fit those rows + 6px padding, not inflate to a fixed
+    // 220-260px box that leaves a huge empty dark area under the last
+    // row (this was the "2 dropdowns / fixed-height background" bug).
     const spaceBelow = Math.max(0, viewportH - rect.bottom - 8);
-    const height = Math.min(260, Math.max(220, spaceBelow));
+    const maxH = Math.min(320, Math.max(60, spaceBelow));
+    // Stash the cap on the element so render() can also clamp the
+    // inner scroll container to the same value when there are many
+    // items and the dropdown needs to scroll.
+    (dropdown as any).__maxH = maxH;
     // Apply ALL layout-affecting properties inline. Inline styles win
     // against any host-theme or .dashboard-* rule, which matters here
     // because we observed ancestor cards (backdrop-filter + overflow:hidden)
@@ -94,9 +189,16 @@ export function attachFileSuggest(
     dropdown.style.left = `${rect.left}px`;
     dropdown.style.top = `${rect.bottom + 4}px`;
     dropdown.style.width = `${Math.max(rect.width, 280)}px`;
-    dropdown.style.height = `${height}px`;
-    dropdown.style.maxHeight = `${height}px`;
-    dropdown.style.minHeight = `${height}px`;
+    // Height is content-driven, BUT we enforce a sensible floor
+    // (≈ 2 rows + 6px padding) so the dropdown never collapses to a
+    // useless ~32px strip when only 1 file matches. The previous
+    // version's "0 min-height" was overcorrecting — single-match
+    // results looked like a clipped chip. We still let the list
+    // overflow-scroll when there are more items than `maxH` allows.
+    const minH = Math.min(96, maxH);
+    dropdown.style.maxHeight = `${maxH}px`;
+    dropdown.style.minHeight = `${minH}px`;
+    dropdown.style.height = "";
     dropdown.style.zIndex = "99999";
     dropdown.style.bottom = "auto";
     dropdown.style.transform = "none";
@@ -126,7 +228,14 @@ export function attachFileSuggest(
     list.style.width = "100%";
     list.style.boxSizing = "border-box";
     list.style.minHeight = "0";
-    list.style.flex = "1 1 auto";
+    // The list shrinks/grows to fit the actual item count, capped at
+    // the same maxH we set on the dropdown in positionDropdown().
+    // When there's only 1 item, the list is ~52px tall (item 40 + padding
+    // 12), NOT a fixed 220px — the dropdown as a whole shrinks to
+    // match, eliminating the "empty fixed-height background" the
+    // user saw in the screenshot.
+    list.style.maxHeight = `${(dropdown as any).__maxH ?? 320}px`;
+    list.style.flex = "0 1 auto";
     list.style.overflowY = "auto";
     for (let i = 0; i < items.length; i++) {
       const f = items[i]!;
@@ -189,9 +298,17 @@ export function attachFileSuggest(
   };
 
   const open = () => {
+    // Layer 2 — sweep every orphan dropdown + marker from the
+    // body before we create a new one. This guarantees that no matter
+    // how many attachFileSuggest closures exist, only one dropdown
+    // node ever lives on document.body at a time.
+    sweepAllFileSuggestDropdowns();
+
     if (active) return;
     active = true;
+
     dropdown = document.body.createDiv({ cls: "dashboard-file-suggest" });
+    activeDropdown = dropdown;
     positionDropdown();
 
     // Mark every dashboard container in the ancestor chain so the CSS
@@ -240,16 +357,36 @@ export function attachFileSuggest(
       const ancestors: HTMLElement[] = (dropdown as any).__ancestors ?? [];
       for (const a of ancestors) a.classList.remove("has-open-suggest");
       dropdown.remove();
+      if (activeDropdown === dropdown) {
+        activeDropdown = null;
+      }
       dropdown = null;
     }
   };
 
   const update = () => {
-    const q = input.value;
-    if (!q.trim()) {
+    const value = input.value;
+    const caret = (input as HTMLTextAreaElement).selectionStart ?? value.length;
+    // #region debug-point update-entry
+    console.log(
+      "[dbg-fs] update caret=" + caret + " value=" + JSON.stringify(value),
+    );
+    // #endregion debug-point update-entry
+    // The dropdown is now strictly a wikilink autocomplete: it only
+    // opens while the caret sits inside an unclosed `[[…`. Normal
+    // text input (e.g. typing "hello", or a task title) leaves the
+    // dropdown closed. The user opts in to the dropdown by typing
+    // the two opening brackets themselves — same UX as the Obsidian
+    // editor.
+    const ctx = findWikilinkContext(value, caret);
+    if (!ctx) {
+      // #region debug-point update-close
+      console.log("[dbg-fs] update -> close (no ctx)");
+      // #endregion debug-point update-close
       close();
       return;
     }
+    const q = ctx.query;
 
     if (!active) open();
     if (!dropdown) return;
@@ -284,20 +421,111 @@ export function attachFileSuggest(
     ta.dispatchEvent(new Event("input", { bubbles: true }));
   };
 
-  const pick = (file: TFile) => {
-    const path = file.path;
-    if (onPick) {
-      onPick(path);
-      close();
-      return;
-    }
-
-    const linkText = `[[${path}]]`;
+  /**
+   * Replace the active `[[…` (or `【【…`) fragment (from `ctx.start`
+   * up to the caret, plus any `]]` / `】】` the user has already typed
+   * past the caret) with `linkText`. Used when the user picks a file
+   * from the dropdown: their typed `[[partial` becomes `[[path]]`.
+   *
+   * Leading text typed BEFORE the opener is ALWAYS preserved via
+   * `value.slice(0, ctx.start)` inside `applyWikilinkReplacement` —
+   * the user can type "review " before `[[` and that prefix is kept
+   * verbatim, so the result is "review [[path]]", not just
+   * "[[path]]" (this was the "don't replace my content"
+   * requirement).
+   */
+  const replaceWikilinkFragment = (linkText: string): string | null => {
+    const value = input.value;
+    const caret = (input as HTMLTextAreaElement).selectionStart ?? value.length;
+    const ctx = findWikilinkContext(value, caret);
+    // #region debug-point rwf-entry
+    console.log(
+      "[dbg-fs] rwf entry caret=" +
+        caret +
+        " value=" +
+        JSON.stringify(value) +
+        " linkText=" +
+        JSON.stringify(linkText) +
+        " ctx=" +
+        JSON.stringify(ctx),
+    );
+    // #endregion debug-point rwf-entry
+    if (!ctx) return null;
+    const { next, caret: newCaret } = applyWikilinkReplacement(
+      value,
+      caret,
+      ctx,
+      linkText,
+    );
     if (input instanceof HTMLTextAreaElement) {
-      insertIntoTextarea(linkText);
+      input.value = next;
+      input.setSelectionRange(newCaret, newCaret);
     } else {
-      input.value = linkText;
-      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.value = next;
+    }
+    // Dispatch AFTER the assignment so listeners (e.g. update()) see
+    // the final value. We return the new string so the caller doesn't
+    // have to re-read `input.value` after the synchronous handler
+    // chain — that race was previously leaving the callback with the
+    // pre-replacement value when the input event triggered further
+    // mutations in other handlers.
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    // #region debug-point rwf-after-dispatch
+    console.log(
+      "[dbg-fs] rwf after-dispatch next=" +
+        JSON.stringify(next) +
+        " input.value=" +
+        JSON.stringify(input.value),
+    );
+    // #endregion debug-point rwf-after-dispatch
+    return next;
+  };
+
+  const pick = (file: TFile) => {
+    const basename = file.basename;
+    // #region debug-point pick-entry
+    console.log(
+      "[dbg-fs] pick entry basename=" +
+        JSON.stringify(basename) +
+        " preInputValue=" +
+        JSON.stringify(input.value),
+    );
+    // #endregion debug-point pick-entry
+    // The user was typing a wikilink fragment when they picked; the
+    // fragment gets replaced with a complete `[[basename]]` link
+    // (basename-only form matches what the dashboard stores
+    // everywhere else). The leading text typed BEFORE the `[[` is
+    // preserved verbatim (see applyWikilinkReplacement).
+    // We use the value returned by replaceWikilinkFragment directly
+    // rather than re-reading input.value, because the dispatched
+    // `input` event runs synchronous listeners (update(), etc.) that
+    // can mutate the field. We pass both the REPLACED input value AND
+    // the TFile to the `onPick` callback so each consumer can choose:
+    //   - task-add consumers use `value` so the leading text + the
+    //     wikilink end up in the task title (the user typed "review "
+    //     then picked a file → task is "review [[note]]", not just
+    //     "[[note]]" — the "don't replace my content" requirement)
+    //   - project-doc consumers use `file.path` to keep the strict
+    //     file-reference semantics
+    const replaced = replaceWikilinkFragment(`[[${basename}]]`);
+    // #region debug-point pick-after-rwf
+    console.log(
+      "[dbg-fs] pick after-rwf replaced=" +
+        JSON.stringify(replaced) +
+        " input.value=" +
+        JSON.stringify(input.value),
+    );
+    // #endregion debug-point pick-after-rwf
+    if (onPick) {
+      // #region debug-point pick-onpick-arg
+      console.log(
+        "[dbg-fs] pick -> onPick arg=" +
+          JSON.stringify(replaced ?? input.value) +
+          " file.path=" +
+          JSON.stringify(file.path),
+      );
+      // #endregion debug-point pick-onpick-arg
+      onPick(replaced ?? input.value, file);
     }
     close();
   };
@@ -358,11 +586,64 @@ export function attachFileSuggest(
     }
   });
 
-  return {
+  // If the dashboard re-renders while the dropdown is open, the
+  // input element is removed from the DOM — but this
+  // attachFileSuggest closure is still alive and never calls
+  // close() on its own. A MutationObserver on the input's parent
+  // detects removal and tears down the dropdown before the next
+  // render cycle creates a competing instance (the "two stacked
+  // dropdowns" bug).
+  let domObserver: MutationObserver | null = null;
+  if (typeof MutationObserver !== "undefined") {
+    const checkDetached = () => {
+      if (!document.body.contains(input)) {
+        close();
+        domObserver?.disconnect();
+        domObserver = null;
+      }
+    };
+    domObserver = new MutationObserver(checkDetached);
+    // Observe the nearest persistent ancestor — the input itself
+    // may swap parents during re-renders, so walk up to the card
+    // root or the top dashboard container.
+    let obsTarget: Node = input.parentElement ?? document.body;
+    let hops = 0;
+    while (
+      obsTarget &&
+      !(
+        obsTarget instanceof HTMLElement &&
+        obsTarget.classList.contains("dashboard-card")
+      ) &&
+      hops < 10
+    ) {
+      obsTarget = obsTarget.parentElement ?? document.body;
+      hops++;
+    }
+    try {
+      domObserver.observe(obsTarget, { childList: true, subtree: true });
+    } catch (_) {
+      // Fallback: observe document.body less precisely, but still
+      // try to detect when the input goes away.
+      try {
+        domObserver.observe(document.body, { childList: true, subtree: true });
+      } catch (_) {
+        // Browser doesn't support MutationObserver properly — skip.
+        domObserver = null;
+      }
+    }
+  }
+
+  // Tag this input so future callers can see it is already wired up
+  // (Layer 1 guard above). This prevents the same input from growing
+  // multiple independent listeners and dropdown nodes on re-render.
+  const handle: FileSuggestHandle = {
     isActive: () => active,
     close,
     tryPickSelection,
   };
+  (input as any).__fileSuggestAttached = handle;
+
+  return handle;
 }
 
 /**

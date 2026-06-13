@@ -24,7 +24,6 @@ import { readTrackerData } from "./tracker-service";
 import type { PomodoroService } from "./pomodoro-service";
 import type { ReadingService } from "./reading-service";
 import { searchBooks, downloadCoverAsBlobUrl } from "./book-service";
-import { pathToWikiLink } from "./parser";
 import { activityColor } from "./pomodoro-service";
 import { renderSidebarLunarWidget } from "./lunar-widget";
 import type { HolidayInfo } from "./holiday-service";
@@ -85,9 +84,21 @@ function getCSSVar(name: string): string {
  * "121", "闪念-2026-01月"), the same way every other section name is
  * displayed. Treating it as a label/tag would change its meaning from
  * "name" to "id", which is misleading.
+ *
+ * Wikilink support: when the name contains an `[[…]]` token (e.g.
+ * `[[dash01]]`, `[[dash01|别名]]`, `[[dash01#section]]`), we hand the
+ * text to `renderTextWithLinks` so the inner part renders as a real
+ * Obsidian internal-link — clickable, with the native Page Preview
+ * popover, the same way every other dashboard wikilink does. Plain
+ * text names still go through `setText` for the cheap path.
  */
-function renderColumnTitle(titleEl: HTMLElement, name: string): void {
-  titleEl.setText(name);
+function renderColumnTitle(titleEl: HTMLElement, name: string, app: App): void {
+  titleEl.empty();
+  if (name.includes("[[")) {
+    renderTextWithLinks(titleEl, name, app);
+  } else {
+    titleEl.setText(name);
+  }
 }
 
 let taskDragSource: { cardId: string; taskIndex: number } | null = null;
@@ -2458,7 +2469,7 @@ function renderSection(
   const titleEl = titleWrap.createEl("h3", {
     cls: "dashboard-section-title",
   });
-  renderColumnTitle(titleEl, column.name);
+  renderColumnTitle(titleEl, column.name, app);
 
   titleEl.addEventListener("dblclick", (e) => {
     e.stopPropagation();
@@ -2480,7 +2491,7 @@ function renderSection(
       } else {
         // Cancel path — restore the original column name verbatim.
         titleEl.empty();
-        renderColumnTitle(titleEl, currentName);
+        renderColumnTitle(titleEl, currentName, app);
       }
     };
 
@@ -3337,20 +3348,38 @@ function renderTaskBody(
     cls: "dashboard-task-input",
     attr: { type: "text", placeholder: t("renderer.addTask") },
   });
-  const taskSuggest = attachFileSuggest(input, app, (filePath) => {
-    // Use the shared pathToWikiLink helper so the inserted task is
-    // always the canonical wikilink form (basename only, no folder
-    // prefix, no ".md" suffix), matching the format used everywhere
-    // else (addDocToCard, project items, etc.).
-    callbacks.onTaskAdd(card.id, pathToWikiLink(filePath));
+  const taskSuggest = attachFileSuggest(input, app, (value) => {
+    // #region debug-point taskadd-onpick
+    console.log("[dbg-renderer] taskadd onPick value=" + JSON.stringify(value));
+    // #endregion debug-point taskadd-onpick
+    // `value` is the REPLACED input content (any leading text the
+    // user typed before `[[` is preserved, and the picked file's
+    // basename has been written in as `[[basename]]`). Using it as
+    // the task title — instead of just the file's wikilink — keeps
+    // the user's prefix intact, e.g. typing "review " then picking
+    // "Foo.md" produces a task of "review [[Foo]]", not just
+    // "[[Foo]]" (the "don't replace my content" requirement).
+    callbacks.onTaskAdd(card.id, value);
     input.value = "";
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && taskSuggest.tryPickSelection()) {
+      // #region debug-point taskadd-enter-arrow
+      console.log(
+        "[dbg-renderer] taskadd Enter via arrow-pick value=" +
+          JSON.stringify(input.value),
+      );
+      // #endregion debug-point taskadd-enter-arrow
       e.preventDefault();
       return;
     }
     if (e.key === "Enter" && input.value.trim()) {
+      // #region debug-point taskadd-enter-fallback
+      console.log(
+        "[dbg-renderer] taskadd Enter fallback value=" +
+          JSON.stringify(input.value.trim()),
+      );
+      // #endregion debug-point taskadd-enter-fallback
       callbacks.onTaskAdd(card.id, input.value.trim());
       input.value = "";
     }
@@ -3546,7 +3575,16 @@ function renderProjectBody(
   ) {
     // projectDocs is array of {path, children}
     for (const doc of projectDocObjects) {
-      lines.push(`- [[${doc.path}]]`);
+      // `doc.path` may be a plain vault path (legacy, e.g.
+      // "Folder/Note.md") or a value with leading text + inline
+      // wikilink (new behaviour, e.g. "11[[Note]]"). For the
+      // latter we must NOT wrap it in another [[...]] — doing so
+      // would produce nested wikilinks and drop the leading text.
+      if (doc.path.includes("[[")) {
+        lines.push(`- ${doc.path}`);
+      } else {
+        lines.push(`- [[${doc.path}]]`);
+      }
       if (Array.isArray(doc.children)) {
         for (const child of doc.children) {
           lines.push(`\t- [[${child}]]`);
@@ -3555,7 +3593,13 @@ function renderProjectBody(
     }
   } else if (Array.isArray(projectDocPaths) && projectDocPaths.length > 0) {
     // projectDocs is array of plain paths
-    for (const p of projectDocPaths) lines.push(`- [[${p}]]`);
+    for (const p of projectDocPaths) {
+      if (p.includes("[[")) {
+        lines.push(`- ${p}`);
+      } else {
+        lines.push(`- [[${p}]]`);
+      }
+    }
   }
 
   // Empty-list drop target for moving items in from other cards
@@ -3770,16 +3814,41 @@ function renderProjectBody(
     cls: "dashboard-task-input",
     attr: { type: "text", placeholder: t("renderer.addNote") },
   });
-  const fileSuggest = attachFileSuggest(input, app, (value) => {
+  const fileSuggest = attachFileSuggest(input, app, (value, file) => {
+    // #region debug-point projectdocs-onpick
+    console.log(
+      "[dbg-renderer] projectdocs onPick value=" +
+        JSON.stringify(value) +
+        " file.path=" +
+        JSON.stringify(file.path),
+    );
+    // #endregion debug-point projectdocs-onpick
+    // Use `value` (the full input text after replacement, e.g.
+    // "11[[En3]]") so leading text the user typed before the
+    // wikilink is preserved. Previous code used `file.path` which
+    // discarded everything before the opener — "don't replace my
+    // content" requirement.
     callbacks.onProjectDocsAdd(card, value);
     input.value = "";
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && fileSuggest.tryPickSelection()) {
+      // #region debug-point projectdocs-enter-arrow
+      console.log(
+        "[dbg-renderer] projectdocs Enter via arrow-pick value=" +
+          JSON.stringify(input.value),
+      );
+      // #endregion debug-point projectdocs-enter-arrow
       e.preventDefault();
       return;
     }
     if (e.key === "Enter" && input.value.trim()) {
+      // #region debug-point projectdocs-enter-fallback
+      console.log(
+        "[dbg-renderer] projectdocs Enter fallback value=" +
+          JSON.stringify(input.value.trim()),
+      );
+      // #endregion debug-point projectdocs-enter-fallback
       callbacks.onProjectDocsAdd(card, input.value.trim());
       input.value = "";
     }
