@@ -294,9 +294,13 @@ export function serialize(data: DashboardData, app?: App): string {
       if (card.gridRow > 0) {
         metadataLines.push(`grow: ${card.gridRow}`);
       }
-      if (card.hideCompleted) {
-        metadataLines.push(`hideCompleted: true`);
-      }
+      // NOTE: `card.hideCompleted` is intentionally NOT serialized into
+      // the markdown. The eye/eye-off button on each Todo card is a
+      // session-only override on top of `settings.defaultHideCompleted`,
+      // and the on-disk state is always "unset" (renderer falls back to
+      // the global setting). Keeping it out of the file prevents
+      // accidentally duplicating the flag across cards and keeps the
+      // dashboard note clean.
       if (card.weatherConfig) {
         const wc = card.weatherConfig;
         metadataLines.push(`lat: ${wc.latitude}`);
@@ -539,7 +543,8 @@ export function generateDefaultMarkdown(): string {
             gridRows: 0,
             gridCol: 0,
             gridRow: 0,
-            hideCompleted: false,
+            // hideCompleted intentionally omitted: always falls back to
+            // `settings.defaultHideCompleted` at render time.
           },
           {
             id: generateId(t("default.todoTitle2"), "Todo"),
@@ -1217,7 +1222,9 @@ function parseCard(
     gridRow: parseInt(metadata.grow ?? "0", 10) || 0,
     weatherConfig,
     trackerConfig,
-    hideCompleted: metadata.hideCompleted === "true",
+    // `hideCompleted` is intentionally NOT read from the markdown — see
+    // the serialize side. The card is always created with this field
+    // unset so the renderer falls back to `settings.defaultHideCompleted`.
   };
 }
 

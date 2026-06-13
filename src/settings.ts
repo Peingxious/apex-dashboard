@@ -78,6 +78,20 @@ export class DashboardSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName(t('settings.defaultHideCompleted'))
+			.setDesc(t('settings.defaultHideCompletedDesc'))
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.defaultHideCompleted)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						defaultHideCompleted: value,
+					};
+					await this.plugin.saveSettings();
+					this.plugin.refreshAllDashboards();
+				}));
+
+		new Setting(containerEl)
 			.setName(t('settings.excludedNotePaths'))
 			.setDesc(t('settings.excludedNotePathsDesc'))
 			.addText(text => text

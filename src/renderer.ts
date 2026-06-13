@@ -3096,6 +3096,19 @@ function renderCard(
   data?: DashboardData,
   settings?: DashboardSettings,
 ): HTMLElement {
+  // Effective "hide completed" state for this render pass:
+  //   1. The card's own in-memory override (set by the eye/eye-off
+  //      button) wins when it is set — this is the session-only toggle.
+  //   2. Otherwise fall back to the global `defaultHideCompleted`
+  //      setting (default true) so users see a clean list out of the
+  //      box.
+  // The `card.hideCompleted` flag itself is never persisted to the
+  // dashboard markdown (see parser.ts), so on every reload the field
+  // is "unset" and step 2 applies — that's what makes the toggle
+  // session-only by construction.
+  const defaultHide = settings?.defaultHideCompleted ?? true;
+  const hideCompletedResolved = card.hideCompleted ?? defaultHide;
+
   const el = document.createElement("div");
   el.addClass("dashboard-card", `dashboard-card--${card.type}`);
   el.dataset.cardId = card.id;
@@ -3287,7 +3300,10 @@ function renderCard(
   // back to disk). Icon flips between "eye-off" (active — hiding) and "eye"
   // (inactive — showing everything) so the user always knows the current state.
   if (isTask) {
-    const hideCompleted = card.hideCompleted === true;
+    // Use the resolved (settings + in-memory override) value so the
+    // button reflects what the user actually sees right now, even
+    // before the user has touched it (i.e. the default kicks in).
+    const hideCompleted = hideCompletedResolved;
     const hideBtn = actions.createEl("button", {
       cls: "dashboard-card-btn",
       attr: {
@@ -3468,6 +3484,15 @@ function renderCardBody(
   data?: DashboardData,
   settings?: DashboardSettings,
 ): void {
+  // Mirrors the `defaultHide` / `hideCompletedResolved` computation in
+  // `renderCard` — both functions need the resolved value because the
+  // eye button and the task list filter both live here, and they have
+  // to agree on the same effective state for the same card.
+  const defaultHide = settings?.defaultHideCompleted ?? true;
+  const hideCompletedResolved = card.hideCompleted ?? defaultHide;
+  void data; // unused here; kept for symmetry with the rest of the
+  // render pipeline.
+
   if (card.type === "weather") {
     renderWeatherBody(container, card, app);
     return;
@@ -3482,7 +3507,7 @@ function renderCardBody(
   const isTaskCard = card.type === "task" || sectionType === "todo";
 
   if (isTaskCard) {
-    renderTaskBody(container, card, callbacks, app);
+    renderTaskBody(container, card, callbacks, app, hideCompletedResolved);
     return;
   }
 
@@ -3500,6 +3525,7 @@ function renderTaskBody(
   card: DashboardCard,
   callbacks: RenderCallbacks,
   app: App,
+  hideCompletedResolved?: boolean,
 ): void {
   taskItemCallbacks = callbacks;
   ensureItemDocListeners();
@@ -3507,11 +3533,17 @@ function renderTaskBody(
   const list = container.createDiv({ cls: "dashboard-task-list" });
   list.dataset.cardId = card.id;
 
-  // Filter hidden completed tasks (controlled by the card's hideCompleted flag).
-  // We still keep the original index mapping for callbacks so uncheck/redo
-  // keeps the same checkbox state; filteredOut tracks the indices we skipped
-  // so onCheckboxToggle still receives the correct source index.
-  const hideCompleted = card.hideCompleted === true;
+  // Filter hidden completed tasks. We still keep the original index
+  // mapping for callbacks so uncheck/redo keeps the same checkbox
+  // state; filteredOut tracks the indices we skipped so
+  // onCheckboxToggle still receives the correct source index.
+  //
+  // `hideCompletedResolved` is the global-default + in-memory-override
+  // resolution computed in `renderCardBody`. If a caller passes
+  // `undefined` (e.g. a future path that doesn't go through the
+  // dashboard renderer), fall back to the legacy in-memory-only
+  // behaviour so we never regress the old API surface.
+  const hideCompleted = hideCompletedResolved ?? card.hideCompleted === true;
   const visibleTasks = hideCompleted
     ? card.tasks
         .map((t, i) => ({ task: t, index: i }))

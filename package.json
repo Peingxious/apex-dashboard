@@ -1,6 +1,6 @@
 {
   "name": "peingxious-dashboard",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Peingxious Dashboard — a personal command center for Obsidian. Memos, todos, projects, library, weather, and quick links in a unified glassmorphism interface.",
   "main": "main.js",
   "type": "module",

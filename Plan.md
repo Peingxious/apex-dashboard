@@ -43,18 +43,18 @@
 
 ### 方案
 
-| 维度         | 改动                                                                                                                                                                                                                                                                                                                                                        |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 维度         | 改动                                                                                                                                                                                                                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **数据模型** | [types.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/types.ts) `LibraryConfig` 新增 `visibleProperties?: string[]`；未设置/空数组表示全量显示（向后兼容）                                                                                                                                                                 |
 | **配置 UI**  | [library-config-modal.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/library-config-modal.ts) 在「视图模式」与「排序/分页」之间新增「显示属性」section：**仅当 `viewMode === 'table'` 或 `viewMode === 'list'` 时显示**，多选 checkbox 列表（基于 `extractFrontmatterProperties` 的全部 key + 内置 name/modified/created） |
-| **看板专属** | 「分组依据」section 继续仅在 `viewMode === 'kanban'` 时显示（已有逻辑保持）                                                                                                                                                                                                                                                                                 |
+| **看板专属** | 「分组依据」section 继续仅在 `viewMode === 'kanban'` 时显示（已有逻辑保持）                                                                                                                                                                                                                                                                                       |
 | **表格渲染** | [library-section.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/library-section.ts) `renderTableView` 优先用 `config.visibleProperties` 决定列；未设置时降级为旧逻辑（filters + 前 20 条 frontmatter 自动收集）                                                                                                            |
-| **列表渲染** | `renderListView` 在 name 与 date 之间插入属性 chip 行；只显示 `config.visibleProperties` 中勾选了的字段（数组为空则不显示任何 chip）                                                                                                                                                                                                                        |
+| **列表渲染** | `renderListView` 在 name 与 date 之间插入属性 chip 行；只显示 `config.visibleProperties` 中勾选了的字段（数组为空则不显示任何 chip）                                                                                                                                                                                                                              |
 | **持久化**   | [parser.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/parser.ts) `serialize` 增加 `visibleProperties: [a, b, c]` YAML 输出；`parseLibraryConfig` 反向解析回数组                                                                                                                                                           |
 | **i18n**     | [i18n.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/i18n.ts) 新增 `library.visibleProperties` / `library.visiblePropertiesDesc` / `library.showAll` 中英文键                                                                                                                                                              |
 | **样式**     | [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/styles.css) 新增 `.dashboard-library-list-meta` / `.dashboard-library-list-meta-value` 样式（无 chip 边框，纯文本 + 末位时间）                                                                                                                                         |
-| **版本**     | 1.1.5 → 1.1.6（patch：列表项 UI 调整）                                                                                                                                                                                                                                                                                                                      |
-| **文档**     | README.md / README_ZH.md / CHANGELOG.md / Target.md 同步                                                                                                                                                                                                                                                                                                    |
+| **版本**     | 1.1.5 → 1.1.6（patch：列表项 UI 调整）                                                                                                                                                                                                                                                                                                                            |
+| **文档**     | README.md / README_ZH.md / CHANGELOG.md / Target.md 同步                                                                                                                                                                                                                                                                                                          |
 
 ### 子任务
 
@@ -252,7 +252,6 @@ plugin:peingxious-dashboard:136 Uncaught (in promise) TypeError: d.includes is n
 - [x] `npx tsc --noEmit` 通过
 - [x] `npm run build` 通过
 
-
 ## 新增 2026-06-12：分区标题尾数分离为角标（兼容旧列表）
 
 **背景**：旧版本的工作台列表曾以**纯数字**作为分区名（例：`11`、`121`），本质是"列表编号"。新版本允许任意文本作为分区名后，旧的纯数字分区在标题里显得突兀。需要在保留原始 column.name（保证 sync / serialize 兼容）的前提下，把尾部的数字视觉上**抽离为角标**显示在标题之后。
@@ -416,22 +415,22 @@ plugin:peingxious-dashboard:136 Uncaught (in promise) TypeError: d.includes is n
 
 ### 修复 1：分区名 `[[…]]` 渲染为真正的双链
 
-| 文件                                                                                                                           | 改动                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 文件                                                                                                                                 | 改动                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | [src/renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/renderer.ts) `renderColumnTitle` | 新增 `app: App` 参数；当 name 包含 `[[` 时调用现有的 `renderTextWithLinks`（已支持别名 / 片段），否则走 `setText` 快速路径 |
-| 同上 `renderSection` 调用 `renderColumnTitle` 处                                                                               | 传入 `app`；rename 取消分支的 `renderColumnTitle(titleEl, currentName, app)` 同样更新                                      |
+| 同上 `renderSection` 调用 `renderColumnTitle` 处                                                                                     | 传入 `app`；rename 取消分支的 `renderColumnTitle(titleEl, currentName, app)` 同样更新                                      |
 
 底层机制沿用现有的 `renderWikilink`：`internal-link` class + `data-href` / `href` 属性 + `mouseover` 派发 `link-hover` 事件，让原生 Page Preview 接管。render / rename / 取消三条路径都走同一函数，行为完全一致。
 
 ### 修复 2：下拉框仅在 `[[` 上下文打开
 
-| 文件                                                                                                                        | 改动                                                                                                                                         |
-| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 文件                                                                                                                              | 改动                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts) `update` | 改用新增的 `findWikilinkContext(value, caret)`：返回 `null` 时直接 `close()`；返回 `{ start, query }` 才打开 / 更新 dropdown                 |
-| 同上 `filterFiles`                                                                                                          | 空 query（刚输入 `[[` 时）改为返回前 20 个文件，让用户能看到可选列表；非空 query 行为不变                                                    |
-| 同上 新增 `findWikilinkContext` 私有函数                                                                                    | 找最后一个 caret 之前的 `[[`；若有 `]]` 在 `[[` 和 caret 之间则返回 `null`；query 包含换行也返回 `null`；兼容 `[[[abc` 这种带前导 `[` 的情况 |
-| 同上 新增 `replaceWikilinkFragment` 私有函数                                                                                | pick 时按 `ctx.start` 到 caret（含光标后已输入的 `]]`）整段替换为 `[[basename]]`；若光标后已有 `]]` 自动去掉避免 `[[path]]]`                 |
-| 同上 `pick`                                                                                                                 | 改用 `replaceWikilinkFragment`；保留 `onPick` 回调（任务 / note 消费者仍能正确添加）                                                         |
+| 同上 `filterFiles`                                                                                                                | 空 query（刚输入 `[[` 时）改为返回前 20 个文件，让用户能看到可选列表；非空 query 行为不变                                                    |
+| 同上 新增 `findWikilinkContext` 私有函数                                                                                          | 找最后一个 caret 之前的 `[[`；若有 `]]` 在 `[[` 和 caret 之间则返回 `null`；query 包含换行也返回 `null`；兼容 `[[[abc` 这种带前导 `[` 的情况 |
+| 同上 新增 `replaceWikilinkFragment` 私有函数                                                                                      | pick 时按 `ctx.start` 到 caret（含光标后已输入的 `]]`）整段替换为 `[[basename]]`；若光标后已有 `]]` 自动去掉避免 `[[path]]]`                 |
+| 同上 `pick`                                                                                                                       | 改用 `replaceWikilinkFragment`；保留 `onPick` 回调（任务 / note 消费者仍能正确添加）                                                         |
 
 调用 `attachFileSuggest` 的三处（todo 任务添加 input / memo textarea / 项目笔记 input）自动同时获得新行为，无需逐处修改。
 
@@ -459,8 +458,8 @@ plugin:peingxious-dashboard:136 Uncaught (in promise) TypeError: d.includes is n
 
 ### 修复 1：BannerData 多属性更新不再清空未编辑字段
 
-| 文件                                                                                                                             | 改动                                                                                                                                   |
-| -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 文件                                                                                                                                   | 改动                                                                                                                                   |
+| -------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | [src/banner.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/banner.ts)                           | `BannerEditModal.save` 不再无条件写 `images: undefined`；只有 `localImages.length > 0` 时才把 `images` 放进 updates 对象               |
 | [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts) `openEmbeddedBannerEditModal` | 消费者不再用 `Object.assign(banner, updates)`；改为按 key 循环，仅当 `value !== undefined` 时才赋值（即标准"safe merge partial" 模式） |
 
@@ -477,17 +476,17 @@ plugin:peingxious-dashboard:136 Uncaught (in promise) TypeError: d.includes is n
 
 ### 修复 2：embedded 视图随 .md 编辑实时刷新
 
-| 文件                                                                                                                        | 改动                                                                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 文件                                                                                                                              | 改动                                                                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | [src/view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/view.ts) `registerVaultListeners` | `vault.on("modify")` 检测到 `file.path === this.embeddedNotePath` 时调用 `reloadEmbeddedFromDisk()`                                              |
-| 同上                                                                                                                        | 新增私有方法 `reloadEmbeddedFromDisk()`：从 vault 读最新内容 → `parse()` 解析 → 更新 `embeddedData` 与 `embeddedDataCache` → `render()` 重新绘制 |
+| 同上                                                                                                                              | 新增私有方法 `reloadEmbeddedFromDisk()`：从 vault 读最新内容 → `parse()` 解析 → 更新 `embeddedData` 与 `embeddedDataCache` → `render()` 重新绘制 |
 
 ### 修复 3：下拉列表无"2 面板"
 
-| 文件                                                                                                                        | 改动                                                                                                                                 |
-| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 文件                                                                                                                              | 改动                                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/peingxious-dashboard/src/file-suggest.ts) `render` | 选中行：移除 `inset 0 0 0 1px ...` 那个 1px 内边框；只保留 `rgba(99, 102, 241, 0.22)` 半透明背景。alpha 微微提高到 0.22 让选中更明显 |
-| 同上                                                                                                                        | 未选中行：`box-shadow: "none"`，避免 1px transparent 阴影被某些主题画成亚像素发丝线                                                  |
+| 同上                                                                                                                              | 未选中行：`box-shadow: "none"`，避免 1px transparent 阴影被某些主题画成亚像素发丝线                                                  |
 
 ### 子任务
 
@@ -696,9 +695,11 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 ## 新增 2026-06-13：Todo 默认隐藏已完成任务
 
 **用户原话**：
+
 > `hideCompleted: true` 像这样属性的一律不出现在 md 文件中；这个可以写入设置中，默认开启隐藏，这个按钮，就是临时使用，看看制作到什么程度了
 
 **目标**：
+
 - 全局设置 `settings.defaultHideCompleted: boolean`（**默认 `true`**）：todo card 创建时如果没显式设置 `hideCompleted`，按此值渲染
 - md 文件中**完全不写** `hideCompleted:` 字段（serialize 跳过，parse 也不读，保持"md 中无此字段"的契约）
 - 卡片右上角 eye/eye-off 按钮**保留**作为**临时切换**（仅改内存中 `card.hideCompleted`，下次 reload 回到设置默认值；不持久化）
@@ -708,21 +709,25 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 ### Step 1：类型 + 设置 + Settings Tab UI
 
 **`src/types.ts`**：
+
 - `DashboardSettings` 接口新增 `defaultHideCompleted: boolean`
 - `DEFAULT_SETTINGS` 加 `defaultHideCompleted: true`
 
 **`src/settings.ts`**：
+
 - 在 `projectHideNestedDocs` toggle 之后新增 toggle：
   - 名称：`Todo 默认隐藏已完成任务` / `Hide completed tasks in Todo cards by default`
   - 描述：`关闭后，新创建的 Todo 卡片会显示所有任务；卡片右上角的"眼"按钮可临时切换单卡片。` / `When off, new Todo cards show all tasks. The eye button on each card can still toggle the hidden state for that card only.`
   - 变更时调 `plugin.refreshAllDashboards()` 让所有 dashboard 立即重渲染
 
 **`src/i18n.ts`**：
+
 - 中英文新增 `settings.defaultHideCompleted` / `settings.defaultHideCompletedDesc`
 
 ### Step 2：parser 完全不读也不写 hideCompleted
 
 **`src/parser.ts`**：
+
 - 删除 [parser.ts:297](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L297) 的 `if (card.hideCompleted) { metadataLines.push('hideCompleted: true'); }` 整段
 - 删除 [parser.ts:1220](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L1220) 的 `hideCompleted: metadata.hideCompleted === "true"`（parse 不再读这个 key；卡片初始 `hideCompleted` 字段为 undefined，渲染时回退到全局设置）
 - 在文件顶部加注释说明契约：`hideCompleted` 字段是**纯内存字段**，禁止在 md 中持久化
@@ -730,6 +735,7 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 ### Step 3：renderer 应用全局默认
 
 **`src/renderer.ts`**：
+
 - 在 `renderCard` 顶部加：`const defaultHide = settings?.defaultHideCompleted ?? true;`
 - 替换 [renderer.ts:3290](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3290) 的 `const hideCompleted = card.hideCompleted === true;` 为 `const hideCompleted = card.hideCompleted ?? defaultHide;`
 - 替换 [renderer.ts:3514](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3514) 同样
@@ -747,6 +753,7 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
   - §8 版本历史新增 1.3.0 行
 
 **验证清单**：
+
 - [ ] Step 1：Settings Tab 出现新 toggle，关闭后 `plugin.settings.defaultHideCompleted` 为 false，立即刷新所有 dashboard
 - [ ] Step 2：md 文件中**没有任何** `hideCompleted:` 字段（serialize 出去的文件干净）
 - [ ] Step 3：默认 `true` 时新建 todo 卡只显示未完成任务；按钮点击后立即切换；reload 后回到默认
@@ -755,6 +762,15 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 - [ ] `npm run build` 通过
 
 **对现有功能影响**：
+
 - 1.2.0/1.2.1 已经迁入了 `hideCompleted: true` 字段到部分用户的 md 文件 —— Step 2 之后这些字段变成"幽灵字段"，md 文件大小不变（serialize 仍会写出——不对，要删除 serialize 的写代码），所以 md 干净度提升 ✅
 - 但旧字段被忽略不会破坏行为（render 时回退到 `defaultHideCompleted`）✅
 - eye 按钮：未变 ✅
+
+**完成状态**：
+
+- [x] Step 1：types.ts + settings.ts + i18n.ts 全部就位（DEFAULT_SETTINGS.defaultHideCompleted = true，Settings Tab toggle 已添加）
+- [x] Step 2：parser.ts 完全不读不写 hideCompleted 字段（serialize 删除 297 行，parse 删除 1224 行赋值，默认模板删除 546 行 `hideCompleted: false`）
+- [x] Step 3：renderer.ts 在 `renderCard` 顶部计算 `hideCompletedResolved = card.hideCompleted ?? defaultHide`；`renderCardBody` 同步计算并透传给 `renderTaskBody`；3290 按钮 + 3514 列表过滤两处都改用 resolved 值
+- [x] Step 4：README.md / README_ZH.md Configuration + What's New 已更新；CHANGELOG.md 1.3.0 段落已添加；Target.md §4.1 Todo 行 + §5.2 设置表 + §8 版本表已同步；manifest.json 1.2.1 → 1.3.0；package.json 1.2.1 → 1.3.0
+- [x] 构建验证：`npx tsc --noEmit --skipLibCheck` 通过；`npm run build` 通过；`main.js` 已生成（928KB）

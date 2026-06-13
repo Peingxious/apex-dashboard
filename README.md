@@ -64,6 +64,10 @@ The dashboard automatically inherits your Obsidian theme colors, seamlessly adap
 - **Dashboard file** — customize the file path for your dashboard data
 - **Language** — English or Chinese interface
 - **Recent documents count** — control how many recent files appear
+- **Pin sidebar by default** — keep the right sidebar always visible when opening the dashboard
+- **Hide nested project docs** — only show top-level documents in project cards; nested children are hidden but preserved
+- **Hide completed tasks in Todo cards by default** _(default: on)_ — when on, every Todo card hides completed items in the visible list on first render. The eye/eye-off button on each card is a session-only override; it does not persist into the markdown
+- **Excluded notes** — comma-separated list of note basenames / paths hidden from the "Open" tab picker (e.g. `dashboard, area/workbench`). The main dashboard file is excluded by default
 - **Sidebar widgets** — Weather, Heatmap, Pomodoro, Reading, Countdown. Enable/disable and configure each widget independently
 - **Reading settings** — Toggle reading tracker, enable/disable session completion sound
 
@@ -120,6 +124,11 @@ The dashboard uses an indented bullet-list format:
 > **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
+
+### 1.3.0
+
+- **New global setting: hide completed tasks in Todo cards by default** — A toggle in Settings (default ON). When on, every Todo card hides completed items in its visible list on first render. The per-card eye/eye-off button still works as a quick "show / hide" peek, but that override is now session-only and never written to the dashboard markdown
+- **`hideCompleted: true` is no longer written to the dashboard markdown** — The dashboard note stays clean; the field is purely a render-time resolution between the global setting and the in-memory card flag
 
 ### 1.2.0
 

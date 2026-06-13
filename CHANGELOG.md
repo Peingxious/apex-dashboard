@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.3.0 (2026-06-13)
+
+### Added
+
+- **Global setting: default-hide completed tasks in Todo cards** — New toggle in Settings → "Todo 默认隐藏已完成任务" / "Hide completed tasks in Todo cards by default" (default ON). When on, every Todo card hides completed items in its visible list on first render (and on every reload), giving new dashboards a clean look out of the box. The eye/eye-off button on each card still works as a per-card override — but that override is now **session-only**: it changes the in-memory flag and re-renders, but the flag is never written to the dashboard markdown, so a reload (or restarting Obsidian) always falls back to the global default. This is intentional — the toggle is meant as a quick "show me what I just did" peek, not a persistent per-card setting
+
+### Changed
+
+- **`hideCompleted: true` is no longer written to the dashboard markdown** — Previously the eye/eye-off button persisted its state into the card's frontmatter-style metadata block at the top of each Todo card, leaving `hideCompleted: true` lines scattered across the file. Those lines are gone. `serialize()` in `parser.ts` no longer emits the key, and `parseCardFromMetadata()` ignores it on read (the in-memory field is always unset on a fresh load), so older notes that still carry the key from previous versions will simply be cleaned up the next time the file is saved (and the field is unused, so the cleanup is purely cosmetic). The button still functions identically from the user's perspective; only the on-disk shape changed
+
 ## 1.2.1 (2026-06-13)
 
 ### Fixed

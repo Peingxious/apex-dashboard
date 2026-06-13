@@ -32,6 +32,18 @@ export interface DashboardSettings {
   taskTemplates: TaskTemplate[];
   sidebarPinnedDefault: boolean;
   projectHideNestedDocs: boolean;
+  /**
+   * Global default for whether Todo cards hide completed tasks in the
+   * visible list. Used as a fallback when `card.hideCompleted` is
+   * undefined (the card's own in-memory toggle is treated as a
+   * session-only override on top of this default).
+   *
+   * NOTE: `card.hideCompleted` itself is **never persisted to the
+   * dashboard markdown** (see parser.ts), so the on-disk state of
+   * every card is effectively "unset" after every reload — this
+   * setting is the single source of truth for the default.
+   */
+  defaultHideCompleted: boolean;
   /** List of note paths opened as tabs in the workspace dashboard */
   embeddedNoteTabs: string[];
   /** Currently active tab path (null = main dashboard) */
@@ -82,6 +94,7 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   taskTemplates: [],
   sidebarPinnedDefault: true,
   projectHideNestedDocs: true,
+  defaultHideCompleted: true,
   embeddedNoteTabs: [],
   activeEmbeddedNoteTab: null,
   excludedNotePaths: ["dashboard"],

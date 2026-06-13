@@ -46,12 +46,12 @@
 
 ### 4.1 四大卡片类型
 
-| 类型         | 说明     | 布局特点                                                     |
-| ------------ | -------- | ------------------------------------------------------------ |
-| **Memo**     | 备忘录   | 可编辑文本区，支持 `[[wikilinks]]`，可选背景色               |
-| **Todo**     | 待办清单 | 复选框列表，支持拖拽排序，进度条显示完成百分比，支持到期提醒 |
-| **Projects** | 项目卡片 | 封面图、文档列表、内联搜索，支持多格式（MD/PDF/图片/音视频） |
-| **Notes**    | 笔记列表 | 紧凑列表，每行 5 张卡片，无封面图                            |
+| 类型         | 说明     | 布局特点                                                                                                                                                                          |
+| ------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Memo**     | 备忘录   | 可编辑文本区，支持 `[[wikilinks]]`，可选背景色                                                                                                                                    |
+| **Todo**     | 待办清单 | 复选框列表，支持拖拽排序，进度条显示完成百分比，支持到期提醒；列表中已完成任务默认隐藏（settings.defaultHideCompleted，默认 true），卡片右上角眼按钮可临时切换单卡片（不写入 md） |
+| **Projects** | 项目卡片 | 封面图、文档列表、内联搜索，支持多格式（MD/PDF/图片/音视频）                                                                                                                      |
+| **Notes**    | 笔记列表 | 紧凑列表，每行 5 张卡片，无封面图                                                                                                                                                 |
 
 ### 4.2 侧边栏小组件
 
@@ -168,6 +168,7 @@ interface DashboardSettings {
   taskTemplates: TaskTemplate[];
   sidebarPinnedDefault: boolean;
   projectHideNestedDocs: boolean;
+  defaultHideCompleted: boolean; // Todo 卡片默认隐藏已完成任务，默认 true
   embeddedNoteTabs: string[];
   activeEmbeddedNoteTab: string | null;
   // 库视图（Library）的 libraryConfig 包含的可选属性（详见 src/types.ts）：
@@ -226,6 +227,9 @@ interface DashboardSettings {
 
 | 版本   | 日期       | 主要变化                                                                                                                                                                                                   |
 | ------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1.3.0  | 2026-06-13 | 新增全局设置 `defaultHideCompleted`（默认 true）：Todo 卡片默认隐藏已完成任务；眼按钮仅作 session 切换，不写 md；serialize/parse 完全不读不写 `hideCompleted:` 字段（旧文件下次保存会被自动清理）          |
+| 1.2.1  | 2026-06-13 | 修复拖拽项目最后一项时 `d.includes is not a function`（parser.toWikiLink 缺类型守卫 + sync.moveProjectItemToCard 未同步 projectDocs）                                                                      |
+| 1.2.0  | 2026-06-13 | 插件重命名 Apex Dashboard → Peingxious Dashboard（id/name/author/description 全部更新；npm 包名 peingxious-dashboard；class/view-type/localStorage/YAML 标记/log tag 跟随）                                |
 | 1.1.18 | 2026-06-13 | 修复 1.1.17 回归：下拉框单匹配时塌成 32px（恢复 ≈96px 最小高度但保留内容驱动）；修复 pick 时 `input` 事件后 `input.value` 被同步 update 改写导致前导文本丢失（`replaceWikilinkFragment` 直接返回新字符串） |
 | 1.1.14 | 2026-06-12 | 项目项 wikilink 普通 hover 触发 Page Preview（200ms 延迟）；卡片标题/task/note 不启用 hover；撤销 1.1.12 分区标题尾号角标，分区名完整渲染                                                                  |
 | 1.1.13 | 2026-06-12 | 项目项 wikilink 支持 Ctrl/Cmd+悬浮原生文件预览（手动派发 workspace `link-hover` 事件，200ms 延迟）                                                                                                         |

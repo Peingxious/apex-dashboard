@@ -55,6 +55,10 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.projectHideNestedDocs": "Hide nested project docs",
     "settings.projectHideNestedDocsDesc":
       "Only show top-level documents in project cards; nested children are hidden but preserved",
+    "settings.defaultHideCompleted":
+      "Hide completed tasks in Todo cards by default",
+    "settings.defaultHideCompletedDesc":
+      "When on, new Todo cards hide completed tasks in the list. The eye button on each card can still toggle the hidden state for that card only (session-only, not saved to the note).",
     "settings.excludedNotePaths": "Excluded notes",
     "settings.excludedNotePathsDesc":
       'Comma-separated list of note basenames or paths hidden from the "Open" tab picker (e.g. dashboard, area/workbench). The main dashboard file is excluded by default.',
@@ -619,6 +623,9 @@ const translations: Record<Language, Record<string, string>> = {
     "settings.projectHideNestedDocs": "隐藏项目嵌套文档",
     "settings.projectHideNestedDocsDesc":
       "项目卡片中仅显示顶层文档，子文档隐藏但保留数据",
+    "settings.defaultHideCompleted": "Todo 默认隐藏已完成任务",
+    "settings.defaultHideCompletedDesc":
+      "开启后，新建 Todo 卡片在列表中隐藏已完成任务；卡片右上角的眼按钮仍可临时切换单卡片（仅本次会话生效，不会写入笔记）。",
     "settings.excludedNotePaths": "排除的笔记",
     "settings.excludedNotePathsDesc":
       "在「打开」面板中隐藏的笔记名称或路径，逗号分隔（如 dashboard, area/workbench）。主工作台文件默认排除。",
