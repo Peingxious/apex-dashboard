@@ -139,6 +139,7 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 ## 修复 2026-06-13：嵌入笔记内嵌视图拖拽失效 + 3 次重复渲染
 
 **现象**（用户日志）：
+
 - 在嵌入到笔记的 dashboard 视图中拖拽 project item，dragstart 触发、drop 事件目标正确（`SPAN class=dashboard-project-item-title`），但 callback 未被调用 → 拖拽"不工作"
 - 同时 `[apex-dashboard] render start` 出现 3 次（navGen 23/24/25），每次都伴随一次 `renderViewNavBar`，渲染频繁
 
@@ -156,6 +157,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 **根因**：`onProjectItemReorder` 在 `splice(fromIndex, 1)` 越界或 `projectDocs` 已包含 `undefined` 元素时，会得到 `undefined` 并把它 `splice(toIndex, 0, undefined!)` 推进数组。随后 `synthesizeProjectBodyFromDocs` 遍历到 `undefined`，访问 `doc.path` 崩溃。
 
 **修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts)）：
+
 1. **`onProjectItemReorder` / `onProjectItemMoveToCard` / `onProjectDocsReorder` / `onDocMoveToCard`**：bounds check（`from < 0 || from >= length || to < 0 || to > length`）+ `if (!movedDoc) return` 守卫，splice 永远不注入 undefined
 2. **`synthesizeProjectBodyFromDocs.renderDoc`**：`if (!doc || typeof doc !== "object") return` + `if (typeof d.path !== "string" || d.path.length === 0) return` + 外层 `if (doc == null) continue` —— 双重防御，脏数据也不会再崩
 3. `synthesizeProjectBodyFromDocs` 的参数类型从 `ProjectDocNode[]` 改为内部用 `unknown` 解析，编译产物对 `unknown` 做窄化，避免 ts 编译阶段就拒绝非空项目
@@ -175,10 +177,12 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 [view.ts:saveEmbeddedAndRefresh](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1554) 调用 `app.vault.modify(file, newContent)`，这会触发 vault `modify` 事件。事件监听器 [view.ts:2481](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L2481) 判定文件是当前 embedded note 后，会调用 `reloadEmbeddedFromDisk` 异步**重新解析文件并 render**。而 `saveEmbeddedAndRefresh` **自己**也调用 `this.render(currentData)`。
 
 **结果**：每次 embedded mode 的 mutation（拖拽排序、编辑、添加/删除等）都会产生**两次 render**：
+
 1. `saveEmbeddedAndRefresh` 末尾的 `render(currentData)`（基于内存 mutated 数据）
 2. `modify` 事件 handler 异步触发的 `reloadEmbeddedFromDisk` → 读盘 → parse → render（基于文件内容）
 
 第二次 render 与第一次**内容相同但时序错位**：
+
 - 第一次 render 时 dragstart 已经设置了 `projectItemDragSource` / `taskItemCallbacks`，但正在 drag 中（drop 还没到）
 - 第二次 render 把它们清零、DOM 重建 → **drop 时 callback 找不到正确的 dragSource**（或者 dragSource 已经被 clear 了）
 - 这就是用户看到的"drop 触发但 callback 未被调用" 的根因
@@ -195,6 +199,7 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 **结果**：现在嵌入视图的 mutation 只会触发 1 次 render（saveEmbeddedAndRefresh 末尾的 render），`projectItemDragSource` 在 drop 触发时仍然有效，callback 能正常被调用。
 
 **验证清单**：
+
 - [x] 4 处类名 `.dashboard-project-item-list` → `.dashboard-project-list` 修复
 - [x] `isWritingEmbeddedFile` flag + modify handler 短路修复
 - [x] 移除 renderer 调试 console.log（保留问题修复逻辑）
@@ -365,22 +370,22 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ### 修复 1：分区名 `[[…]]` 渲染为真正的双链
 
-| 文件                                                                                                                                     | 改动                                                                                                                                |
-| ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| [src/renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) `renderColumnTitle`           | 新增 `app: App` 参数；当 name 包含 `[[` 时调用现有的 `renderTextWithLinks`（已支持别名 / 片段），否则走 `setText` 快速路径            |
-| 同上 `renderSection` 调用 `renderColumnTitle` 处                                                                                          | 传入 `app`；rename 取消分支的 `renderColumnTitle(titleEl, currentName, app)` 同样更新                                                |
+| 文件                                                                                                                           | 改动                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| [src/renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) `renderColumnTitle` | 新增 `app: App` 参数；当 name 包含 `[[` 时调用现有的 `renderTextWithLinks`（已支持别名 / 片段），否则走 `setText` 快速路径 |
+| 同上 `renderSection` 调用 `renderColumnTitle` 处                                                                               | 传入 `app`；rename 取消分支的 `renderColumnTitle(titleEl, currentName, app)` 同样更新                                      |
 
 底层机制沿用现有的 `renderWikilink`：`internal-link` class + `data-href` / `href` 属性 + `mouseover` 派发 `link-hover` 事件，让原生 Page Preview 接管。render / rename / 取消三条路径都走同一函数，行为完全一致。
 
 ### 修复 2：下拉框仅在 `[[` 上下文打开
 
-| 文件                                                                                                                                       | 改动                                                                                                                       |
-| ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `update`                | 改用新增的 `findWikilinkContext(value, caret)`：返回 `null` 时直接 `close()`；返回 `{ start, query }` 才打开 / 更新 dropdown |
-| 同上 `filterFiles`                                                                                                                          | 空 query（刚输入 `[[` 时）改为返回前 20 个文件，让用户能看到可选列表；非空 query 行为不变                                    |
-| 同上 新增 `findWikilinkContext` 私有函数                                                                                                    | 找最后一个 caret 之前的 `[[`；若有 `]]` 在 `[[` 和 caret 之间则返回 `null`；query 包含换行也返回 `null`；兼容 `[[[abc` 这种带前导 `[` 的情况 |
-| 同上 新增 `replaceWikilinkFragment` 私有函数                                                                                                 | pick 时按 `ctx.start` 到 caret（含光标后已输入的 `]]`）整段替换为 `[[basename]]`；若光标后已有 `]]` 自动去掉避免 `[[path]]]`     |
-| 同上 `pick`                                                                                                                                 | 改用 `replaceWikilinkFragment`；保留 `onPick` 回调（任务 / note 消费者仍能正确添加）                                         |
+| 文件                                                                                                                        | 改动                                                                                                                                         |
+| --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| [src/file-suggest.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/file-suggest.ts) `update` | 改用新增的 `findWikilinkContext(value, caret)`：返回 `null` 时直接 `close()`；返回 `{ start, query }` 才打开 / 更新 dropdown                 |
+| 同上 `filterFiles`                                                                                                          | 空 query（刚输入 `[[` 时）改为返回前 20 个文件，让用户能看到可选列表；非空 query 行为不变                                                    |
+| 同上 新增 `findWikilinkContext` 私有函数                                                                                    | 找最后一个 caret 之前的 `[[`；若有 `]]` 在 `[[` 和 caret 之间则返回 `null`；query 包含换行也返回 `null`；兼容 `[[[abc` 这种带前导 `[` 的情况 |
+| 同上 新增 `replaceWikilinkFragment` 私有函数                                                                                | pick 时按 `ctx.start` 到 caret（含光标后已输入的 `]]`）整段替换为 `[[basename]]`；若光标后已有 `]]` 自动去掉避免 `[[path]]]`                 |
+| 同上 `pick`                                                                                                                 | 改用 `replaceWikilinkFragment`；保留 `onPick` 回调（任务 / note 消费者仍能正确添加）                                                         |
 
 调用 `attachFileSuggest` 的三处（todo 任务添加 input / memo textarea / 项目笔记 input）自动同时获得新行为，无需逐处修改。
 
@@ -454,11 +459,63 @@ Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'p
 
 ---
 
+## 1.1.19：嵌入视图拖拽到项目卡片丢失 + 双链符号缺失
+
+**用户反馈**（2026-06-13，1.1.18 回归）：
+
+1. **嵌入（非工作台）视图里拖入文件，第 1 个能保存，后面再拖就「替换」旧内容** —— 用户原话「多拖拽几次，会替换内容」
+2. **拖入的文件在项目列表里没有 `[[ ]]` 形态的双链** —— 用户原话「所有的双链文本没有双链符号」
+
+### 根因
+
+[src/view.ts:1360](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1360) 嵌入视图 `onFileDrop` 处理项目卡片时**只 push 到 `projectDocs`，没有 append 到 `card.body`**。两条链路错位：
+
+- `serialize()` 优先用 `card.body`，只在 body 为空时才从 `projectDocs` 兜底合成
+- 第 1 次拖入（body 空）→ serialize 走兜底 → 文件落地为 `- [[file1]]` ✅
+- 第 2 次拖入（body 已非空）→ `projectDocs.push(file2)` 看起来写进去了，但 serialize 看到 body 非空直接用 body 写回 → 文件**还是 `- [[file1]]`**，内存里的 `file2` 丢失
+- 下次 reload 时 `parse()` 从 body 重建 `projectDocs`，把内存累积的 `file2` 覆盖回 `file1` → 表现就是「新的拖拽都被吞了」
+
+而「没有 `[[ ]]` 形态」是另一面：旧代码把 `filePath` 原样塞进 `projectDocs`，下一轮 render 的 projectDocs 分支会按「新规则」判断：path 不含 `/` 也不以 `.md` 结尾时（边缘 case 比如 `note` 这种纯 basename）走平文本分支 `- ${d.path}`，所以 body 里就是 `- note`，没有 `[[ ]]`。
+
+主工作台 ([sync.ts:addDocToCard](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L830)) 没有这个 bug，因为它**直接 append 到 `card.body`**，body 永远是事实来源。
+
+### 修复
+
+[src/view.ts:onFileDrop](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1358) 嵌入视图项目卡片分支改为**同时**更新 `projectDocs` 和 `card.body`，并沿用主工作台 [sync.ts:855](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L855) 的 wikilink wrap 规则：
+
+```ts
+// projectDocs (structured) and body (markdown) MUST be in lockstep
+found.card.projectDocs.push({ path: filePath, children: [] });
+const looksLikePath =
+  filePath.includes("/") || filePath.toLowerCase().endsWith(".md");
+const newLine = filePath.includes("[[")
+  ? `- ${filePath}`
+  : looksLikePath
+    ? `- ${pathToWikiLink(filePath)}`
+    : `- ${filePath}`;
+const existingBody = (found.card.body ?? "").trim();
+found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
+```
+
+这样保证：
+
+- 每次拖入都立刻 append 到 body → 多次拖入不会丢
+- vault 路径（含 `/` 或 `.md`）经 `pathToWikiLink` 包成 `[[basename]]`，纯 basename 也走对应分支不重复加 `[[ ]]`
+- 与主工作台 `addDocToCard` 的输出格式完全一致，跨视图切换无视觉差
+
+### 验证
+
+- [x] 嵌入视图项目卡片连续拖入 2 个不同文件 → 两次都出现在列表中
+- [x] 嵌入视图项目卡片拖入 `note.md` / `folder/note.md` → body 行 `- [[note]]`（带 `[[ ]]`）
+- [x] `npm run build` 通过（tsc + esbuild）
+
+---
+
 ## 当前状态概览
 
 | 维度         | 状态                                       |
 | ------------ | ------------------------------------------ |
-| **版本**     | 1.1.15                                     |
+| **版本**     | 1.1.19                                     |
 | **构建**     | ✅ `npm run build` 通过                    |
 | **核心功能** | ✅ 四大卡片类型、侧边栏小组件、拖拽交互    |
 | **国际化**   | ✅ 中英文支持                              |

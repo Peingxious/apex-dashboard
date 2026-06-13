@@ -3838,13 +3838,18 @@ function renderProjectBody(
       // latter we must NOT wrap it in another [[...]] — doing so
       // would produce nested wikilinks and drop the leading text.
       if (d.path.includes("[[")) {
+        // Already a wikilink (possibly with leading text such as
+        // "11[[En3]]"). Use verbatim — going through pathToWikiLink
+        // would produce nested `[[[[Note]]]]` brackets and corrupt
+        // the rendered link.
         lines.push(`- ${d.path}`);
       } else if (d.path.includes("/") || d.path.toLowerCase().endsWith(".md")) {
-        // Looks like a vault path — wrap as a wikilink
-        lines.push(`- [[${d.path}]]`);
+        // Looks like a vault path → wrap as `[[basename]]`.
+        lines.push(`- [[${d.path.replace(/\.md$/, "")}]]`);
       } else {
-        // Plain text (e.g. "11") written via the Enter fallback
-        // — keep it as a normal list line, no double brackets.
+        // Plain text (e.g. "11") entered via the Enter fallback.
+        // Keep it as a normal list line, no double brackets. This
+        // is the fix for "输入普通文本会变成双链笔记".
         lines.push(`- ${d.path}`);
       }
       if (Array.isArray(d.children)) {

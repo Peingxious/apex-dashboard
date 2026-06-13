@@ -1244,26 +1244,27 @@ export class DashboardView extends ItemView {
         const found = self.findEmbeddedCard(card.id);
         if (found) {
           if (!found.card.projectDocs) found.card.projectDocs = [];
-          found.card.projectDocs.push({ path: docPath, children: [] });
-          // Two input paths converge here:
-          //   1. file-suggest onPick — value already contains the
-          //      `[[...]]` block (possibly with leading text such
-          //      as "11[[En3]]"). Store as-is.
-          //   2. Enter fallback — value is whatever the user
-          //      typed verbatim. If it looks like a vault path
-          //      (contains "/" or ends with ".md") wrap it as a
-          //      wikilink; otherwise treat it as plain text and
-          //      keep the user's characters intact. The old code
-          //      always wrapped via pathToWikiLink, which forced
-          //      arbitrary text like "11" to become "[[11]]" — a
-          //      double-bracket the user never asked for.
+          // Three-way wrap rule (mirrors onFileDrop):
+          //   1. docPath already contains "[[" → use verbatim.
+          //      Force-wrapping would produce nested brackets.
+          //   2. docPath looks like a vault path (has "/" or ends
+          //      with ".md") → wrap as `[[basename]]`.
+          //   3. Anything else (plain text such as "11") → keep
+          //      as a normal list line. The user typed it as
+          //      plain text on purpose; force-wrapping into
+          //      `[[11]]` would be wrong.
           const newLine = docPath.includes("[[")
             ? `- ${docPath}`
             : docPath.includes("/") || docPath.toLowerCase().endsWith(".md")
               ? `- ${pathToWikiLink(docPath)}`
               : `- ${docPath}`;
-          found.card.body = found.card.body
-            ? `${found.card.body}\n${newLine}`
+          // projectDocs stores the raw user input; the conditional
+          // wrap is re-applied on the next render so we never
+          // double-wrap.
+          found.card.projectDocs.push({ path: docPath, children: [] });
+          const existingBody = (found.card.body ?? "").trim();
+          found.card.body = existingBody
+            ? `${existingBody}\n${newLine}`
             : newLine;
           await self.saveEmbeddedAndRefresh();
         }
@@ -1356,8 +1357,46 @@ export class DashboardView extends ItemView {
           const link = pathToWikiLink(filePath);
           found.card.body += (found.card.body ? "\n" : "") + link;
         } else {
+          // Both projectDocs (structured) and body (markdown) MUST
+          // be updated in lockstep. The previous version only
+          // pushed to projectDocs, so once the body became
+          // non-empty the next serialize() pass kept writing the
+          // stale body back to disk (serialize() prefers body and
+          // only falls back to projectDocs when body is empty).
+          // The in-memory projectDocs would then be silently
+          // overwritten on the next reload when parse() rebuilt
+          // it from the on-disk body — every drag after the first
+          // looked like it "replaced" existing content.
           if (!found.card.projectDocs) found.card.projectDocs = [];
+          // Three-way wrap rule. Order matters:
+          //   1. filePath already contains "[[" (e.g. drag of an
+          //      existing wikilink, or file-suggest onPick with
+          //      leading text like "11[[En3]]") → use verbatim.
+          //      Going through pathToWikiLink here would yield
+          //      nested `[[[[Note]]]]` brackets and silently
+          //      corrupt the rendered link.
+          //   2. filePath looks like a vault path (contains "/"
+          //      or ends with ".md") → wrap as `[[basename]]`.
+          //   3. Anything else (plain text such as "11") → keep
+          //      as a normal list line. The user typed it as
+          //      plain text on purpose; force-wrapping into
+          //      `[[11]]` would be wrong.
+          const newLine = filePath.includes("[[")
+            ? `- ${filePath}`
+            : filePath.includes("/") || filePath.toLowerCase().endsWith(".md")
+              ? `- ${pathToWikiLink(filePath)}`
+              : `- ${filePath}`;
+          // Append to BOTH projectDocs (structured) and body
+          // (markdown). projectDocs stores the raw user input so
+          // the renderer's conditional wrap is re-applied on the
+          // next reload (avoids double-wrapping); body stores the
+          // already-wrapped render form so the on-disk markdown
+          // round-trips correctly.
           found.card.projectDocs.push({ path: filePath, children: [] });
+          const existingBody = (found.card.body ?? "").trim();
+          found.card.body = existingBody
+            ? `${existingBody}\n${newLine}`
+            : newLine;
         }
         await self.saveEmbeddedAndRefresh();
       },
@@ -1396,6 +1435,11 @@ export class DashboardView extends ItemView {
         found.card.body = self.synthesizeProjectBodyFromDocs(
           found.card.projectDocs,
         );
+        // 拖拽重排是嵌入笔记的"实质写盘"操作之一：新顺序要
+        // 持久化到 markdown body，否则下次 reload 会被
+        // parse() 从 body 重建回旧顺序。serialize() 优先
+        // 写 body，body 已经被上面的 synthesizeProjectBody
+        // 重写过了。
         await self.saveEmbeddedAndRefresh();
       },
       onProjectItemMoveToCard: async (
@@ -1432,6 +1476,8 @@ export class DashboardView extends ItemView {
         destFound.card.body = self.synthesizeProjectBodyFromDocs(
           destFound.card.projectDocs,
         );
+        // 跨卡片移动同上：要持久化到 body（参见
+        // onProjectItemReorder 注释）。
         await self.saveEmbeddedAndRefresh();
       },
       onProjectItemDelete: async (
@@ -1677,11 +1723,13 @@ export class DashboardView extends ItemView {
       const d = doc as { path?: unknown; children?: unknown };
       if (typeof d.path !== "string" || d.path.length === 0) return;
       const indent = "\t".repeat(depth);
-      // path may already include the [[ ]] wrapper plus leading
-      // text (e.g. "11[[En3]]") — only wrap a bare vault path
-      // (one with "/" or a ".md" suffix). Pure text like "11"
-      // stays as plain list text so we don't accidentally
-      // re-introduce brackets the user never asked for.
+      // Three-way wrap rule (mirrors onFileDrop / onProjectDocsAdd):
+      //   1. d.path already contains "[[" → use verbatim.
+      //   2. d.path looks like a vault path (has "/" or ends with
+      //      ".md") → strip ".md" and wrap as `[[basename]]`.
+      //   3. Anything else (plain text) → keep as-is. This is the
+      //      key fix for "输入普通文本会变成双链笔记" — the user
+      //      typed "11" and expects to see "- 11", not "- [[11]]".
       const path = d.path.includes("[[")
         ? d.path
         : d.path.includes("/") || d.path.toLowerCase().endsWith(".md")

@@ -854,14 +854,16 @@ export class SyncEngine {
         ...col,
         cards: col.cards.map((card) => {
           if (card.id !== cardId) return card;
-          // Two input paths converge here:
-          //   1. file-suggest onPick — value already contains the
-          //      `[[...]]` block (possibly with leading text).
-          //   2. Enter fallback — value is whatever the user
-          //      typed. Only treat it as a vault path when it
-          //      actually looks like one (contains "/" or ends
-          //      with ".md"); otherwise keep the user's plain
-          //      text intact instead of double-wrapping it.
+          // Three-way wrap rule (mirrors view.ts onFileDrop):
+          //   1. filePath already contains "[[" → use verbatim.
+          //      Force-wrapping would produce nested brackets.
+          //   2. filePath looks like a vault path (has "/" or ends
+          //      with ".md") → wrap as `[[basename]]`.
+          //   3. Anything else (plain text) → keep as a normal
+          //      list line. The user typed it as plain text on
+          //      purpose; force-wrapping into `[[11]]` would be
+          //      wrong. This is the fix for "输入普通文本会变成
+          //      双链笔记".
           const looksLikePath =
             filePath.includes("/") || filePath.toLowerCase().endsWith(".md");
           const newLine = filePath.includes("[[")
@@ -874,7 +876,12 @@ export class SyncEngine {
             card.body.includes(pathToWikiLink(filePath).slice(0, -2) + "|")
           )
             return card;
-          // Append as depth-0 entry in hierarchical format
+          // Append as depth-0 entry in hierarchical format. Body
+          // stores the already-wrapped render form so the on-disk
+          // markdown round-trips correctly. The append (rather
+          // than replace) is the fix for "拖拽双链笔记会直接替换
+          // 普通文本" — prior versions overwrote the body and
+          // silently dropped any earlier plain-text entries.
           const existingBody = card.body.trim();
           const body = existingBody ? `${existingBody}\n${newLine}` : newLine;
           return { ...card, body };

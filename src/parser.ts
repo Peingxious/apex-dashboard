@@ -340,8 +340,22 @@ export function serialize(data: DashboardData, app?: App): string {
       // extension and the folder prefix so the markdown stays
       // short. We re-import locally here to avoid coupling
       // serialize() callers to the helper's name.
-      const toWikiLink = (rawPath: string): string =>
-        rawPath.includes("[[") ? rawPath : pathToWikiLink(rawPath);
+      // Render a stored projectDocs entry as the canonical body
+      // line. Mirrors the three-way wrap rule in view.ts:
+      //   - "[[Note]]" → keep verbatim.
+      //   - bare vault path (has "/" or ends with ".md") → wrap.
+      //   - plain text (e.g. "11") → keep verbatim, no wrapping.
+      // The previous version of toWikiLink always wrapped via
+      // pathToWikiLink, which silently turned stored plain text
+      // into `[[11]]` and caused "plain text gets cleaned up to a
+      // wikilink" on save.
+      const toWikiLink = (rawPath: string): string => {
+        if (rawPath.includes("[[")) return rawPath;
+        if (!rawPath.includes("/") && !rawPath.toLowerCase().endsWith(".md")) {
+          return rawPath;
+        }
+        return pathToWikiLink(rawPath);
+      };
       let bodySource = card.body;
       const projectDocsAny = (card as any).projectDocs as
         | { path: string; children?: string[] }[]
@@ -1194,11 +1208,36 @@ function parseProjectDocs(body: string): ProjectDocNode[] {
       indent++;
       rest = rest.slice(1);
     }
-    // Match "- [[path]]" or "- [[path|alias]]"
-    const docMatch = rest.match(/^-\s*\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/);
-    if (!docMatch || !docMatch[1]) continue;
-
-    const path = docMatch[1].trim();
+    // Three shapes must round-trip through parse → synthesize
+    // without losing information:
+    //   1. "- [[Note]]" / "- [[Note|alias]]" → path keeps the
+    //      "[[Note]]" form. This is the critical fix for
+    //      "移动会把双链清理了" — the previous version captured
+    //      just "Note" (basename), and synthesizeProjectBody
+    //      re-classified it as plain text on the next move
+    //      because "Note" no longer looked like a vault path.
+    //   2. "- folder/Note.md" (bare vault path written by an
+    //      older version) → path becomes "[[Note]]" after wrap.
+    //   3. "- 11" (plain text typed via the Enter fallback) →
+    //      path stays as "11" so synthesize won't double-wrap it.
+    const listMatch = rest.match(/^-\s+(.*)$/);
+    if (!listMatch || !listMatch[1]) continue;
+    const raw = listMatch[1].trim();
+    if (!raw) continue;
+    const linkMatch = raw.match(/^\[\[([^\]|]+)(?:\|[^\]]+)?\]\]$/);
+    let path: string;
+    if (linkMatch) {
+      // Already a wikilink — keep the [[ ]] form verbatim.
+      path = `[[${linkMatch[1]!.trim()}]]`;
+    } else if (raw.includes("/") || raw.toLowerCase().endsWith(".md")) {
+      // Bare vault path that somehow got written without
+      // brackets — normalise to the canonical wikilink form.
+      path = `[[${raw.replace(/\.md$/, "")}]]`;
+    } else {
+      // Plain text (e.g. "11"). Stays as-is; synthesize uses the
+      // same conditional rule and keeps it un-bracketed.
+      path = raw;
+    }
     const node: ProjectDocNode = { path, children: [] };
 
     // Find the right parent based on indent level
