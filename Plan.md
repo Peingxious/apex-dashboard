@@ -136,6 +136,72 @@ if (current.length > 0 && content.length < current.length * 0.3) {
 
 ---
 
+## 修复 2026-06-13：嵌入笔记内嵌视图拖拽失效 + 3 次重复渲染
+
+**现象**（用户日志）：
+- 在嵌入到笔记的 dashboard 视图中拖拽 project item，dragstart 触发、drop 事件目标正确（`SPAN class=dashboard-project-item-title`），但 callback 未被调用 → 拖拽"不工作"
+- 同时 `[apex-dashboard] render start` 出现 3 次（navGen 23/24/25），每次都伴随一次 `renderViewNavBar`，渲染频繁
+
+### 补充修复（第二轮）：onProjectItemReorder 触发 synthesizeProjectBodyFromDocs 时崩溃
+
+**现象**（用户日志）：第一轮修复后拖拽本身可以工作了，但浏览器报
+
+```
+Uncaught (in promise) TypeError: Cannot read properties of undefined (reading 'path')
+    at renderDoc (main.js:43371:24)
+    at _DashboardView.synthesizeProjectBodyFromDocs (main.js:43380:7)
+    at Object.onProjectItemReorder (main.js:43174:32)
+```
+
+**根因**：`onProjectItemReorder` 在 `splice(fromIndex, 1)` 越界或 `projectDocs` 已包含 `undefined` 元素时，会得到 `undefined` 并把它 `splice(toIndex, 0, undefined!)` 推进数组。随后 `synthesizeProjectBodyFromDocs` 遍历到 `undefined`，访问 `doc.path` 崩溃。
+
+**修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts)）：
+1. **`onProjectItemReorder` / `onProjectItemMoveToCard` / `onProjectDocsReorder` / `onDocMoveToCard`**：bounds check（`from < 0 || from >= length || to < 0 || to > length`）+ `if (!movedDoc) return` 守卫，splice 永远不注入 undefined
+2. **`synthesizeProjectBodyFromDocs.renderDoc`**：`if (!doc || typeof doc !== "object") return` + `if (typeof d.path !== "string" || d.path.length === 0) return` + 外层 `if (doc == null) continue` —— 双重防御，脏数据也不会再崩
+3. `synthesizeProjectBodyFromDocs` 的参数类型从 `ProjectDocNode[]` 改为内部用 `unknown` 解析，编译产物对 `unknown` 做窄化，避免 ts 编译阶段就拒绝非空项目
+
+**根因**（两个独立 bug）：
+
+### Bug A：drop handler 类名不匹配
+
+[renderer.ts:417](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L417) `drop` handler 寻找 `.dashboard-project-item-list`，但 [renderer.ts:3327](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3327) 实际创建的是 `.dashboard-project-list`。同样问题在 [renderer.ts:307](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L307) 的 `dragleave` 和 [renderer.ts:3350](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3350) 的 card body `dragover`/`drop` 中也存在。
+
+虽然该 bug 不会直接阻断「拖拽到具体 item 上」的场景（因为有 `closest(".dashboard-project-item")` 的分支在前面），但会**导致空 project 列表的 drop 检测失败**，并且 card body 区域的兜底 dragover/drop 排除逻辑错误。
+
+**修复**：把 4 处 `.dashboard-project-item-list` 全部改为 `.dashboard-project-list`，与实际渲染的 class 对齐。
+
+### Bug B：`saveEmbeddedAndRefresh` 写入触发 `modify` 事件 → `reloadEmbeddedFromDisk` 重渲染
+
+[view.ts:saveEmbeddedAndRefresh](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1554) 调用 `app.vault.modify(file, newContent)`，这会触发 vault `modify` 事件。事件监听器 [view.ts:2481](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L2481) 判定文件是当前 embedded note 后，会调用 `reloadEmbeddedFromDisk` 异步**重新解析文件并 render**。而 `saveEmbeddedAndRefresh` **自己**也调用 `this.render(currentData)`。
+
+**结果**：每次 embedded mode 的 mutation（拖拽排序、编辑、添加/删除等）都会产生**两次 render**：
+1. `saveEmbeddedAndRefresh` 末尾的 `render(currentData)`（基于内存 mutated 数据）
+2. `modify` 事件 handler 异步触发的 `reloadEmbeddedFromDisk` → 读盘 → parse → render（基于文件内容）
+
+第二次 render 与第一次**内容相同但时序错位**：
+- 第一次 render 时 dragstart 已经设置了 `projectItemDragSource` / `taskItemCallbacks`，但正在 drag 中（drop 还没到）
+- 第二次 render 把它们清零、DOM 重建 → **drop 时 callback 找不到正确的 dragSource**（或者 dragSource 已经被 clear 了）
+- 这就是用户看到的"drop 触发但 callback 未被调用" 的根因
+
+而用户日志中的 3 次 render = saveEmbeddedAndRefresh 自身 1 次 + modify 事件 1 次 + 不知来源的 1 次（怀疑是 modify 事件在 Obsidian 内部被同步触发了一次 + 我们自己又触发一次）。
+
+**修复**（[view.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts)）：
+
+1. 新增 `private isWritingEmbeddedFile = false` 标志位
+2. `saveEmbeddedAndRefresh` 在 `await this.app.vault.modify(file, newContent)` **之前**设置 `isWritingEmbeddedFile = true`
+3. 用 `setTimeout(() => { isWritingEmbeddedFile = false; }, 0)` 在 macrotask 上清零（覆盖 `modify` 事件触发的同步+异步 handler），同时不阻塞外部编辑的正常 reload
+4. `modify` 事件 handler 在 `isWritingEmbeddedFile && file.path === this.embeddedNotePath` 时**提前 return**，不再调用 `reloadEmbeddedFromDisk`
+
+**结果**：现在嵌入视图的 mutation 只会触发 1 次 render（saveEmbeddedAndRefresh 末尾的 render），`projectItemDragSource` 在 drop 触发时仍然有效，callback 能正常被调用。
+
+**验证清单**：
+- [x] 4 处类名 `.dashboard-project-item-list` → `.dashboard-project-list` 修复
+- [x] `isWritingEmbeddedFile` flag + modify handler 短路修复
+- [x] 移除 renderer 调试 console.log（保留问题修复逻辑）
+- [x] `npm run build` 通过
+
+---
+
 ## 新增 2026-06-12：分区标题尾数分离为角标（兼容旧列表）
 
 **背景**：旧版本的工作台列表曾以**纯数字**作为分区名（例：`11`、`121`），本质是"列表编号"。新版本允许任意文本作为分区名后，旧的纯数字分区在标题里显得突兀。需要在保留原始 column.name（保证 sync / serialize 兼容）的前提下，把尾部的数字视觉上**抽离为角标**显示在标题之后。

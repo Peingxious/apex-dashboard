@@ -103,6 +103,333 @@ function renderColumnTitle(titleEl: HTMLElement, name: string, app: App): void {
 
 let taskDragSource: { cardId: string; taskIndex: number } | null = null;
 let projectItemDragSource: { cardId: string; itemIndex: number } | null = null;
+let taskItemCallbacks: RenderCallbacks | null = null;
+let itemDocListenersInstalled = false;
+
+function clearTaskDragOverClasses() {
+  document.querySelectorAll(".dashboard-task-item--drag-over").forEach((el) => {
+    (el as HTMLElement).classList.remove("dashboard-task-item--drag-over");
+  });
+  document
+    .querySelectorAll(".dashboard-project-item--drag-over")
+    .forEach((el) => {
+      (el as HTMLElement).classList.remove("dashboard-project-item--drag-over");
+    });
+  document
+    .querySelectorAll(".dashboard-task-list--drop-target")
+    .forEach((el) => {
+      (el as HTMLElement).classList.remove("dashboard-task-list--drop-target");
+    });
+}
+
+function ensureItemDocListeners() {
+  if (itemDocListenersInstalled || typeof document === "undefined") return;
+  itemDocListenersInstalled = true;
+
+  document.addEventListener("dragstart", (e) => {
+    const target = e.target as HTMLElement;
+    if (target.closest("button, input, textarea, select, a")) return;
+
+    const taskItem = target.closest(
+      ".dashboard-task-item",
+    ) as HTMLElement | null;
+    if (taskItem) {
+      const cardId = taskItem.dataset.cardId;
+      const taskIndexStr = taskItem.dataset.taskIndex;
+      if (!cardId || taskIndexStr === undefined) return;
+      const taskIndex = parseInt(taskIndexStr, 10);
+      if (isNaN(taskIndex)) return;
+      taskDragSource = { cardId, taskIndex };
+      taskItem.addClass("dashboard-task-item--dragging");
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(taskIndex));
+      }
+      console.log(
+        "[dbg-renderer] taskItem dragstart cardId=" +
+          cardId +
+          " idx=" +
+          taskIndex,
+      );
+      return;
+    }
+
+    const projectItem = target.closest(
+      ".dashboard-project-item",
+    ) as HTMLElement | null;
+    if (projectItem) {
+      const cardId = projectItem.dataset.cardId;
+      const itemIndexStr = projectItem.dataset.itemIndex;
+      if (!cardId || itemIndexStr === undefined) return;
+      const itemIndex = parseInt(itemIndexStr, 10);
+      if (isNaN(itemIndex)) return;
+      projectItemDragSource = { cardId, itemIndex };
+      projectItem.addClass("dashboard-project-item--dragging");
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(itemIndex));
+      }
+      console.log(
+        "[dbg-renderer] projectItem dragstart cardId=" +
+          cardId +
+          " idx=" +
+          itemIndex,
+      );
+      return;
+    }
+  });
+
+  document.addEventListener("dragend", (e) => {
+    const target = e.target as HTMLElement;
+    const taskItem = target.closest(
+      ".dashboard-task-item",
+    ) as HTMLElement | null;
+    if (taskItem) {
+      taskItem.classList.remove("dashboard-task-item--dragging");
+      clearTaskDragOverClasses();
+      taskDragSource = null;
+      return;
+    }
+    const projectItem = target.closest(
+      ".dashboard-project-item",
+    ) as HTMLElement | null;
+    if (projectItem) {
+      projectItem.classList.remove("dashboard-project-item--dragging");
+      clearTaskDragOverClasses();
+      projectItemDragSource = null;
+      return;
+    }
+    clearTaskDragOverClasses();
+  });
+
+  document.addEventListener("dragover", (e) => {
+    const target = e.target as HTMLElement;
+
+    const taskItem = target.closest(
+      ".dashboard-task-item",
+    ) as HTMLElement | null;
+    if (taskItem && taskDragSource) {
+      const cardId = taskItem.dataset.cardId;
+      const taskIndex = parseInt(taskItem.dataset.taskIndex ?? "-1", 10);
+      if (
+        cardId &&
+        !isNaN(taskIndex) &&
+        !(
+          taskDragSource.cardId === cardId &&
+          taskDragSource.taskIndex === taskIndex
+        )
+      ) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        clearTaskDragOverClasses();
+        taskItem.addClass("dashboard-task-item--drag-over");
+        return;
+      }
+    }
+
+    const projectItem = target.closest(
+      ".dashboard-project-item",
+    ) as HTMLElement | null;
+    if (projectItem && projectItemDragSource) {
+      const cardId = projectItem.dataset.cardId;
+      const itemIndex = parseInt(projectItem.dataset.itemIndex ?? "-1", 10);
+      if (
+        cardId &&
+        !isNaN(itemIndex) &&
+        !(
+          projectItemDragSource.cardId === cardId &&
+          projectItemDragSource.itemIndex === itemIndex
+        )
+      ) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        clearTaskDragOverClasses();
+        projectItem.addClass("dashboard-project-item--drag-over");
+        return;
+      }
+    }
+
+    const emptyTaskList = target.closest(
+      ".dashboard-task-list",
+    ) as HTMLElement | null;
+    if (emptyTaskList && taskDragSource) {
+      const containerCard = emptyTaskList.closest(
+        ".dashboard-card",
+      ) as HTMLElement | null;
+      if (
+        containerCard &&
+        containerCard.dataset.cardId !== taskDragSource.cardId
+      ) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        clearTaskDragOverClasses();
+        emptyTaskList.addClass("dashboard-task-list--drop-target");
+        return;
+      }
+    }
+
+    const emptyProjectList = target.closest(
+      ".dashboard-project-list",
+    ) as HTMLElement | null;
+    if (emptyProjectList && projectItemDragSource) {
+      const containerCard = emptyProjectList.closest(
+        ".dashboard-card",
+      ) as HTMLElement | null;
+      if (
+        containerCard &&
+        containerCard.dataset.cardId !== projectItemDragSource.cardId
+      ) {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
+        clearTaskDragOverClasses();
+        emptyProjectList.addClass("dashboard-task-list--drop-target");
+        return;
+      }
+    }
+  });
+
+  document.addEventListener("dragleave", (e) => {
+    const target = e.target as HTMLElement;
+    const taskList = target.closest(
+      ".dashboard-task-list",
+    ) as HTMLElement | null;
+    if (taskList && !taskList.contains(e.relatedTarget as Node)) {
+      taskList.classList.remove("dashboard-task-list--drop-target");
+    }
+    const projectList = target.closest(
+      ".dashboard-project-list",
+    ) as HTMLElement | null;
+    if (projectList && !projectList.contains(e.relatedTarget as Node)) {
+      projectList.classList.remove("dashboard-task-list--drop-target");
+    }
+  });
+
+  document.addEventListener("drop", (e) => {
+    const target = e.target as HTMLElement;
+    if (!taskItemCallbacks) {
+      return;
+    }
+
+    const taskItem = target.closest(
+      ".dashboard-task-item",
+    ) as HTMLElement | null;
+    if (taskItem && taskDragSource) {
+      const cardId = taskItem.dataset.cardId;
+      const taskIndex = parseInt(taskItem.dataset.taskIndex ?? "-1", 10);
+      if (
+        cardId &&
+        !isNaN(taskIndex) &&
+        !(
+          taskDragSource.cardId === cardId &&
+          taskDragSource.taskIndex === taskIndex
+        )
+      ) {
+        e.preventDefault();
+        clearTaskDragOverClasses();
+        if (taskDragSource.cardId === cardId) {
+          taskItemCallbacks.onTaskReorder(
+            cardId,
+            taskDragSource.taskIndex,
+            taskIndex,
+          );
+        } else {
+          taskItemCallbacks.onTaskMoveToCard(
+            taskDragSource.cardId,
+            taskDragSource.taskIndex,
+            cardId,
+            taskIndex,
+          );
+        }
+        taskDragSource = null;
+        return;
+      }
+    }
+
+    const emptyTaskList = target.closest(
+      ".dashboard-task-list",
+    ) as HTMLElement | null;
+    if (emptyTaskList && taskDragSource) {
+      const containerCard = emptyTaskList.closest(
+        ".dashboard-card",
+      ) as HTMLElement | null;
+      if (
+        containerCard &&
+        containerCard.dataset.cardId !== taskDragSource.cardId
+      ) {
+        const numTasks = emptyTaskList.querySelectorAll(
+          ".dashboard-task-item",
+        ).length;
+        taskItemCallbacks.onTaskMoveToCard(
+          taskDragSource.cardId,
+          taskDragSource.taskIndex,
+          containerCard.dataset.cardId ?? "",
+          numTasks,
+        );
+        clearTaskDragOverClasses();
+        taskDragSource = null;
+        return;
+      }
+    }
+
+    const projectItem = target.closest(
+      ".dashboard-project-item",
+    ) as HTMLElement | null;
+    if (projectItem && projectItemDragSource) {
+      const cardId = projectItem.dataset.cardId;
+      const itemIndex = parseInt(projectItem.dataset.itemIndex ?? "-1", 10);
+      if (
+        cardId &&
+        !isNaN(itemIndex) &&
+        !(
+          projectItemDragSource.cardId === cardId &&
+          projectItemDragSource.itemIndex === itemIndex
+        )
+      ) {
+        e.preventDefault();
+        clearTaskDragOverClasses();
+        if (projectItemDragSource.cardId === cardId) {
+          taskItemCallbacks.onProjectItemReorder(
+            cardId,
+            projectItemDragSource.itemIndex,
+            itemIndex,
+          );
+        } else {
+          taskItemCallbacks.onProjectItemMoveToCard(
+            projectItemDragSource.cardId,
+            projectItemDragSource.itemIndex,
+            cardId,
+            itemIndex,
+          );
+        }
+        projectItemDragSource = null;
+        return;
+      }
+    }
+
+    const emptyProjectList = target.closest(
+      ".dashboard-project-list",
+    ) as HTMLElement | null;
+    if (emptyProjectList && projectItemDragSource) {
+      const containerCard = emptyProjectList.closest(
+        ".dashboard-card",
+      ) as HTMLElement | null;
+      if (
+        containerCard &&
+        containerCard.dataset.cardId !== projectItemDragSource.cardId
+      ) {
+        taskItemCallbacks.onProjectItemMoveToCard(
+          projectItemDragSource.cardId,
+          projectItemDragSource.itemIndex,
+          containerCard.dataset.cardId ?? "",
+          0,
+        );
+        clearTaskDragOverClasses();
+        projectItemDragSource = null;
+        return;
+      }
+    }
+  });
+}
 
 const VAULT_FILE_EXTS = new Set([
   "md",
@@ -2975,9 +3302,15 @@ function renderCard(
     settings,
   );
 
-  // Allow dropping files from vault or project items onto project-like card body
   if (isProjectLike) {
     body.addEventListener("dragover", (e) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(
+          ".dashboard-project-item, .dashboard-task-item, .dashboard-project-list, .dashboard-task-list",
+        )
+      )
+        return;
       e.preventDefault();
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = projectItemDragSource ? "move" : "copy";
@@ -2992,14 +3325,20 @@ function renderCard(
     });
 
     body.addEventListener("drop", (e) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest(
+          ".dashboard-project-item, .dashboard-task-item, .dashboard-project-list, .dashboard-task-list",
+        )
+      )
+        return;
       e.preventDefault();
       body.removeClass("dashboard-card-body--doc-drop");
 
-      // Project item cross-card move
+      // Project item cross-card move (onto card body directly)
       if (projectItemDragSource) {
         if (projectItemDragSource.cardId === card.id) return;
         e.stopPropagation();
-        // Count depth-0 items in this card
         const numItems = card.body
           ? card.body
               .split("\n")
@@ -3016,7 +3355,6 @@ function renderCard(
         return;
       }
 
-      // File drop from vault
       const raw = e.dataTransfer?.getData("text/plain");
       if (!raw) return;
       const filePath = raw.trim();
@@ -3132,36 +3470,11 @@ function renderTaskBody(
   callbacks: RenderCallbacks,
   app: App,
 ): void {
+  taskItemCallbacks = callbacks;
+  ensureItemDocListeners();
+
   const list = container.createDiv({ cls: "dashboard-task-list" });
   list.dataset.cardId = card.id;
-
-  // When the list is empty, make it a drop target so tasks can be dragged in
-  list.addEventListener("dragover", (e) => {
-    if (!taskDragSource) return;
-    if (taskDragSource.cardId === card.id) return;
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    list.addClass("dashboard-task-list--drop-target");
-  });
-
-  list.addEventListener("dragleave", (e) => {
-    if (!list.contains(e.relatedTarget as Node)) {
-      list.removeClass("dashboard-task-list--drop-target");
-    }
-  });
-
-  list.addEventListener("drop", (e) => {
-    e.preventDefault();
-    list.removeClass("dashboard-task-list--drop-target");
-    if (!taskDragSource) return;
-    if (taskDragSource.cardId === card.id) return;
-    callbacks.onTaskMoveToCard(
-      taskDragSource.cardId,
-      taskDragSource.taskIndex,
-      card.id,
-      card.tasks.length,
-    );
-  });
 
   card.tasks.forEach((task, index) => {
     const item = list.createDiv({ cls: "dashboard-task-item" });
@@ -3274,73 +3587,6 @@ function renderTaskBody(
       callbacks,
     );
     item.appendChild(reminderBtn);
-
-    item.addEventListener("dragstart", (e) => {
-      e.stopPropagation();
-      taskDragSource = { cardId: card.id, taskIndex: index };
-      item.addClass("dashboard-task-item--dragging");
-      if (e.dataTransfer) {
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", String(index));
-      }
-    });
-
-    item.addEventListener("dragend", () => {
-      item.removeClass("dashboard-task-item--dragging");
-      document
-        .querySelectorAll(".dashboard-task-item--drag-over")
-        .forEach((el) => {
-          (el as HTMLElement).removeClass("dashboard-task-item--drag-over");
-        });
-      taskDragSource = null;
-    });
-
-    item.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!taskDragSource) return;
-      if (
-        taskDragSource.cardId === card.id &&
-        taskDragSource.taskIndex === index
-      )
-        return;
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "move";
-      }
-      document
-        .querySelectorAll(".dashboard-task-item--drag-over")
-        .forEach((el) => {
-          (el as HTMLElement).removeClass("dashboard-task-item--drag-over");
-        });
-      item.addClass("dashboard-task-item--drag-over");
-    });
-
-    item.addEventListener("dragleave", () => {
-      item.removeClass("dashboard-task-item--drag-over");
-    });
-
-    item.addEventListener("drop", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      item.removeClass("dashboard-task-item--drag-over");
-      if (!taskDragSource) return;
-      if (
-        taskDragSource.cardId === card.id &&
-        taskDragSource.taskIndex === index
-      )
-        return;
-
-      if (taskDragSource.cardId === card.id) {
-        callbacks.onTaskReorder(card.id, taskDragSource.taskIndex, index);
-      } else {
-        callbacks.onTaskMoveToCard(
-          taskDragSource.cardId,
-          taskDragSource.taskIndex,
-          card.id,
-          index,
-        );
-      }
-    });
   });
 
   const addRow = container.createDiv({ cls: "dashboard-task-add" });
@@ -3544,6 +3790,9 @@ function renderProjectBody(
   callbacks: RenderCallbacks,
   app: App,
 ): void {
+  taskItemCallbacks = callbacks;
+  ensureItemDocListeners();
+
   // Draggable project items (todo-style):
   //   Each depth-0 line is a draggable item showing title + child count
   //   depth>=1 sub-items are hidden, counted as "+N"
@@ -3575,18 +3824,27 @@ function renderProjectBody(
   ) {
     // projectDocs is array of {path, children}
     for (const doc of projectDocObjects) {
+      // The data model can carry `undefined` entries in legacy
+      // states (sparse splice holes, drag pre-bounds-check code
+      // paths, partial deserialization). Skip anything that isn't
+      // a real object with a string `path` — crashing renderCard
+      // would tear down the entire dashboard for one bad row.
+      if (!doc || typeof doc !== "object") continue;
+      const d = doc as { path?: unknown; children?: unknown };
+      if (typeof d.path !== "string" || d.path.length === 0) continue;
       // `doc.path` may be a plain vault path (legacy, e.g.
       // "Folder/Note.md") or a value with leading text + inline
       // wikilink (new behaviour, e.g. "11[[Note]]"). For the
       // latter we must NOT wrap it in another [[...]] — doing so
       // would produce nested wikilinks and drop the leading text.
-      if (doc.path.includes("[[")) {
-        lines.push(`- ${doc.path}`);
+      if (d.path.includes("[[")) {
+        lines.push(`- ${d.path}`);
       } else {
-        lines.push(`- [[${doc.path}]]`);
+        lines.push(`- [[${d.path}]]`);
       }
-      if (Array.isArray(doc.children)) {
-        for (const child of doc.children) {
+      if (Array.isArray(d.children)) {
+        for (const child of d.children) {
+          if (typeof child !== "string") continue;
           lines.push(`\t- [[${child}]]`);
         }
       }
@@ -3594,6 +3852,7 @@ function renderProjectBody(
   } else if (Array.isArray(projectDocPaths) && projectDocPaths.length > 0) {
     // projectDocs is array of plain paths
     for (const p of projectDocPaths) {
+      if (typeof p !== "string") continue;
       if (p.includes("[[")) {
         lines.push(`- ${p}`);
       } else {
@@ -3601,33 +3860,6 @@ function renderProjectBody(
       }
     }
   }
-
-  // Empty-list drop target for moving items in from other cards
-  list.addEventListener("dragover", (e) => {
-    if (!projectItemDragSource) return;
-    if (projectItemDragSource.cardId === card.id) return;
-    e.preventDefault();
-    if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-    list.addClass("dashboard-task-list--drop-target");
-  });
-  list.addEventListener("dragleave", (e) => {
-    if (!list.contains(e.relatedTarget as Node)) {
-      list.removeClass("dashboard-task-list--drop-target");
-    }
-  });
-  list.addEventListener("drop", (e) => {
-    e.preventDefault();
-    list.removeClass("dashboard-task-list--drop-target");
-    if (!projectItemDragSource) return;
-    if (projectItemDragSource.cardId === card.id) return;
-    e.stopPropagation();
-    callbacks.onProjectItemMoveToCard(
-      projectItemDragSource.cardId,
-      projectItemDragSource.itemIndex,
-      card.id,
-      0,
-    );
-  });
 
   if (lines.length > 0) {
     // (Re-use the local `lines` variable that was already built above
@@ -3732,79 +3964,6 @@ function renderProjectBody(
       // note itself) to drill in if they need to see the children.
       // The children array on `title` is still populated by the
       // counting loop above so that the badge value stays correct.
-
-      // ----- Drag events -----
-      item.addEventListener("dragstart", (e) => {
-        e.stopPropagation();
-        projectItemDragSource = { cardId: card.id, itemIndex: index };
-        item.addClass("dashboard-project-item--dragging");
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", title.cleanText);
-        }
-      });
-
-      item.addEventListener("dragend", () => {
-        item.removeClass("dashboard-project-item--dragging");
-        document
-          .querySelectorAll(".dashboard-project-item--drag-over")
-          .forEach((el) => {
-            (el as HTMLElement).removeClass(
-              "dashboard-project-item--drag-over",
-            );
-          });
-        projectItemDragSource = null;
-      });
-
-      item.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        if (!projectItemDragSource) return;
-        if (
-          projectItemDragSource.cardId === card.id &&
-          projectItemDragSource.itemIndex === index
-        )
-          return;
-        if (e.dataTransfer) e.dataTransfer.dropEffect = "move";
-        document
-          .querySelectorAll(".dashboard-project-item--drag-over")
-          .forEach((el) => {
-            (el as HTMLElement).removeClass(
-              "dashboard-project-item--drag-over",
-            );
-          });
-        item.addClass("dashboard-project-item--drag-over");
-      });
-
-      item.addEventListener("dragleave", () => {
-        item.removeClass("dashboard-project-item--drag-over");
-      });
-
-      item.addEventListener("drop", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        item.removeClass("dashboard-project-item--drag-over");
-        if (!projectItemDragSource) return;
-        if (
-          projectItemDragSource.cardId === card.id &&
-          projectItemDragSource.itemIndex === index
-        )
-          return;
-
-        if (projectItemDragSource.cardId === card.id) {
-          callbacks.onProjectItemReorder(
-            card.id,
-            projectItemDragSource.itemIndex,
-            index,
-          );
-        } else {
-          callbacks.onProjectItemMoveToCard(
-            projectItemDragSource.cardId,
-            projectItemDragSource.itemIndex,
-            card.id,
-            index,
-          );
-        }
-      });
     });
   } // end if (lines.length > 0)
 

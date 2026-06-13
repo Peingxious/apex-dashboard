@@ -94,6 +94,14 @@ export class DashboardView extends ItemView {
   private embeddedData: DashboardData | null = null;
   private embeddedDataCache = new Map<string, DashboardData>();
 
+  // Suppress reload-on-modify when WE just wrote the embedded file
+  // ourselves via saveEmbeddedAndRefresh. Without this flag the
+  // vault 'modify' event would re-parse the file and re-render the
+  // view a second time, racing with the in-place data mutation
+  // and producing duplicate render cycles (and stale data in the
+  // brief window between the two renders).
+  private isWritingEmbeddedFile = false;
+
   /** Get current active tab path from settings */
   get embeddedNotePath(): string | null {
     return this.plugin.settings.activeEmbeddedNoteTab ?? null;
@@ -1164,11 +1172,25 @@ export class DashboardView extends ItemView {
         to: number,
       ) => {
         const found = self.findEmbeddedCard(cardId);
-        if (found?.card.projectDocs) {
-          const [item] = found.card.projectDocs.splice(from, 1);
-          found.card.projectDocs.splice(to, 0, item);
-          await self.saveEmbeddedAndRefresh();
+        if (!found) return;
+        // Keep projectDocs AND body in sync — see
+        // onProjectItemReorder for the full reasoning.
+        if (!found.card.projectDocs) found.card.projectDocs = [];
+        if (
+          from < 0 ||
+          from >= found.card.projectDocs.length ||
+          to < 0 ||
+          to > found.card.projectDocs.length
+        ) {
+          return;
         }
+        const [item] = found.card.projectDocs.splice(from, 1);
+        if (!item) return;
+        found.card.projectDocs.splice(to, 0, item);
+        found.card.body = self.synthesizeProjectBodyFromDocs(
+          found.card.projectDocs,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onDocMoveToCard: async (
         srcCardId: string,
@@ -1178,12 +1200,29 @@ export class DashboardView extends ItemView {
       ) => {
         const srcFound = self.findEmbeddedCard(srcCardId);
         const destFound = self.findEmbeddedCard(destCardId);
-        if (srcFound?.card.projectDocs && destFound) {
-          const [doc] = srcFound.card.projectDocs.splice(docIndex, 1);
-          if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
-          destFound.card.projectDocs.splice(destIndex, 0, doc);
-          await self.saveEmbeddedAndRefresh();
+        if (!srcFound || !destFound) return;
+        // See onProjectItemMoveToCard — same body/projectDocs
+        // lockstep requirement.
+        if (!srcFound.card.projectDocs) srcFound.card.projectDocs = [];
+        if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
+        if (
+          docIndex < 0 ||
+          docIndex >= srcFound.card.projectDocs.length ||
+          destIndex < 0 ||
+          destIndex > destFound.card.projectDocs.length
+        ) {
+          return;
         }
+        const [doc] = srcFound.card.projectDocs.splice(docIndex, 1);
+        if (!doc) return;
+        destFound.card.projectDocs.splice(destIndex, 0, doc);
+        srcFound.card.body = self.synthesizeProjectBodyFromDocs(
+          srcFound.card.projectDocs,
+        );
+        destFound.card.body = self.synthesizeProjectBodyFromDocs(
+          destFound.card.projectDocs,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectDocsAdd: async (card: DashboardCard, docPath: string) => {
         const found = self.findEmbeddedCard(card.id);
@@ -1303,11 +1342,36 @@ export class DashboardView extends ItemView {
         toIndex: number,
       ) => {
         const found = self.findEmbeddedCard(cardId);
-        if (found?.card.projectDocs) {
-          const [item] = found.card.projectDocs.splice(fromIndex, 1);
-          found.card.projectDocs.splice(toIndex, 0, item);
-          await self.saveEmbeddedAndRefresh();
+        if (!found) return;
+        // Mutate BOTH the structured projectDocs (used by some code
+        // paths) and the canonical body (used by the renderer). The
+        // previous implementation only touched projectDocs, but the
+        // renderer reads `card.body` when it is non-empty — and
+        // `serialize()` in parser.ts also writes back from `body`
+        // (it only falls back to projectDocs when body is empty).
+        // Result: the drag mutation was lost on the next save and
+        // re-render, so the order "snapped back" — appearing as
+        // "drag doesn't work in embedded mode".
+        if (!found.card.projectDocs) found.card.projectDocs = [];
+        // Bounds check: stale drag indices (e.g. the renderer fired a
+        // drop based on a DOM snapshot that no longer matches the
+        // current data) must not corrupt the array by splicing in
+        // an `undefined` element. Bail out cleanly instead.
+        if (
+          fromIndex < 0 ||
+          fromIndex >= found.card.projectDocs.length ||
+          toIndex < 0 ||
+          toIndex > found.card.projectDocs.length
+        ) {
+          return;
         }
+        const [movedDoc] = found.card.projectDocs.splice(fromIndex, 1);
+        if (!movedDoc) return;
+        found.card.projectDocs.splice(toIndex, 0, movedDoc);
+        found.card.body = self.synthesizeProjectBodyFromDocs(
+          found.card.projectDocs,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectItemMoveToCard: async (
         srcCardId: string,
@@ -1317,12 +1381,33 @@ export class DashboardView extends ItemView {
       ) => {
         const srcFound = self.findEmbeddedCard(srcCardId);
         const destFound = self.findEmbeddedCard(destCardId);
-        if (srcFound?.card.projectDocs && destFound) {
-          const [item] = srcFound.card.projectDocs.splice(itemIndex, 1);
-          if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
-          destFound.card.projectDocs.splice(destIndex, 0, item);
-          await self.saveEmbeddedAndRefresh();
+        if (!srcFound || !destFound) return;
+        // See onProjectItemReorder — must mirror the body in lockstep
+        // with projectDocs, otherwise the next save round-trips back
+        // to the pre-drag order.
+        if (!srcFound.card.projectDocs) srcFound.card.projectDocs = [];
+        if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
+        // Bounds-check both sides — same reason as
+        // onProjectItemReorder. Stale drag indices must not inject
+        // `undefined` into the array.
+        if (
+          itemIndex < 0 ||
+          itemIndex >= srcFound.card.projectDocs.length ||
+          destIndex < 0 ||
+          destIndex > destFound.card.projectDocs.length
+        ) {
+          return;
         }
+        const [movedDoc] = srcFound.card.projectDocs.splice(itemIndex, 1);
+        if (!movedDoc) return;
+        destFound.card.projectDocs.splice(destIndex, 0, movedDoc);
+        srcFound.card.body = self.synthesizeProjectBodyFromDocs(
+          srcFound.card.projectDocs,
+        );
+        destFound.card.body = self.synthesizeProjectBodyFromDocs(
+          destFound.card.projectDocs,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectItemDelete: async (
         cardId: string,
@@ -1532,6 +1617,67 @@ export class DashboardView extends ItemView {
     return null;
   }
 
+  /**
+   * Build a markdown body string from a list of projectDocs nodes.
+   * Mirrors the inverse of parser.ts#parseProjectDocs so that drag
+   * mutations written through this path produce the same markdown
+   * shape that the next parse() call will read back. Used to keep
+   * `card.body` and `card.projectDocs` in lockstep — see
+   * onProjectItemReorder / onProjectItemMoveToCard.
+   *
+   * Format:
+   *   - [[path|or-prefixed text]]           (top-level)
+   *   \t- [[child]]                          (each child, one tab indent)
+   */
+  private synthesizeProjectBodyFromDocs(
+    projectDocs: import("./types").ProjectDocNode[],
+  ): string {
+    // Fast path: a non-array (or empty) input is most often the
+    // result of a project that has been cleared. Returning an
+    // empty body means serialize() will also skip the body
+    // branch, which is the correct canonical state.
+    if (!Array.isArray(projectDocs) || projectDocs.length === 0) return "";
+    const lines: string[] = [];
+    const renderDoc = (
+      doc: unknown,
+      depth: number,
+    ): void => {
+      // Defensive: previous versions of this method assumed every
+      // entry was a well-formed ProjectDocNode, but the data model
+      // has been mutated by several code paths (drag reorder,
+      // delete, deserialize from file, etc.) and at least one of
+      // those paths can produce `undefined` entries or entries
+      // whose `path` is missing/empty. Treat the whole shape as
+      // untrusted and skip anything that isn't a real object with
+      // a string `path`. Losing one body line is strictly better
+      // than crashing the entire drop handler.
+      if (!doc || typeof doc !== "object") return;
+      const d = doc as { path?: unknown; children?: unknown };
+      if (typeof d.path !== "string" || d.path.length === 0) return;
+      const indent = "\t".repeat(depth);
+      // path may already include the [[ ]] wrapper plus leading
+      // text (e.g. "11[[En3]]") — only wrap a bare path.
+      const path = d.path.includes("[[")
+        ? d.path
+        : d.path.includes(".md")
+          ? `[[${d.path.replace(/\.md$/, "")}]]`
+          : `[[${d.path}]]`;
+      lines.push(`${indent}- ${path}`);
+      if (Array.isArray(d.children)) {
+        for (const child of d.children) {
+          renderDoc(child, depth + 1);
+        }
+      }
+    };
+    for (const doc of projectDocs) {
+      // Filter out sparse holes from past splices / deletes so the
+      // recursive renderer never sees an undefined doc.
+      if (doc == null) continue;
+      renderDoc(doc, 0);
+    }
+    return lines.join("\n");
+  }
+
   private deleteEmbeddedCardById(cardId: string): void {
     if (!this.embeddedData) return;
     for (const col of this.embeddedData.columns) {
@@ -1551,8 +1697,20 @@ export class DashboardView extends ItemView {
     const file = this.app.vault.getAbstractFileByPath(this.embeddedNotePath);
     if (file instanceof TFile) {
       try {
+        // Suppress the 'modify' event listener from re-parsing the
+        // file and re-rendering — we already hold the post-mutation
+        // embeddedData and are about to render from it directly.
+        this.isWritingEmbeddedFile = true;
         await this.app.vault.modify(file, newContent);
+        // Keep the flag set through the next microtask so the
+        // 'modify' event (fired by vault.modify) sees it. Reset
+        // on the next macrotask so external edits (e.g. from the
+        // Obsidian editor) still trigger a normal reload.
+        setTimeout(() => {
+          this.isWritingEmbeddedFile = false;
+        }, 0);
       } catch (e) {
+        this.isWritingEmbeddedFile = false;
         console.error("[apex-dashboard] Error saving embedded note:", e);
         new Notice(t("noteDash.saveError"));
       }
@@ -2466,6 +2624,20 @@ export class DashboardView extends ItemView {
       // reflect the latest markdown content. Without this, the
       // embedded dashboard keeps showing stale data until the user
       // manually re-clicks the tab or restarts Obsidian.
+      //
+      // Skip the reload when this plugin itself just wrote the
+      // embedded file (saveEmbeddedAndRefresh). In that case the
+      // in-memory embeddedData is already the post-mutation state
+      // and we render from it directly; re-parsing would race
+      // with the in-flight render and produce duplicate
+      // render cycles.
+      if (
+        this.isWritingEmbeddedFile &&
+        this.embeddedNotePath &&
+        file.path === this.embeddedNotePath
+      ) {
+        return;
+      }
       if (this.embeddedNotePath && file.path === this.embeddedNotePath) {
         void this.reloadEmbeddedFromDisk();
       }
