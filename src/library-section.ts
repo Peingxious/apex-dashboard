@@ -230,6 +230,7 @@ let activeCalendarPopup: HTMLElement | null = null;
 
 function closeCalendarPopup(): void {
   if (activeCalendarPopup) {
+    (activeCalendarPopup as HTMLElement & { __cleanup?: () => void }).__cleanup?.();
     activeCalendarPopup.remove();
     activeCalendarPopup = null;
   }
@@ -245,6 +246,7 @@ function showCalendarPopup(
   const popup = document.body.createDiv({
     cls: "dashboard-task-reminder-popup dashboard-library-calendar-popup",
   });
+  let outsideClickTimer: ReturnType<typeof setTimeout> | null = null;
 
   const dashboardRoot = anchor.closest(
     ".peingxious-dashboard-root",
@@ -415,10 +417,19 @@ function showCalendarPopup(
       !anchor.contains(ev.target as Node)
     ) {
       closeCalendarPopup();
-      document.removeEventListener("mousedown", outsideClick);
     }
   };
-  setTimeout(() => document.addEventListener("mousedown", outsideClick), 0);
+  const cleanupOutsideClick = () => {
+    if (outsideClickTimer) {
+      clearTimeout(outsideClickTimer);
+      outsideClickTimer = null;
+    }
+    document.removeEventListener("mousedown", outsideClick);
+  };
+  (popup as HTMLElement & { __cleanup?: () => void }).__cleanup = cleanupOutsideClick;
+  outsideClickTimer = setTimeout(() => {
+    document.addEventListener("mousedown", outsideClick);
+  }, 0);
 
   activeCalendarPopup = popup;
   renderCalendar();
@@ -527,6 +538,16 @@ export function renderLibrarySection(
 
   // Popup
   let filterPopup: HTMLElement | null = null;
+  let docClickInstalled = false;
+  const onDocClick = (e: MouseEvent) => {
+    if (
+      filterPopup &&
+      !filterPopup.contains(e.target as Node) &&
+      !filterBtn.contains(e.target as Node)
+    ) {
+      closePopup();
+    }
+  };
 
   function applyQuickFilter(): void {
     config.quickDateFilter =
@@ -545,6 +566,10 @@ export function renderLibrarySection(
     filterPopup = document.body.createDiv({
       cls: "dashboard-library-filter-popup",
     });
+    if (!docClickInstalled) {
+      document.addEventListener("click", onDocClick);
+      docClickInstalled = true;
+    }
 
     // Inherit theme from dashboard
     const dashboardRoot = filterBtn.closest(
@@ -664,6 +689,10 @@ export function renderLibrarySection(
       filterPopup.remove();
       filterPopup = null;
     }
+    if (docClickInstalled) {
+      document.removeEventListener("click", onDocClick);
+      docClickInstalled = false;
+    }
   }
 
   function renderFilterTag(): void {
@@ -697,16 +726,6 @@ export function renderLibrarySection(
       closePopup();
     } else {
       openPopup();
-    }
-  });
-
-  document.addEventListener("click", (e) => {
-    if (
-      filterPopup &&
-      !filterPopup.contains(e.target as Node) &&
-      !filterBtn.contains(e.target as Node)
-    ) {
-      closePopup();
     }
   });
 

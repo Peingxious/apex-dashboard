@@ -151,12 +151,6 @@ function ensureItemDocListeners() {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(taskIndex));
       }
-      console.log(
-        "[dbg-renderer] taskItem dragstart cardId=" +
-          cardId +
-          " idx=" +
-          taskIndex,
-      );
       return;
     }
 
@@ -175,12 +169,6 @@ function ensureItemDocListeners() {
         e.dataTransfer.effectAllowed = "move";
         e.dataTransfer.setData("text/plain", String(itemIndex));
       }
-      console.log(
-        "[dbg-renderer] projectItem dragstart cardId=" +
-          cardId +
-          " idx=" +
-          itemIndex,
-      );
       return;
     }
   });
@@ -1315,10 +1303,49 @@ export function renderSidebarCountdown(
 
   // Auto-refresh with flip animation
   let prevVal = currentVal;
-  const timer = setInterval(() => {
+  const doc = content.ownerDocument;
+  const priorCleanup = (
+    content as HTMLElement & { __countdownCleanup?: () => void }
+  ).__countdownCleanup;
+  priorCleanup?.();
+
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let flipTimeout: ReturnType<typeof setTimeout> | null = null;
+  let domObserver: MutationObserver | null = null;
+
+  const cleanup = () => {
+    if (timer) {
+      clearInterval(timer);
+      timer = null;
+    }
+    if (flipTimeout) {
+      clearTimeout(flipTimeout);
+      flipTimeout = null;
+    }
+    if (domObserver) {
+      domObserver.disconnect();
+      domObserver = null;
+    }
+    (
+      content as HTMLElement & { __countdownCleanup?: () => void }
+    ).__countdownCleanup = undefined;
+  };
+
+  (
+    content as HTMLElement & { __countdownCleanup?: () => void }
+  ).__countdownCleanup = cleanup;
+
+  if (typeof MutationObserver !== "undefined" && doc.body) {
+    domObserver = new MutationObserver(() => {
+      if (!doc.body.contains(content)) cleanup();
+    });
+    domObserver.observe(doc.body, { childList: true, subtree: true });
+  }
+
+  timer = setInterval(() => {
     const now2 = new Date();
     if (now2 >= target) {
-      clearInterval(timer);
+      cleanup();
       content.empty();
       content.createDiv({
         cls: "dashboard-sidebar-countdown-expired",
@@ -1337,10 +1364,10 @@ export function renderSidebarCountdown(
       prevVal = newVal;
       valueEl.textContent = String(newVal);
       valueEl.addClass("dashboard-sidebar-countdown-value--flip");
-      setTimeout(
-        () => valueEl.removeClass("dashboard-sidebar-countdown-value--flip"),
-        400,
-      );
+      if (flipTimeout) clearTimeout(flipTimeout);
+      flipTimeout = setTimeout(() => {
+        valueEl.removeClass("dashboard-sidebar-countdown-value--flip");
+      }, 400);
     }
   }, 60000);
 }
@@ -3220,9 +3247,7 @@ async function renderSection(
         settings,
       );
       cardsContainer.appendChild(cardEl);
-    } catch (err) {
-      console.error("[Dashboard] renderCard error:", card.id, card.type, err);
-    }
+    } catch {}
   }
 
   // When ALL cards in the column are archived, show a small
@@ -3330,11 +3355,7 @@ function renderCard(
     ) {
       titleEl.addClass("dashboard-card-title--linked");
     }
-  } catch (err) {
-    console.error(
-      "[peingxious-dashboard] title renderTextWithLinks FAILED:",
-      err,
-    );
+  } catch {
     titleEl.setText(card.title);
   }
 
@@ -3848,9 +3869,6 @@ function renderTaskBody(
     attr: { type: "text", placeholder: t("renderer.addTask") },
   });
   const taskSuggest = attachFileSuggest(input, app, (value) => {
-    // #region debug-point taskadd-onpick
-    console.log("[dbg-renderer] taskadd onPick value=" + JSON.stringify(value));
-    // #endregion debug-point taskadd-onpick
     // `value` is the REPLACED input content (any leading text the
     // user typed before `[[` is preserved, and the picked file's
     // basename has been written in as `[[basename]]`). Using it as
@@ -3863,22 +3881,10 @@ function renderTaskBody(
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && taskSuggest.tryPickSelection()) {
-      // #region debug-point taskadd-enter-arrow
-      console.log(
-        "[dbg-renderer] taskadd Enter via arrow-pick value=" +
-          JSON.stringify(input.value),
-      );
-      // #endregion debug-point taskadd-enter-arrow
       e.preventDefault();
       return;
     }
     if (e.key === "Enter" && input.value.trim()) {
-      // #region debug-point taskadd-enter-fallback
-      console.log(
-        "[dbg-renderer] taskadd Enter fallback value=" +
-          JSON.stringify(input.value.trim()),
-      );
-      // #endregion debug-point taskadd-enter-fallback
       callbacks.onTaskAdd(card.id, input.value.trim());
       input.value = "";
     }
@@ -4237,14 +4243,6 @@ function renderProjectBody(
     attr: { type: "text", placeholder: t("renderer.addNote") },
   });
   const fileSuggest = attachFileSuggest(input, app, (value, file) => {
-    // #region debug-point projectdocs-onpick
-    console.log(
-      "[dbg-renderer] projectdocs onPick value=" +
-        JSON.stringify(value) +
-        " file.path=" +
-        JSON.stringify(file.path),
-    );
-    // #endregion debug-point projectdocs-onpick
     // Use `value` (the full input text after replacement, e.g.
     // "11[[En3]]") so leading text the user typed before the
     // wikilink is preserved. Previous code used `file.path` which
@@ -4255,22 +4253,10 @@ function renderProjectBody(
   });
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && fileSuggest.tryPickSelection()) {
-      // #region debug-point projectdocs-enter-arrow
-      console.log(
-        "[dbg-renderer] projectdocs Enter via arrow-pick value=" +
-          JSON.stringify(input.value),
-      );
-      // #endregion debug-point projectdocs-enter-arrow
       e.preventDefault();
       return;
     }
     if (e.key === "Enter" && input.value.trim()) {
-      // #region debug-point projectdocs-enter-fallback
-      console.log(
-        "[dbg-renderer] projectdocs Enter fallback value=" +
-          JSON.stringify(input.value.trim()),
-      );
-      // #endregion debug-point projectdocs-enter-fallback
       callbacks.onProjectDocsAdd(card, input.value.trim());
       input.value = "";
     }
@@ -4456,7 +4442,6 @@ async function renderTodoPlusBody(
     const value = rawValue.trim();
     if (!value) return;
     void addTodoPlusItem(app, slice.file, slice.heading, value).catch((e) => {
-      console.error("[apex-dashboard] TodoPlus add failed", e);
       new Notice(
         t("renderer.todoPlusWriteError", { message: (e as Error).message }),
       );
@@ -4556,7 +4541,6 @@ function renderTodoPlusItem(
     const newChecked = checkbox.checked;
     void setTodoPlusItemChecked(app, slice.file, item, newChecked).catch(
       (e) => {
-        console.error("[apex-dashboard] TodoPlus toggle failed", e);
         new Notice(
           t("renderer.todoPlusWriteError", { message: (e as Error).message }),
         );
@@ -4593,7 +4577,6 @@ function renderTodoPlusItem(
       const newText = textarea.value.trim();
       if (save && newText && newText !== item.text) {
         void editTodoPlusItem(app, slice.file, item, newText).catch((err) => {
-          console.error("[apex-dashboard] TodoPlus edit failed", err);
           new Notice(
             t("renderer.todoPlusWriteError", {
               message: (err as Error).message,
@@ -4633,7 +4616,6 @@ function renderTodoPlusItem(
   delBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     void removeTodoPlusItem(app, slice.file, item).catch((err) => {
-      console.error("[apex-dashboard] TodoPlus delete failed", err);
       new Notice(
         t("renderer.todoPlusWriteError", { message: (err as Error).message }),
       );
@@ -5342,20 +5324,18 @@ function renderWikilink(
         displayName = noteName;
       }
     } catch (err) {
-      console.error(
-        "[peingxious-dashboard] renderWikilink getSearchableFiles FAILED:",
-        err,
-      );
       displayName = noteName;
     }
   }
 
-  const link = container.createSpan({
-    cls: "dashboard-wikilink internal-link",
+  const link = container.createEl("a", {
+    cls: "dashboard-wikilink internal-link data-link-icon data-link-icon-after data-link-text",
     text: displayName,
     attr: {
       "data-href": fragment ? `${path}#${fragment}` : path,
       href: fragment ? `${path}#${fragment}` : path,
+      target: "_blank",
+      rel: "noopener nofollow",
     },
   });
 
@@ -5363,12 +5343,23 @@ function renderWikilink(
 
   link.addEventListener("click", (e) => {
     e.stopPropagation();
+    e.preventDefault();
     // Use native Obsidian link resolution for proper fragment/heading navigation
     app.workspace.openLinkText(linkText, "", false, { active: true });
   });
 
+  try {
+    const sourcePath = app.workspace.getActiveFile()?.path ?? "";
+    const linkPath = fragment ? path : linkText;
+    const file = app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+    if (file) {
+      link.setAttribute("data-link-path", file.path);
+      link.style.setProperty("--data-link-path", file.path);
+    }
+  } catch {}
+
   // Native right-click context menu. The dashboard renders wikilinks as
-  // plain spans, not via the markdown post-processor, so Obsidian's
+  // custom DOM, not via the markdown post-processor, so Obsidian's
   // global "show on internal-link" hook never sees them. We re-create
   // the *file* context menu by hand — the one the user gets when
   // right-clicking a note in the File Explorer (Open in new tab / pane
@@ -5450,44 +5441,36 @@ function renderWikilink(
   // post-processor does in the editor. Page Preview then takes over
   // and shows the same native popover (fragment navigation, embeds,
   // "Open" / "Open to the right" all work as expected).
-  let hoverTimer: number | null = null;
-  const clearHoverTimer = (): void => {
-    if (hoverTimer !== null) {
-      window.clearTimeout(hoverTimer);
-      hoverTimer = null;
-    }
-  };
-  link.addEventListener("mouseover", (event) => {
-    if (hoverTimer !== null) return;
-    // If the link was already detached (e.g. mid-render swap), bail.
-    if (!link.isConnected) return;
-    hoverTimer = window.setTimeout(() => {
-      hoverTimer = null;
-      // The link may have been re-rendered (and thus detached)
-      // during the delay window; in that case we must NOT fire the
-      // event on a stale node.
+  if (!fragment || !fragment.startsWith("^")) {
+    let hoverTimer: number | null = null;
+    const clearHoverTimer = (): void => {
+      if (hoverTimer !== null) {
+        window.clearTimeout(hoverTimer);
+        hoverTimer = null;
+      }
+    };
+    link.addEventListener("mouseover", (event) => {
+      if (hoverTimer !== null) return;
       if (!link.isConnected) return;
-      // Cast through unknown — "link-hover" is dispatched by
-      // Obsidian internals and isn't in the public .d.ts, but every
-      // Page Preview install listens for it.
-      (
-        app.workspace as unknown as {
-          trigger: (
-            type: string,
-            evt: MouseEvent,
-            target: HTMLElement,
-            linkText: string,
-            source: string,
-          ) => void;
-        }
-      ).trigger("link-hover", event, link, linkText, "peingxious-dashboard");
-    }, 200);
-  });
-  link.addEventListener("mouseout", clearHoverTimer);
-  // If the user mouses out, hits a key, or the link gets re-rendered
-  // before the timer fires, drop it so we don't pop a preview that
-  // no longer matches the cursor position.
-  link.addEventListener("keydown", clearHoverTimer);
+      hoverTimer = window.setTimeout(() => {
+        hoverTimer = null;
+        if (!link.isConnected) return;
+        (
+          app.workspace as unknown as {
+            trigger: (
+              type: string,
+              evt: MouseEvent,
+              target: HTMLElement,
+              linkText: string,
+              source: string,
+            ) => void;
+          }
+        ).trigger("link-hover", event, link, linkText, "peingxious-dashboard");
+      }, 200);
+    });
+    link.addEventListener("mouseout", clearHoverTimer);
+    link.addEventListener("keydown", clearHoverTimer);
+  }
 }
 
 function renderExternalLink(

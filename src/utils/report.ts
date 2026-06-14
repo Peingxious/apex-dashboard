@@ -6,6 +6,5 @@ export function reportError(
   err: unknown,
   noticeText?: string,
 ): void {
-  console.error(prefix, message, err);
   if (noticeText) new Notice(noticeText);
 }

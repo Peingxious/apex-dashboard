@@ -1562,9 +1562,6 @@ export class SyncEngine {
         const newBannerLen = extractBannerSectionLength(content);
         const currentBannerLen = extractBannerSectionLength(current);
         if (currentBannerLen > 0 && newBannerLen < currentBannerLen * 0.5) {
-          console.warn(
-            "Dashboard write skipped: banner image appears to have been lost (new banner section < 50% of current).",
-          );
           return;
         }
 
@@ -1573,9 +1570,7 @@ export class SyncEngine {
 
         await this.app.vault.modify(fileRef, content);
         this.lastWrittenHash = hash;
-      } catch (err) {
-        console.error("Dashboard sync write failed:", err);
-      }
+      } catch {}
     });
 
     this.notifyCallbacks();

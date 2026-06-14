@@ -220,14 +220,6 @@ export class DashboardView extends ItemView {
 
     // Use embedded note data if in embedded mode
     const activeData = this.embeddedData ?? data;
-    console.log("[peingxious-dashboard] render start", {
-      navGen: this.navBarGeneration,
-      passedDataColumns: data?.columns?.length,
-      activeDataColumns: activeData?.columns?.length,
-      activeDataBannerQuote: activeData?.banner?.quote?.slice(0, 30),
-      isEmbeddedActive: !!this.embeddedData,
-      embeddedNotePath: this.embeddedNotePath,
-    });
 
     // Save scroll positions before re-render
     const root = this.containerEl.children[1] as HTMLElement;
@@ -422,11 +414,6 @@ export class DashboardView extends ItemView {
     // will no longer match the class's current gen and the timer
     // will safely no-op.
     const navGen = ++this.navBarGeneration;
-    console.log("[peingxious-dashboard] renderViewNavBar", {
-      navGen,
-      embeddedNotePath: this.embeddedNotePath,
-      mainIsActive: !this.embeddedNotePath,
-    });
 
     const navBar = container.createDiv({ cls: "dashboard-view-nav-bar" });
 
@@ -441,10 +428,6 @@ export class DashboardView extends ItemView {
     // identical, matching the note tabs.
     /** Try to open the given md by replacing the active md leaf. */
     const openAsMarkdown = async (notePath: string | null): Promise<void> => {
-      console.log(
-        "[peingxious-dashboard] dblclick open (replace active md leaf):",
-        notePath,
-      );
       // Main tab case: there is no embedded note path of course,
       // but the workspace IS backed by the dashboard file from
       // settings. Resolve that file via the sync engine (which
@@ -487,21 +470,11 @@ export class DashboardView extends ItemView {
             t("noteDash.noActiveMd") ||
               "No markdown window is open to replace. Open a note first, then double-click the tab.",
           );
-          console.warn(
-            "[peingxious-dashboard] no active md leaf to replace; refusing to create a new leaf (per Plan.md ironclad rule)",
-            { notePath: resolvedPath },
-          );
           return;
         }
 
         await targetLeaf.openFile(file, { active: true });
-        console.log(
-          "[peingxious-dashboard] replaced active md leaf with:",
-          resolvedPath,
-        );
-      } catch (err) {
-        console.error("[peingxious-dashboard] open failed:", resolvedPath, err);
-      }
+      } catch {}
     };
 
     /** Close a note tab; for the main tab this is a no-op. */
@@ -572,9 +545,6 @@ export class DashboardView extends ItemView {
           clickTimer = null;
         }
         if (isDouble) {
-          console.log("[peingxious-dashboard] main tab dblclick", {
-            mainNavGen,
-          });
           void openAsMarkdown(null);
           return;
         }
@@ -673,13 +643,6 @@ export class DashboardView extends ItemView {
         const now = Date.now();
         const isDouble = now - lastClickTime < NAV_DBLCLICK_THRESHOLD_MS;
         lastClickTime = now;
-        console.log("[peingxious-dashboard] tab click", {
-          notePath,
-          isDouble,
-          isActive,
-          navGen,
-          currentGen: this.navBarGeneration,
-        });
 
         if (clickTimer !== null) {
           clearTimeout(clickTimer);
@@ -711,12 +674,6 @@ export class DashboardView extends ItemView {
           // their second click of a dblclick), silently
           // breaking the dblclick / right-click that follows.
           // We simply no-op.
-          console.log("[peingxious-dashboard] clickTimer firing", {
-            notePath,
-            navGen,
-            currentGen: this.navBarGeneration,
-            matches: this.navBarGeneration === navGen,
-          });
           if (this.navBarGeneration !== navGen) {
             clickTimer = null;
             return;
@@ -771,15 +728,7 @@ export class DashboardView extends ItemView {
 
   /** Load a note's dashboard data and render it embedded in the main view */
   async embedNoteDashboard(notePath: string): Promise<void> {
-    console.log("[peingxious-dashboard] embedNoteDashboard called", {
-      notePath,
-    });
     const file = this.app.vault.getAbstractFileByPath(notePath);
-    console.log("[peingxious-dashboard] embedNoteDashboard file lookup", {
-      notePath,
-      found: !!file,
-      isTFile: file instanceof TFile,
-    });
     if (!(file instanceof TFile)) {
       new Notice(t("noteDash.fileNotFound"));
       return;
@@ -787,22 +736,8 @@ export class DashboardView extends ItemView {
 
     try {
       const content = await this.app.vault.read(file);
-      console.log("[peingxious-dashboard] embedNoteDashboard content read", {
-        notePath,
-        length: content.length,
-      });
       this.embeddedData = parse(content);
-      console.log("[peingxious-dashboard] embedNoteDashboard parse result", {
-        notePath,
-        hasData: !!this.embeddedData,
-        columns: this.embeddedData?.columns?.length,
-      });
       this.embeddedNotePath = notePath;
-      console.log("[peingxious-dashboard] embedNoteDashboard before render", {
-        notePath,
-        embeddedNotePath: this.embeddedNotePath,
-        hasEmbeddedData: !!this.embeddedData,
-      });
       // Add to persisted tabs list if not already there
       const tabs = this.plugin.settings.embeddedNoteTabs ?? [];
       if (!tabs.includes(notePath)) {
@@ -815,14 +750,7 @@ export class DashboardView extends ItemView {
 
       // Re-render with embedded data
       const currentData = this.sync.getData();
-      console.log("[peingxious-dashboard] embedNoteDashboard currentData", {
-        notePath,
-        hasCurrentData: !!currentData,
-      });
       if (currentData) this.render(currentData);
-      console.log("[peingxious-dashboard] embedNoteDashboard after render", {
-        notePath,
-      });
 
       // Add peingxious-note-dashboard-root class for fixed-width card styles
       const root = this.containerEl.children[1] as HTMLElement;
@@ -940,14 +868,6 @@ export class DashboardView extends ItemView {
         }
       },
       onTaskAdd: async (cardId: string, text: string) => {
-        // #region debug-point view-taskadd
-        console.log(
-          "[dbg-view] onTaskAdd cardId=" +
-            JSON.stringify(cardId) +
-            " text=" +
-            JSON.stringify(text),
-        );
-        // #endregion debug-point view-taskadd
         const found = self.findEmbeddedCard(cardId);
         if (found) {
           found.card.tasks.push({ text, checked: false });
@@ -1782,7 +1702,6 @@ export class DashboardView extends ItemView {
         }, 0);
       } catch (e) {
         this.isWritingEmbeddedFile = false;
-        console.error("[peingxious-dashboard] Error saving embedded note:", e);
         new Notice(t("noteDash.saveError"));
       }
     }

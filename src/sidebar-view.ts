@@ -158,10 +158,6 @@ export class SidebarView extends ItemView {
         return;
       }
     } catch (err) {
-      console.error(
-        "[peingxious-dashboard] Error parsing note for overlay:",
-        err,
-      );
       new Notice("Error reading note content");
       this.exitOverlayMode();
       return;
@@ -301,7 +297,6 @@ export class SidebarView extends ItemView {
         await self.app.vault.modify(file, newContent);
         self.render();
       } catch (e) {
-        console.error("[peingxious-dashboard] Error saving overlay note:", e);
         new Notice("Error saving changes");
       }
     }

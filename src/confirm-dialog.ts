@@ -14,6 +14,15 @@ export function showConfirmDialog(_app: unknown, options: ConfirmOptions): Promi
 			resolve(value);
 		};
 
+		let keydownInstalled = false;
+		const cleanup = () => {
+			if (keydownInstalled) {
+				document.removeEventListener('keydown', onKeydown);
+				keydownInstalled = false;
+			}
+			overlay.remove();
+		};
+
 		// Full-screen overlay
 		const overlay = document.body.createDiv({ cls: 'dashboard-confirm-overlay' });
 
@@ -30,7 +39,7 @@ export function showConfirmDialog(_app: unknown, options: ConfirmOptions): Promi
 			cls: 'dashboard-confirm-cancel',
 		});
 		cancelBtn.addEventListener('click', () => {
-			overlay.remove();
+			cleanup();
 			done(false);
 		});
 
@@ -39,14 +48,14 @@ export function showConfirmDialog(_app: unknown, options: ConfirmOptions): Promi
 			cls: 'dashboard-confirm-delete',
 		});
 		deleteBtn.addEventListener('click', () => {
-			overlay.remove();
+			cleanup();
 			done(true);
 		});
 
 		// Close on overlay click
 		overlay.addEventListener('click', (e) => {
 			if (e.target === overlay) {
-				overlay.remove();
+				cleanup();
 				done(false);
 			}
 		});
@@ -54,11 +63,11 @@ export function showConfirmDialog(_app: unknown, options: ConfirmOptions): Promi
 		// Close on Escape
 		const onKeydown = (e: KeyboardEvent) => {
 			if (e.key === 'Escape') {
-				document.removeEventListener('keydown', onKeydown);
-				overlay.remove();
+				cleanup();
 				done(false);
 			}
 		};
 		document.addEventListener('keydown', onKeydown);
+		keydownInstalled = true;
 	});
 }

@@ -97,19 +97,8 @@ export function attachFileSuggest(
   // document.body, producing the "two stacked dropdowns" bug.
   const alreadyAttached = (input as any).__fileSuggestAttached;
   if (alreadyAttached) {
-    console.log(
-      "[dbg-fs] skip double-attach on input.value=" +
-        JSON.stringify(input.value),
-    );
     return alreadyAttached;
   }
-
-  console.log(
-    "[dbg-fs] attachFileSuggest input.tag=" +
-      input.tagName +
-      " hasOnPick=" +
-      (onPick ? "yes" : "no"),
-  );
   let active = false;
   let dropdown: HTMLElement | null = null;
   let items: TFile[] = [];
@@ -374,11 +363,6 @@ export function attachFileSuggest(
   const update = () => {
     const value = input.value;
     const caret = (input as HTMLTextAreaElement).selectionStart ?? value.length;
-    // #region debug-point update-entry
-    console.log(
-      "[dbg-fs] update caret=" + caret + " value=" + JSON.stringify(value),
-    );
-    // #endregion debug-point update-entry
     // The dropdown is now strictly a wikilink autocomplete: it only
     // opens while the caret sits inside an unclosed `[[…`. Normal
     // text input (e.g. typing "hello", or a task title) leaves the
@@ -387,9 +371,6 @@ export function attachFileSuggest(
     // editor.
     const ctx = findWikilinkContext(value, caret);
     if (!ctx) {
-      // #region debug-point update-close
-      console.log("[dbg-fs] update -> close (no ctx)");
-      // #endregion debug-point update-close
       close();
       return;
     }
@@ -445,18 +426,6 @@ export function attachFileSuggest(
     const value = input.value;
     const caret = (input as HTMLTextAreaElement).selectionStart ?? value.length;
     const ctx = findWikilinkContext(value, caret);
-    // #region debug-point rwf-entry
-    console.log(
-      "[dbg-fs] rwf entry caret=" +
-        caret +
-        " value=" +
-        JSON.stringify(value) +
-        " linkText=" +
-        JSON.stringify(linkText) +
-        " ctx=" +
-        JSON.stringify(ctx),
-    );
-    // #endregion debug-point rwf-entry
     if (!ctx) return null;
     const { next, caret: newCaret } = applyWikilinkReplacement(
       value,
@@ -477,27 +446,11 @@ export function attachFileSuggest(
     // pre-replacement value when the input event triggered further
     // mutations in other handlers.
     input.dispatchEvent(new Event("input", { bubbles: true }));
-    // #region debug-point rwf-after-dispatch
-    console.log(
-      "[dbg-fs] rwf after-dispatch next=" +
-        JSON.stringify(next) +
-        " input.value=" +
-        JSON.stringify(input.value),
-    );
-    // #endregion debug-point rwf-after-dispatch
     return next;
   };
 
   const pick = (file: TFile) => {
     const basename = file.basename;
-    // #region debug-point pick-entry
-    console.log(
-      "[dbg-fs] pick entry basename=" +
-        JSON.stringify(basename) +
-        " preInputValue=" +
-        JSON.stringify(input.value),
-    );
-    // #endregion debug-point pick-entry
     // The user was typing a wikilink fragment when they picked; the
     // fragment gets replaced with a complete `[[basename]]` link
     // (basename-only form matches what the dashboard stores
@@ -515,23 +468,7 @@ export function attachFileSuggest(
     //   - project-doc consumers use `file.path` to keep the strict
     //     file-reference semantics
     const replaced = replaceWikilinkFragment(`[[${basename}]]`);
-    // #region debug-point pick-after-rwf
-    console.log(
-      "[dbg-fs] pick after-rwf replaced=" +
-        JSON.stringify(replaced) +
-        " input.value=" +
-        JSON.stringify(input.value),
-    );
-    // #endregion debug-point pick-after-rwf
     if (onPick) {
-      // #region debug-point pick-onpick-arg
-      console.log(
-        "[dbg-fs] pick -> onPick arg=" +
-          JSON.stringify(replaced ?? input.value) +
-          " file.path=" +
-          JSON.stringify(file.path),
-      );
-      // #endregion debug-point pick-onpick-arg
       onPick(replaced ?? input.value, file);
     }
     close();

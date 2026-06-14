@@ -257,11 +257,6 @@ export function setupDragAndDrop(
   container.addEventListener("drop", onDrop);
   container.addEventListener("dragend", onDragEnd);
 
-  console.log(
-    "[dbg-dnd] setup kanban.cards=" +
-      container.querySelectorAll(".dashboard-card").length,
-  );
-
   // Document-level listeners are never removed (plugin-lifetime
   // singleton). The container-level listeners are cleaned up in
   // cleanupFns and may be re-installed by the next render. Since
