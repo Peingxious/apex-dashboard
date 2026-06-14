@@ -121,6 +121,128 @@ export function pathToWikiLink(rawPath: string): string {
   return `[[${basename}]]`;
 }
 
+type RawFrontmatterSplit = {
+  hasFrontmatter: boolean;
+  newline: "\n" | "\r\n";
+  frontmatterRaw: string;
+  body: string;
+};
+
+function splitFrontmatterRaw(markdown: string): RawFrontmatterSplit {
+  const nl: "\n" | "\r\n" = markdown.includes("\r\n") ? "\r\n" : "\n";
+  const startLine = markdown.startsWith("\uFEFF---")
+    ? "\uFEFF---" + nl
+    : "---" + nl;
+  if (!markdown.startsWith(startLine)) {
+    return { hasFrontmatter: false, newline: nl, frontmatterRaw: "", body: markdown };
+  }
+
+  const endMarker = nl + "---";
+  const endIdx = markdown.indexOf(endMarker, startLine.length);
+  if (endIdx < 0) {
+    return { hasFrontmatter: false, newline: nl, frontmatterRaw: "", body: markdown };
+  }
+
+  const frontmatterRaw = markdown.slice(startLine.length, endIdx);
+  let bodyStart = endIdx + endMarker.length;
+  if (markdown.startsWith(nl, bodyStart)) bodyStart += nl.length;
+  const body = markdown.slice(bodyStart);
+  return { hasFrontmatter: true, newline: nl, frontmatterRaw, body };
+}
+
+function isTopLevelKeyLine(line: string): boolean {
+  if (!line) return false;
+  const ch = line[0]!;
+  if (ch === " " || ch === "\t" || ch === "-") return false;
+  const idx = line.indexOf(":");
+  if (idx <= 0) return false;
+  return true;
+}
+
+function findYamlBlockRange(lines: string[], key: string): [number, number] | null {
+  const start = lines.findIndex((l) => l.startsWith(key + ":"));
+  if (start < 0) return null;
+  let end = lines.length;
+  for (let i = start + 1; i < lines.length; i++) {
+    if (isTopLevelKeyLine(lines[i]!)) {
+      end = i;
+      break;
+    }
+  }
+  return [start, end];
+}
+
+function normalizeNewlines(input: string, nl: "\n" | "\r\n"): string {
+  return input.replace(/\r?\n/g, nl);
+}
+
+function patchYamlBlock(
+  lines: string[],
+  key: string,
+  newBlockLines: string[] | null,
+): string[] {
+  const range = findYamlBlockRange(lines, key);
+  if (!range) {
+    if (!newBlockLines || newBlockLines.length === 0) return lines;
+    const out = [...lines];
+    let insertAt = out.length;
+    while (insertAt > 0 && out[insertAt - 1]!.trim() === "") insertAt--;
+    const needsSpacer = insertAt > 0 && out[insertAt - 1]!.trim() !== "";
+    const prefix: string[] = needsSpacer ? [""] : [];
+    out.splice(insertAt, 0, ...prefix, ...newBlockLines);
+    return out;
+  }
+
+  const [start, end] = range;
+  let replaceEnd = end;
+  while (replaceEnd > start && lines[replaceEnd - 1]!.trim() === "") replaceEnd--;
+  const trailing = lines.slice(replaceEnd, end);
+  const out = [...lines];
+  const replacement = newBlockLines && newBlockLines.length > 0 ? [...newBlockLines, ...trailing] : trailing;
+  out.splice(start, end - start, ...replacement);
+  return out;
+}
+
+export function serializeInto(
+  existingMarkdown: string,
+  data: DashboardData,
+  app?: App,
+): string {
+  const next = serialize(data, app);
+  const cur = splitFrontmatterRaw(existingMarkdown);
+  if (!cur.hasFrontmatter) return next;
+  const gen = splitFrontmatterRaw(next);
+  if (!gen.hasFrontmatter) return next;
+
+  const nl = cur.newline;
+  const curLines = cur.frontmatterRaw.split(/\r?\n/);
+  const genLines = gen.frontmatterRaw.split(/\r?\n/);
+
+  const takeBlock = (key: string): string[] | null => {
+    const r = findYamlBlockRange(genLines, key);
+    if (!r) return null;
+    const [s, e] = r;
+    let cutEnd = e;
+    while (cutEnd > s && genLines[cutEnd - 1]!.trim() === "") cutEnd--;
+    return genLines.slice(s, cutEnd);
+  };
+
+  let patched = curLines;
+  for (const key of [
+    "banner",
+    "quickActions",
+    "quickActionOrder",
+    "hiddenPresets",
+    "columns",
+  ]) {
+    patched = patchYamlBlock(patched, key, takeBlock(key));
+  }
+
+  const patchedFrontmatter = patched.join(nl);
+  const body = normalizeNewlines(gen.body, nl);
+  return `---${nl}${patchedFrontmatter}${nl}---${nl}${body}`;
+}
+
 export function serialize(data: DashboardData, app?: App): string {
   const lines: string[] = [];
 

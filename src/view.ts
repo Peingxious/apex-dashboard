@@ -50,6 +50,10 @@ import { ReadingService } from "./reading-service";
 import { ReminderNoticeModal } from "./reminder-notice";
 import { t } from "./i18n";
 import { parse, pathToWikiLink } from "./parser";
+import { RafCoalescer } from "./utils/raf-coalescer";
+import { MOBILE_BREAKPOINT_PX, NAV_DBLCLICK_THRESHOLD_MS } from "./constants";
+import { reportError } from "./utils/report";
+import { showColumnFilePicker as showColumnFilePickerUI } from "./dashboard-view/column-file-picker";
 
 export const DASHBOARD_VIEW_TYPE = "peingxious-dashboard-view";
 
@@ -80,6 +84,7 @@ export class DashboardView extends ItemView {
   private mobileWidgetTabsOpen: boolean = false;
   private static readonly WEATHER_REFRESH_MS = 30 * 60 * 1000; // 30 min
   private weatherRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private renderCoalescer = new RafCoalescer<DashboardData>();
 
   // Generation counter for the nav-bar. Bumped on every
   // renderViewNavBar() call. Pending clickTimer callbacks (set by
@@ -138,7 +143,7 @@ export class DashboardView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.sync.updateSettings(this.plugin.settings);
-    this.sync.onDataUpdate((data) => this.render(data));
+    this.sync.onDataUpdate((data) => this.requestRender(data));
 
     await this.sync.init();
     this.registerVaultListeners();
@@ -152,7 +157,7 @@ export class DashboardView extends ItemView {
     loadHolidayData().then((data) => {
       this.holidayData = data;
       const currentData = this.sync.getData();
-      if (currentData) this.render(currentData);
+      if (currentData) this.requestRender(currentData);
     });
 
     // Restore last active embedded note tab if any
@@ -163,6 +168,7 @@ export class DashboardView extends ItemView {
   }
 
   async onClose(): Promise<void> {
+    this.renderCoalescer.cancel();
     this.runCleanup();
     this.unregisterVaultListeners();
     this.stopReminderChecker();
@@ -178,7 +184,7 @@ export class DashboardView extends ItemView {
     this.sync.updateSettings(this.plugin.settings);
     const data = this.sync.getData();
     if (data) {
-      this.render(data);
+      this.requestRender(data);
     }
   }
 
@@ -201,6 +207,10 @@ export class DashboardView extends ItemView {
     if (name?.trim()) {
       this.sync.addColumn(name.trim());
     }
+  }
+
+  private requestRender(data: DashboardData): void {
+    this.renderCoalescer.schedule(data, (d) => this.render(d));
   }
 
   private render(data: DashboardData): void {
@@ -259,7 +269,7 @@ export class DashboardView extends ItemView {
 
     this.renderMobileActions(bannerEl);
 
-    if (this.bannerCollapsed && window.innerWidth > 640) {
+    if (this.bannerCollapsed && window.innerWidth > MOBILE_BREAKPOINT_PX) {
       bannerEl.addClass("dashboard-banner--collapsed");
     }
     this.setupBannerBehavior(bannerEl);
@@ -429,8 +439,6 @@ export class DashboardView extends ItemView {
     // openAsMarkdown() / closeNoteTab() gracefully no-op with a
     // Notice — but the UI affordance (dblclick + right-click) is
     // identical, matching the note tabs.
-    const DBLCLICK_THRESHOLD_MS = 250;
-
     /** Try to open the given md by replacing the active md leaf. */
     const openAsMarkdown = async (notePath: string | null): Promise<void> => {
       console.log(
@@ -557,7 +565,7 @@ export class DashboardView extends ItemView {
       let lastClickTime = 0;
       const onClick = (): void => {
         const now = Date.now();
-        const isDouble = now - lastClickTime < DBLCLICK_THRESHOLD_MS;
+        const isDouble = now - lastClickTime < NAV_DBLCLICK_THRESHOLD_MS;
         lastClickTime = now;
         if (clickTimer !== null) {
           clearTimeout(clickTimer);
@@ -581,7 +589,7 @@ export class DashboardView extends ItemView {
           }
           clickTimer = null;
           this.exitEmbeddedMode();
-        }, DBLCLICK_THRESHOLD_MS);
+        }, NAV_DBLCLICK_THRESHOLD_MS);
       };
       mainTab.addEventListener("click", onClick);
       const onContextMenu = buildContextMenu(null);
@@ -663,7 +671,7 @@ export class DashboardView extends ItemView {
 
       btn.addEventListener("click", () => {
         const now = Date.now();
-        const isDouble = now - lastClickTime < DBLCLICK_THRESHOLD_MS;
+        const isDouble = now - lastClickTime < NAV_DBLCLICK_THRESHOLD_MS;
         lastClickTime = now;
         console.log("[peingxious-dashboard] tab click", {
           notePath,
@@ -715,7 +723,7 @@ export class DashboardView extends ItemView {
           }
           clickTimer = null;
           void this.embedNoteDashboard(notePath);
-        }, DBLCLICK_THRESHOLD_MS);
+        }, NAV_DBLCLICK_THRESHOLD_MS);
       });
 
       // Native contextmenu: same as dblclick — activate tab +
@@ -749,117 +757,16 @@ export class DashboardView extends ItemView {
 
   /** Scan files for columns frontmatter and show picker */
   private async showColumnFilePicker(anchorEl: HTMLElement): Promise<void> {
-    const mdFiles = this.app.vault.getMarkdownFiles();
-    const columnFiles: TFile[] = [];
-    // Normalize the user-configured exclusion list for fast matching by path or basename
-    const excluded = (this.plugin.settings.excludedNotePaths ?? [])
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-
-    for (const f of mdFiles) {
-      // Skip files explicitly excluded from the picker
-      const lower = f.path.toLowerCase();
-      if (
-        excluded.some(
-          (x) =>
-            lower === x || lower === `${x}.md` || lower.endsWith(`/${x}.md`),
-        )
-      )
-        continue;
-      try {
-        const content = await this.app.vault.read(f);
-        if (content.trimStart().startsWith("---")) {
-          const endIdx = content.indexOf("---", 3);
-          if (endIdx !== -1) {
-            const yaml = content.slice(3, endIdx);
-            // Look for columns: or column: in YAML (not dashboard:)
-            if (
-              (yaml.includes("columns:") || yaml.includes("column:")) &&
-              !yaml.includes("peingxious-dashboard-template")
-            ) {
-              columnFiles.push(f);
-            }
-          }
-        }
-      } catch {
-        /* skip */
-      }
-    }
-
-    if (columnFiles.length === 0) {
-      new Notice(t("noteDash.noDashboardFiles"));
-      return;
-    }
-
-    // Remove existing dropdown
-    const root = this.containerEl.children[1] as HTMLElement;
-    const existing = root?.querySelector(".dashboard-nav-dropdown");
-    if (existing) existing.remove();
-
-    // Append dropdown to navBar so it's positioned relative to the button
-    const dropdown = anchorEl.createDiv({ cls: "dashboard-nav-dropdown" });
-    // Reset any inline styles — let CSS position it just below the button
-    dropdown.style.position = "";
-    dropdown.style.top = "";
-    dropdown.style.right = "";
-    const list = dropdown.createDiv({ cls: "dashboard-nav-dropdown-list" });
-
-    // Search input
-    const searchRow = list.createDiv({ cls: "dropdown-search-row" });
-    const searchInput = searchRow.createEl("input", {
-      cls: "dropdown-search-input",
-      type: "text",
-      placeholder: t("noteDash.searchPlaceholder"),
+    return showColumnFilePickerUI({
+      app: this.app,
+      plugin: this.plugin,
+      anchorEl,
+      rootEl: this.containerEl.children[1] as HTMLElement,
+      embeddedNotePath: this.embeddedNotePath,
+      cleanupFns: this.cleanupFns,
+      embedNoteDashboard: (notePath) => this.embedNoteDashboard(notePath),
+      t,
     });
-
-    const titleEl = list.createEl("div", {
-      cls: "dropdown-title",
-      text: t("noteDash.selectDash") + ` (${columnFiles.length})`,
-    });
-
-    const allItems: { el: HTMLElement; file: TFile }[] = [];
-
-    for (const f of columnFiles) {
-      const item = list.createEl("button", {
-        cls: "dashboard-nav-dropdown-item",
-        text: f.basename,
-        attr: { title: f.path },
-      });
-
-      if (f.path === this.embeddedNotePath) {
-        item.addClass("dashboard-nav-dropdown-item--open");
-      }
-
-      allItems.push({ el: item, file: f });
-
-      item.addEventListener("click", async () => {
-        dropdown.remove();
-        await this.embedNoteDashboard(f.path);
-      });
-    }
-
-    // Search filter
-    searchInput.addEventListener("input", () => {
-      const q = searchInput.value.toLowerCase().trim();
-      let visibleCount = 0;
-      for (const { el, file } of allItems) {
-        const match = !q || file.basename.toLowerCase().includes(q);
-        el.style.display = match ? "" : "none";
-        if (match) visibleCount++;
-      }
-      titleEl.textContent = q
-        ? t("noteDash.selectDash") + ` (${visibleCount}/${columnFiles.length})`
-        : t("noteDash.selectDash") + ` (${columnFiles.length})`;
-    });
-
-    // Close on outside click
-    const closeOnOutside = (ev: MouseEvent) => {
-      if (!dropdown.contains(ev.target as Node)) {
-        dropdown.remove();
-        document.removeEventListener("mousedown", closeOnOutside);
-      }
-    };
-    setTimeout(() => document.addEventListener("mousedown", closeOnOutside), 0);
   }
 
   /** Load a note's dashboard data and render it embedded in the main view */
@@ -921,8 +828,12 @@ export class DashboardView extends ItemView {
       const root = this.containerEl.children[1] as HTMLElement;
       root?.addClass("peingxious-note-dashboard-root");
     } catch (err) {
-      console.error("[peingxious-dashboard] Error loading note:", err);
-      new Notice(t("noteDash.loadError"));
+      reportError(
+        "[peingxious-dashboard]",
+        "Error loading note dashboard",
+        err,
+        t("noteDash.loadError"),
+      );
     }
   }
 
@@ -959,8 +870,12 @@ export class DashboardView extends ItemView {
         data = parse(content);
         this.embeddedDataCache.set(notePath, data);
       } catch (err) {
-        console.error("[peingxious-dashboard] Error reloading note:", err);
-        new Notice(t("noteDash.loadError"));
+        reportError(
+          "[peingxious-dashboard]",
+          "Error reloading note dashboard",
+          err,
+          t("noteDash.loadError"),
+        );
         return;
       }
     }
@@ -1369,7 +1284,8 @@ export class DashboardView extends ItemView {
         const found = self.findEmbeddedCard(cardId);
         if (found) {
           found.card.hideCompleted = hide;
-          await self.saveEmbeddedAndRefresh();
+          const currentData = self.sync.getData();
+          if (currentData) self.render(currentData);
         }
       },
       onCardGridChange: async (
@@ -1845,12 +1761,13 @@ export class DashboardView extends ItemView {
 
   private async saveEmbeddedAndRefresh(): Promise<void> {
     if (!this.embeddedData || !this.embeddedNotePath) return;
-    const { serialize } = await import("./parser");
-    const newContent = serialize(this.embeddedData, this.app);
+    const { serializeInto } = await import("./parser");
     this.embeddedDataCache.set(this.embeddedNotePath, this.embeddedData);
     const file = this.app.vault.getAbstractFileByPath(this.embeddedNotePath);
     if (file instanceof TFile) {
       try {
+        const current = await this.app.vault.read(file);
+        const newContent = serializeInto(current, this.embeddedData, this.app);
         // Suppress the 'modify' event listener from re-parsing the
         // file and re-rendering — we already hold the post-mutation
         // embeddedData and are about to render from it directly.
@@ -2122,7 +2039,7 @@ export class DashboardView extends ItemView {
 
     pinBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (window.innerWidth <= 640) return;
+      if (window.innerWidth <= MOBILE_BREAKPOINT_PX) return;
       this.bannerCollapsed = !this.bannerCollapsed;
       bannerEl.toggleClass("dashboard-banner--collapsed", this.bannerCollapsed);
       localStorage.setItem(
@@ -2132,7 +2049,7 @@ export class DashboardView extends ItemView {
     });
 
     const onResize = () => {
-      if (window.innerWidth <= 640 && this.bannerCollapsed) {
+      if (window.innerWidth <= MOBILE_BREAKPOINT_PX && this.bannerCollapsed) {
         bannerEl.removeClass("dashboard-banner--collapsed");
       } else if (this.bannerCollapsed) {
         bannerEl.addClass("dashboard-banner--collapsed");
@@ -2852,10 +2769,11 @@ export class DashboardView extends ItemView {
       this.embeddedData = data;
       this.embeddedDataCache.set(notePath, data);
       const currentData = this.sync.getData();
-      if (currentData) this.render(currentData);
+      if (currentData) this.requestRender(currentData);
     } catch (err) {
-      console.error(
-        "[peingxious-dashboard] Error reloading embedded note:",
+      reportError(
+        "[peingxious-dashboard]",
+        "Error reloading embedded note from disk",
         err,
       );
     }
@@ -2909,6 +2827,10 @@ export class DashboardView extends ItemView {
       clearTimeout(this.recentDocsTimer);
       this.recentDocsTimer = null;
     }
+    if (this.libraryRefreshTimer) {
+      clearTimeout(this.libraryRefreshTimer);
+      this.libraryRefreshTimer = null;
+    }
   }
 
   private debouncedRefreshRecentDocs(): void {
@@ -2927,7 +2849,7 @@ export class DashboardView extends ItemView {
     if (this.libraryRefreshTimer) clearTimeout(this.libraryRefreshTimer);
     this.libraryRefreshTimer = setTimeout(() => {
       const data = this.sync.getData();
-      if (data) this.render(data);
+      if (data) this.requestRender(data);
     }, 500);
   }
 
@@ -2981,7 +2903,7 @@ export class DashboardView extends ItemView {
         col.cards.some((c) => c.type === "weather"),
       );
       if (hasWeather) {
-        this.render(this.data);
+        this.requestRender(this.data);
       }
     }, DashboardView.WEATHER_REFRESH_MS);
   }

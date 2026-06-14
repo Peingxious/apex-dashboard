@@ -13,6 +13,7 @@ import type {
 import {
   parse,
   serialize,
+  serializeInto,
   generateDefaultMarkdown,
   pathToWikiLink,
 } from "./parser";
@@ -82,6 +83,7 @@ export class SyncEngine {
   /** Stack of in-memory undo entries for the most recent destructive ops. */
   private undoStack: UndoEntry[] = [];
   private static readonly MAX_UNDO = 50;
+  private hideCompletedOverrides = new Map<string, boolean>();
 
   constructor(app: App, settings: DashboardSettings) {
     this.app = app;
@@ -469,6 +471,7 @@ export class SyncEngine {
 
   async deleteCard(cardId: string): Promise<void> {
     if (!this.data) return;
+    this.hideCompletedOverrides.delete(cardId);
 
     // Snapshot the card (and the column + index it was on) so Ctrl+Z
     // can restore it to exactly the same slot.
@@ -1317,7 +1320,20 @@ export class SyncEngine {
     cardId: string,
     hideCompleted: boolean,
   ): Promise<void> {
-    await this.updateCard(cardId, { hideCompleted });
+    if (!this.data) return;
+
+    this.hideCompletedOverrides.set(cardId, hideCompleted);
+    this.data = {
+      ...this.data,
+      columns: this.data.columns.map((col) => ({
+        ...col,
+        cards: col.cards.map((card) =>
+          card.id === cardId ? { ...card, hideCompleted } : card,
+        ),
+      })),
+    };
+
+    this.notifyCallbacks();
   }
 
   async updateCardGrid(
@@ -1497,20 +1513,37 @@ export class SyncEngine {
     const hash = simpleHash(content);
     if (hash === this.lastWrittenHash) return;
 
-    this.data = parse(content);
+    this.data = this.applySessionOverrides(parse(content));
     this.notifyCallbacks();
+  }
+
+  private applySessionOverrides(data: DashboardData): DashboardData {
+    if (this.hideCompletedOverrides.size === 0) return data;
+    const present = new Set<string>();
+    const columns = data.columns.map((col) => ({
+      ...col,
+      cards: col.cards.map((card) => {
+        present.add(card.id);
+        const override = this.hideCompletedOverrides.get(card.id);
+        if (override === undefined) return card;
+        return { ...card, hideCompleted: override };
+      }),
+    }));
+    for (const key of this.hideCompletedOverrides.keys()) {
+      if (!present.has(key)) this.hideCompletedOverrides.delete(key);
+    }
+    return { ...data, columns };
   }
 
   private async writeToDisk(): Promise<void> {
     if (!this.data || !this.file) return;
 
-    const content = serialize(this.data);
-    const hash = simpleHash(content);
-
     const fileRef = this.file;
     this.writeQueue = this.writeQueue.then(async () => {
       try {
         const current = await this.app.vault.read(fileRef);
+        const content = serializeInto(current, this.data!);
+        const hash = simpleHash(content);
 
         // Safety: skip write if the new content is drastically smaller
         // than the current file. The previous blanket 30% threshold was

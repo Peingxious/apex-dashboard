@@ -7,6 +7,7 @@ import { setLanguage, t, type Language } from "./i18n";
 
 export default class DashboardPlugin extends Plugin {
   settings: DashboardSettings;
+  private refreshTimer: number | null = null;
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -113,10 +114,14 @@ export default class DashboardPlugin extends Plugin {
   }
 
   refreshAllDashboards(): void {
-    this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE).forEach((leaf) => {
-      const view = leaf.view as DashboardView;
-      view.refresh();
-    });
+    if (this.refreshTimer !== null) return;
+    this.refreshTimer = window.setTimeout(() => {
+      this.refreshTimer = null;
+      this.app.workspace.getLeavesOfType(DASHBOARD_VIEW_TYPE).forEach((leaf) => {
+        const view = leaf.view as DashboardView;
+        view.refresh();
+      });
+    }, 0);
   }
 
   async activateView(): Promise<void> {

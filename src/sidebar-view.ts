@@ -14,7 +14,7 @@ import { t } from "./i18n";
 import type { HolidayInfo } from "./holiday-service";
 import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
-import { parse as parseMarkdown, serialize } from "./parser";
+import { parse as parseMarkdown, serializeInto } from "./parser";
 
 export const SIDEBAR_VIEW_TYPE = "peingxious-dashboard-sidebar";
 
@@ -296,7 +296,8 @@ export class SidebarView extends ItemView {
       const file = self.app.vault.getAbstractFileByPath(self.overlayNotePath);
       if (!(file instanceof TFile)) return;
       try {
-        const newContent = serialize(self.data);
+        const current = await self.app.vault.read(file);
+        const newContent = serializeInto(current, self.data);
         await self.app.vault.modify(file, newContent);
         self.render();
       } catch (e) {
@@ -599,7 +600,7 @@ export class SidebarView extends ItemView {
         const found = findCard(cardId);
         if (found) {
           found.card.hideCompleted = hide;
-          await saveAndRefresh();
+          self.render();
         }
       },
       onProjectGroupAdd: () => {},

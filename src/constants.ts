@@ -1,0 +1,3 @@
+export const MOBILE_BREAKPOINT_PX = 640;
+
+export const NAV_DBLCLICK_THRESHOLD_MS = 250;

@@ -56,6 +56,11 @@ Chart.register(
 );
 
 const chartInstances = new Map<string, Chart>();
+const todoPlusRenderGeneration = new Map<string, number>();
+const todoPlusWatchers = new Map<
+  string,
+  { sourcePath: string; ref: unknown; observer: MutationObserver }
+>();
 
 function destroyChart(cardId: string): void {
   const chart = chartInstances.get(cardId);
@@ -4347,6 +4352,10 @@ async function renderTodoPlusBody(
   app: App,
   settings?: DashboardSettings,
 ): Promise<void> {
+  const nextGen = (todoPlusRenderGeneration.get(card.id) ?? 0) + 1;
+  todoPlusRenderGeneration.set(card.id, nextGen);
+  container.empty();
+
   // The source link is read from the card's `title` (a wikilink of
   // the form `[[note#heading]]`); there is no per-card `sourceLink`
   // field anymore — see `getTodoPlusSourceLinkFromTitle` below.
@@ -4378,6 +4387,7 @@ async function renderTodoPlusBody(
   // workspace). `resolveTodoPlusSlice` handles that internally via
   // `waitForFileCache`, so this single call should be enough.
   let slice = await resolveTodoPlusSlice(app, sourceLink);
+  if (todoPlusRenderGeneration.get(card.id) !== nextGen) return;
 
   // Belt-and-braces fallback: if the cache truly has no `## To-do`
   // heading (maybe the user just typed the link but hasn't opened the
@@ -4387,6 +4397,7 @@ async function renderTodoPlusBody(
     await new Promise<void>((r) => setTimeout(r, 400));
     slice = await resolveTodoPlusSlice(app, sourceLink);
   }
+  if (todoPlusRenderGeneration.get(card.id) !== nextGen) return;
   if (!slice) {
     const err = container.createDiv({ cls: "dashboard-todoplus-error" });
     err.setText(t("renderer.todoPlusUnresolved", { link: sourceLink }));
@@ -4759,6 +4770,14 @@ function scheduleTodoPlusRefresh(
   const sourcePath = listEl.dataset.todoplusFile;
   if (!sourcePath) return;
 
+  const existing = todoPlusWatchers.get(card.id);
+  if (existing && existing.sourcePath === sourcePath) return;
+  if (existing) {
+    app.metadataCache.offref(existing.ref as any);
+    existing.observer.disconnect();
+    todoPlusWatchers.delete(card.id);
+  }
+
   const onChange = (file: TFile) => {
     if (file.path !== sourcePath) return;
     if (!document.body.contains(cardEl)) return;
@@ -4786,11 +4805,16 @@ function scheduleTodoPlusRefresh(
   const teardown = () => {
     app.metadataCache.offref(ref);
     observer.disconnect();
+    const current = todoPlusWatchers.get(card.id);
+    if (current && current.ref === ref) {
+      todoPlusWatchers.delete(card.id);
+    }
   };
   const observer = new MutationObserver(() => {
     if (!document.body.contains(cardEl)) teardown();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+  todoPlusWatchers.set(card.id, { sourcePath, ref, observer });
 }
 
 /**
@@ -4903,14 +4927,34 @@ async function setTodoPlusItemChecked(
   checked: boolean,
 ): Promise<void> {
   await app.vault.process(file, (content) => {
+    const formatLocalDate = (d: Date): string => {
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
     const before = content.slice(0, item.lineStart);
     const line = content.slice(item.lineStart, item.lineEnd);
     const after = content.slice(item.lineEnd);
-    const replaced = line.replace(
+    let replaced = line.replace(
       /^(\s*-\s+\[)( |x|X)(\]\s+.*)$/,
       (_full, head: string, _box: string, tail: string) =>
         `${head}${checked ? "x" : " "}${tail}`,
     );
+    const trimmed = replaced.trimEnd();
+    const doneWithDateRe = /\s+✅\s+\d{4}-\d{2}-\d{2}\s*$/;
+    const doneBareRe = /\s+✅\s*$/;
+    if (checked) {
+      if (!doneWithDateRe.test(trimmed)) {
+        const base = trimmed.replace(doneBareRe, "");
+        replaced = `${base} ✅ ${formatLocalDate(new Date())}`;
+      } else {
+        replaced = trimmed;
+      }
+    } else {
+      replaced = trimmed.replace(doneWithDateRe, "").replace(doneBareRe, "");
+    }
     return before + replaced + after;
   });
 }
