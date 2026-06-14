@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.4.7 (2026-06-15)
+
+### Documentation
+
+- **README / README_ZH / versions.json fully aligned with the v1.4.0 → v1.4.6 changelog** — the docs were lagging the code; this release brings them back in sync. All features shipped since 1.4.1 (TodoPlus card UI alignment, the + button note-search modal, the per-section auto-archive toggle, etc.) are now documented under the corresponding feature sections in both `README.md` and `README_ZH.md`. The "What's New" / "更新日志" sections are now a complete changelog from 1.1.0 onward
+- **`versions.json` updated** — added the missing 1.4.5, 1.4.6, 1.4.7 entries (all map to `minAppVersion: 0.15.0`)
+- **No code changes** — pure documentation sync; bump only
+
 ## 1.4.6 (2026-06-14)
 
 ### Changed
