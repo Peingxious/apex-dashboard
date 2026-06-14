@@ -552,7 +552,6 @@ export function generateDefaultMarkdown(): string {
               { text: t("default.todo2"), checked: false },
               { text: t("default.todo3"), checked: false },
               { text: t("default.todo4"), checked: false },
-              { text: t("default.todo5"), checked: false },
             ],
             url: "",
             wikiLink: "",
