@@ -294,6 +294,18 @@ export function serialize(data: DashboardData, app?: App): string {
       if (card.gridRow > 0) {
         metadataLines.push(`grow: ${card.gridRow}`);
       }
+      // TodoPlus: NO metadata lines are written for `type` or
+      // `sourceLink`. The card's identity comes from two things
+      // that are already on disk:
+      //   1. The column's `sectionType: todoplus` (frontmatter,
+      //      single source of truth for the column kind).
+      //   2. The card's first-bullet title, which is a wikilink of
+      //      the form `[[note#heading]]` and is the source-link
+      //      pointer (the renderer parses the title directly via
+      //      `parseTodoPlusSourceLink` in renderer.ts).
+      // Writing either as metadata would be a duplicated field —
+      // one source of truth on disk, one in memory.
+      //
       // NOTE: `card.hideCompleted` is intentionally NOT serialized into
       // the markdown. The eye/eye-off button on each Todo card is a
       // session-only override on top of `settings.defaultHideCompleted`,
@@ -832,6 +844,18 @@ function parseColumns(
       def?.sectionType,
     );
     const cards = parseCards(section.content, section.heading, sectionType);
+    // TodoPlus column: every card in the column is a mirror card.
+    // We force the card type to `"todoplus"` here (derived from the
+    // column's `sectionType`, single source of truth on disk) so the
+    // renderer can dispatch with `card.type === "todoplus"` without
+    // requiring a per-card `type: todoplus` line in the markdown.
+    // Without this override, an empty todo card body would parse as
+    // `generic` and skip the TodoPlus render path.
+    if (sectionType === "todoplus") {
+      for (const card of cards) {
+        card.type = "todoplus";
+      }
+    }
     return {
       name: section.heading,
       color: def?.color ?? "#6366f1",
@@ -1225,6 +1249,13 @@ function parseCard(
     // `hideCompleted` is intentionally NOT read from the markdown — see
     // the serialize side. The card is always created with this field
     // unset so the renderer falls back to `settings.defaultHideCompleted`.
+    //
+    // TodoPlus: `sourceLink` is also NOT read from the markdown. The
+    // single source of truth on disk is the column's `sectionType`
+    // (frontmatter) plus the card's first-bullet title (`[[note#heading]]`).
+    // The renderer parses the title directly via
+    // `parseTodoPlusSourceLink`; no per-card `sourceLink` field exists
+    // in memory or on disk anymore.
   };
 }
 
@@ -1351,6 +1382,14 @@ function detectCardType(
   if (metadata.type === "project") return "project";
   if (metadata.type === "weather") return "weather";
   if (metadata.type === "tracker") return "tracker";
+  // TodoPlus is NOT detected from per-card `type:` metadata anymore.
+  // The single source of truth is the column's `sectionType`
+  // (frontmatter) — see `parseColumns` which overrides every card
+  // type to `"todoplus"` when the column is a todoplus column. This
+  // avoids writing a redundant `type: todoplus` line into every
+  // card body. (The legacy `metadata.type === "todoplus"` check is
+  // intentionally removed: any old markdown that still carries that
+  // line will simply be re-typed on save by the column override.)
 
   const link = metadata.link ?? "";
 

@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.4.2 (2026-06-14)
+
+### Changed
+
+- **Removed redundant per-card metadata for TodoPlus** — 1.4.0/1.4.1 wrote two lines into every TodoPlus card body that were already encoded elsewhere on disk:
+  - `- type: todoplus` — this is the same value as the enclosing column's `sectionType: todoplus` (frontmatter, single source of truth for the column kind), so it was a duplicated field. The parser now ignores the per-card `type:` line and `parseColumns` derives `card.type = "todoplus"` for every card in a todoplus column automatically
+  - `- sourceLink: "[[dash002#To-do]]"` — the source link is the card's first-bullet title itself (`- [[dash002#To-do]]`), so writing it as a metadata line was a duplicated field. The card's `DashboardCard.sourceLink` field is removed from the type; the renderer reads the source link from the title via a new `getTodoPlusSourceLinkFromTitle(card)` helper that parses the wikilink and returns the canonical `note#heading` form
+- **A TodoPlus card on disk is now exactly one bullet line** — `- [[dash002#To-do]]` — plus its indented metadata (cover / width / size / grid), same shape as a regular Todo card. No per-card `type:` or `sourceLink:` line is written
+- **`onCardAdd` option shape changed** — the `options.sourceLink` field on `RenderCallbacks.onCardAdd` is replaced by `options.title`. For TodoPlus columns the caller passes the wikilink-form title `[[note#heading]]` directly; the view layer creates the card with `type: "todoplus"` and that title. The round-trip is byte-identical to the on-disk format
+
+### Migration
+
+- **Existing dashboard notes load without manual action** — the parser still recognises the legacy `type: todoplus` / `sourceLink: "[[...]]"` lines if they happen to be present, but on the next save those lines are dropped (single source of truth wins). The card's in-memory `title` is read from the first bullet; the `sourceLink` field on `DashboardCard` is gone, so any direct `card.sourceLink` access in your own code is now a TypeScript error — switch to `getTodoPlusSourceLinkFromTitle(card)` (or parse the title yourself with the existing `parseTodoPlusSourceLink` helper) to get the canonical `note#heading` string
+
+### Notes
+
+- The `extractSourceLink(metadata)` helper in `parser.ts` is removed; the new `getTodoPlusSourceLinkFromTitle(card)` helper in `renderer.ts` is its replacement
+- `detectCardType` no longer special-cases `metadata.type === "todoplus"`; the column override in `parseColumns` is the only place the type is set
+
+## 1.4.1 (2026-06-14)
+
+### Changed
+
+- **TodoPlus card now uses the same UI and operations as a regular Todo card** — the 1.4.0 release shipped TodoPlus with its own chrome (a "Source: [[…]]" header and an "## heading" caption above the list, plus only a working toggle). In 1.4.1 the body drops the Source/## decorations entirely and reuses the standard `dashboard-task-list` / `dashboard-task-item` / `dashboard-task-add` / `dashboard-progress` DOM, so a TodoPlus card looks identical to a plain Todo card body. The progress bar is computed from the full item list, the add row supports the same file-suggest `[[…]]` flow as Todo, and the hide-completed eye button in the card header now applies (the header's `isTask` / `isTaskCard` checks were extended to include `sectionType === "todoplus"`, so the eye button and the no-edit-pencil behaviour show up automatically)
+- **Three new vault-write helpers** — `addTodoPlusItem` (append a fresh `- [ ] <text>` line to the end of the heading slice, or append a new `## heading` block if the heading doesn't exist), `removeTodoPlusItem` (delete the touched line, including its trailing newline so no blank line is left behind), and `editTodoPlusItem` (rewrite just the text portion of a checklist line, preserving the `- [ ]` / `- [x]` marker). All three funnel through `vault.process` and only touch bytes inside the `## <heading>` slice of the source file, so neighbouring sections, paragraphs, and other headings stay byte-identical
+
+### Notes
+
+- No data format change. Existing dashboard markdown files load identically; the on-disk `sourceLink` field is still the only thing the renderer reads
+- The "Source" and "## heading" header rows are gone from the card body. The source link is still visible from the card's hover-tooltip and the auto-suggest context; if you want a permanent visual reminder of which note a card mirrors, the card title is free to be set to a wikilink to that note (the regular title-edit path applies)
+- The card `title` is now auto-set to `[[note#heading]]` (the same wikilink as `sourceLink`) when a TodoPlus card is created or its source link is changed via "Set source", so the header shows a clickable `[[dash002#To-do]]` label out of the box. The on-disk first-bullet text and the in-memory `title` stay byte-identical to avoid any round-trip mismatch
+
+## 1.4.0 (2026-06-14)
+
+### Added
+
+- **TodoPlus section type (`待办Plus`)** — a new section kind that mirrors a checklist that lives in another note under a `## <heading>` block. Each card stores a single `sourceLink` (e.g. `dash002#To-do`) and renders the live checklist straight from the source — no second copy, no drift. Click the `+` button in a TodoPlus section to point a new card at any `[[note#heading]]` in the vault; if the heading doesn't exist yet, the plugin appends an empty `## heading` block for you so you can drop tasks in immediately
+- **Bidirectional sync** — toggling a checkbox in a TodoPlus card rewrites the matching line in the source note via `vault.process` (only the touched line is changed, so neighbouring sections and other headings are untouched). The dashboard never owns the checklist; the source note does
+- **Section type dropdown now lists `待办Plus`** — the header-level "switch section type" menu (the one with sticky-note / check-square / folder-kanban icons) gets a 4th option `list-checks` (待办Plus). Switching an existing column to TodoPlus just changes its `sectionType` flag; the existing cards are cleared since TodoPlus cards require their own `sourceLink` to be useful
+- **New-section picker now lists `待办Plus`** — the inline type picker on the "+" button at the end of the kanban row gets a 6th option (Notes / Todo / Memo / Notes (no cover) / Library / **待办Plus**). Pick it to create a column that already knows it should hold mirror cards
+- **Wikilink-as-title** — the source link is rendered as a clickable `[[note#heading]]` (using the same `renderTextWithLinks` pipeline as other wikilinks), so clicking it jumps straight to the heading in the source note
+- **Native read path** — TodoPlus uses only Obsidian's built-in APIs (`metadataCache.getFirstLinkpathDest` + `metadataCache.getFileCache(file).headings` + `vault.cachedRead`) to slice the heading range. No new persistence layer, no DOM hacks, no extra metadata on the source note
+
+### Changed
+
+- **Source link is stored on the card, not the section** — like Project's `addGroup`, each TodoPlus card carries its own `sourceLink` (e.g. `dash002#To-do`). A single TodoPlus section can therefore mirror several different notes / headings side by side, or just one — the section's role is purely visual grouping
+- **`sourceLink` is persisted as `sourceLink: "[[note#heading]]"`** in the card's metadata block (with `[[ ]]` wrapping on disk; the brackets are stripped on read so the in-memory representation is the canonical `dash002#To-do` form)
+
 ## 1.3.0 (2026-06-13)
 
 ### Added

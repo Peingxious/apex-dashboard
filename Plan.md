@@ -774,3 +774,203 @@ found.card.body = existingBody ? `${existingBody}\n${newLine}` : newLine;
 - [x] Step 3：renderer.ts 在 `renderCard` 顶部计算 `hideCompletedResolved = card.hideCompleted ?? defaultHide`；`renderCardBody` 同步计算并透传给 `renderTaskBody`；3290 按钮 + 3514 列表过滤两处都改用 resolved 值
 - [x] Step 4：README.md / README_ZH.md Configuration + What's New 已更新；CHANGELOG.md 1.3.0 段落已添加；Target.md §4.1 Todo 行 + §5.2 设置表 + §8 版本表已同步；manifest.json 1.2.1 → 1.3.0；package.json 1.2.1 → 1.3.0
 - [x] 构建验证：`npx tsc --noEmit --skipLibCheck` 通过；`npm run build` 通过；`main.js` 已生成（928KB）
+
+---
+
+## 新增 2026-06-13：待办 Plus（TodoPlus）分区
+
+**用户原话**：
+
+> 新增一个分区方法叫做 待办Plus（TodoPlus）。这个待办读取嵌入笔记中的一个二级标题（## To-do）中的 CheckList 进行展示。所以这个标题，只用显示 1 个无需列表方法，可以使用 `[[dash002#To-do]]` 读取，最好使用原生方法读取，不要新增方法。
+
+**进一步需求**：
+
+- 勾选 / 取消勾选 → **双向同步回原笔记**（用 `vault.process` 改原文件对应行）
+- `[[dash002#To-do]]` 引用源存到 **卡字段** `sourceLink`（仿 Project `renderer.addGroup`），渲染时显示成可点击 wikilink 跳转源笔记
+- 加卡 UI：点击"+" → input 输入 `[[note#heading]]`（也可只输 `[[note]]` 自动补 `#To-do`）→ 没找到 heading 时自动在原文件追加 `## To-do\n` 块
+
+**目标**：
+
+- 新 `CardType: "todoplus"`，新 `sectionType: "todoplus"`
+- `DashboardCard.sourceLink?: string`（如 `"[[dash002#To-do]]"`）
+- **数据读取**全用 Obsidian 原生：`metadataCache.getFirstLinkpathDest` + `metadataCache.getFileCache` (headings) + `vault.cachedRead`，按 heading 位置切片
+- **勾选同步**：`vault.process(file, fn)` 改原文件
+- **加卡 UI**：仿 `renderer.addGroup` 风格
+
+**实现分步**：
+
+### Step 1：类型 + section type 推断
+
+**`src/types.ts`**：
+
+- `CardType` 联合类型加 `"todoplus"`
+- `DashboardCard` 接口加 `sourceLink?: string`（带 JSDoc 说明）
+
+**`src/renderer.ts` `getSectionType`**：
+
+- 加分支：`if (column.sectionType === "todoplus") return "todoplus";`
+- 加分支：`if (lower === "todoplus" || lower === "todo plus" || lower === "待办plus") return "todoplus";`
+- 保证 todoPlus 分区也能复用 addSection + 加卡按钮
+
+### Step 2：parser 持久化 sourceLink
+
+**`src/parser.ts`**：
+
+- `serialize()`：检测到 `card.sourceLink` 时，写 `sourceLink: "[[dash002#To-do]]"`（用 `[[ ]]` 包裹持久化；解析回来时**剥掉** `[[ ]]`）
+- `parseCardFromMetadata()`：读 `metadata.sourceLink`，剥 `[[ ]]` 存为 `card.sourceLink`
+- 默认模板 + 各 fallback 路径：TodoPlus 卡的 `sourceLink` 默认为 `undefined`
+
+### Step 3：renderer 渲染 todoPlus 卡（核心）
+
+**`src/renderer.ts` 新增 `renderTodoPlusBody`**：
+
+1. 解析 `card.sourceLink`：用 `getFirstLinkpathDest(path, "")` 拿 TFile
+2. 拿 `metadataCache.getFileCache(file).headings`，按 `level === 2 && heading === "To-do"` 找 target
+3. 拿 `vault.cachedRead(file)`，按 `target.position.start.offset` → 下一个 `level === 2` heading 的 `start.offset` 切片
+4. 在切片范围内解析 `- [ ] text` / `- [x] text` 行，渲染成任务列表
+5. 复选框点击 → `vault.process(file, content => …)` 在**同一切片范围**内切换 `- [ ]` / `- [x]`
+6. 卡片头部显示 `[[dash002#To-do]]` 可点击 wikilink（复用 `renderTextWithLinks`）
+7. 缓存：维护 `card._cachedChecklist` 内存字段避免重复切片（sourceFile 变化时通过 `metadataCache.on("changed", ...)` 失效）
+
+**`renderCardBody`** 加分支：
+
+```ts
+if (card.type === "todoplus") {
+  renderTodoPlusBody(container, card, callbacks, app);
+  return;
+}
+```
+
+**`getSectionType` 联动**：
+
+- 卡片标题区、checkbox 颜色与 task/todo 保持一致（list 类型视觉）
+- sectionType === "todoplus" 时，分区右上的"加卡"按钮逻辑走 `addTodoPlusCard`（Step 4）
+
+### Step 4：加卡 UI（仿 addGroup）
+
+**`src/renderer.ts` 新增 `addTodoPlusCard(column, callbacks, app, data, settings)`**：
+
+- 弹 input：placeholder = `[[note#To-do]]` 或 `note`
+- 提交时：
+  1. 解析输入 → `[[path#heading]]` / `[[path]]` / `path`
+  2. `getFirstLinkpathDest` 找 TFile
+  3. `metadataCache.getFileCache(file).headings` 找 `level === 2` 匹配 heading
+  4. 没找到 → `vault.process(file, content => content + "\n## To-do\n")`（或更智能：找第一个非空行后追加）
+  5. 写新 card 到 column：`{ type: "todoplus", sourceLink: "[[note#To-do]]", ... }`
+  6. 调 `onCardEdit` / `saveAndRefresh`
+
+**联动**：
+
+- `addSection` / 加卡按钮：sectionType === "todoplus" 时调 `addTodoPlusCard`
+- 默认 todoPlus 分区下：渲染时如 cards 为空，**自动加一张模板卡**（`sourceLink` 为空 → 提示用户点击"+"设置）
+
+### Step 5：文档 + 版本号
+
+- `manifest.json` `1.3.0` → `1.4.0`
+- `package.json` `1.3.0` → `1.4.0`
+- `CHANGELOG.md` 新增 1.4.0 段落
+- `README.md` / `README_ZH.md` Features / What's New 同步
+- `Target.md` §4.1 加 todoPlus 行，§4.2/§5.2 同步，`§8` 版本表加 1.4.0
+
+**验证清单**：
+
+- [x] Step 1：DashboardCard.sourceLink 类型 OK；getSectionType 识别 TodoPlus
+- [x] Step 2：md 文件中 todoPlus 卡有 `sourceLink: "[[dash002#To-do]]"` 字段，load 后回填 sourceLink
+- [x] Step 3：todoPlus 卡显示 `[[dash002#To-do]]` 可点击 + `## To-do` 下的 checklist；勾选同步回原文件
+- [x] Step 4：点击"+"能加卡，输入 `dash002` 自动补 `#To-do`，没找到 heading 时自动追加
+- [x] Step 5：所有文档同步
+- [x] Step 6：分区类型下拉菜单 + 新增分区按钮均加入「待办Plus」选项（图标 list-checks）
+- [x] `npx tsc --noEmit` 通过
+- [x] `npm run build` 通过
+
+**对现有功能影响**：
+
+- 新 `CardType` "todoplus" 加入联合类型，serialize 的 switch 需要补一个 case（默认 fallback）
+- `getSectionType` 加分支，但只在 column 显式 `sectionType = "todoplus"` 或 `column.name` 匹配时触发，对现有 dashboard 无影响
+- 加卡 UI 只在 todoPlus 分区生效，其他分区不显示
+- `vault.process` 调用是标准 API，写入会触发 Obsidian 的 file-modified 事件，sync 链路无需修改
+
+---
+
+## 新增 2026-06-14：TodoPlus 与 Todo 视觉对齐（样式 / 操作完全一致）
+
+**用户原话**：
+
+> todoplus 是和区块2一样的样式，但是读取的是这个文件 [[dash002#To-do]] 中的checklist，操作也是操作这个文件这个标题下的checklist
+
+**背景**：v1.4.0 引入的 TodoPlus 卡有自己一套 UI：顶部一行 `Source: [[dash002#To-do]]` + 标题下加一行 `## To-do` 提示，再渲染清单。读路径正确，写路径只有勾选一种；缺添加/删除/编辑/进度条/隐藏已完成能力，和普通 Todo 卡的 UX 差距过大。本次目标：UI 收敛到与普通 Todo 完全一致，所有操作（添加 / 删除 / 编辑 / 勾选）直接写到原文件对应 heading 切片下。
+
+### 方案
+
+| 维度           | 改动                                                                                                                                                                                                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **渲染器 DOM** | [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) 重构 `renderTodoPlusBody`：去掉 `dashboard-todoplus-source` 头部和 `dashboard-todoplus-heading` 提示行；列表用 `dashboard-task-list` + `dashboard-task-item`（同 `renderTaskBody`）；添加行用 `dashboard-task-add` + `dashboard-task-input`；底部用 `dashboard-progress` |
+| **写辅助函数** | 新增 `addTodoPlusItem`（追加 `- [ ]`）、`removeTodoPlusItem`（删行）、`editTodoPlusItem`（改文本），全部走 `vault.process` 只动 heading 切片                                                                                                                                                                                                          |
+| **按钮策略**   | `isTask` / `isTaskCard` 判定追加 `sectionType === "todoplus"`，让 TodoPlus 也能拿到右上角眼按钮和"无编辑铅笔"等 Todo 专属 chrome                                                                                                                                                                                                                      |
+| **CSS 复用**   | [styles.css](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/styles.css) 把 `dashboard-section-row[data-section-type="todo"]` 的 flex/scroll 选择器同步加上 `data-section-type="todoplus"`，让 task-list 滚动手感与 Todo 完全一致                                                                                                  |
+| **文件建议**   | 添加行 `attachFileSuggest` 走 `tryPickSelection()` + 提交双向路径，与 Todo 加任务保持一致                                                                                                                                                                                                                                                            |
+| **不引入**     | 拖拽重排（要写回原文件，用户未要求）；移动端长按进入编辑（TodoPlus 未要求）                                                                                                                                                                                                                                                                          |
+
+### 子任务
+
+- [x] CSS：把 `data-section-type="todoplus"` 加入 task-body 的 flex/scroll 复用列表
+- [x] renderer.ts：新增 `addTodoPlusItem` / `removeTodoPlusItem` / `editTodoPlusItem` 三个 `vault.process` 写入辅助函数
+- [x] renderer.ts：重构 `renderTodoPlusBody` / `renderTodoPlusItem`，复用 `renderTaskBody` 的 DOM（去掉 Source/## 头，保留 checkbox 列表/添加输入/进度条）
+
+---
+
+## 修复 2026-06-14：移除 TodoPlus 卡片冗余元数据（`type: todoplus` / `sourceLink: "[[...]]"`）
+
+**用户原话**：
+
+> 不要  - sourceLink: "[[dash002#To-do]]" 的属性俩姐 上面有，直接读，顶部属性也有 todoplus 为什么做这么多冗余的事情
+> type属性不要写在md文本内 ，你顶部也有这个属性
+
+**问题**：v1.4.0 / v1.4.1 在每张 TodoPlus 卡片 body 里写了两个 metadata 行：
+
+```yaml
+- "[[dash002#To-do]]"        # 卡片首行（标题）
+  type: todoplus             # ← 冗余：列的 sectionType: todoplus 已经有
+  sourceLink: "[[dash002#To-do]]"  # ← 冗余：标题本身就是 source link
+```
+
+这两个 metadata 在 md 里完全可由已有信息推导，没必要持久化在每张卡片里。
+
+**根因**：v1.4.0 实现时把所有"读得到的字段"都存到了 metadata，给后面读取方便，但忘了 1) 标题本身就是 wikilink 2) 列已经声明了分区类型，**single source of truth** 没建立。
+
+**修复方案**：从磁盘格式和内存模型中彻底移除这两个字段。
+
+### 方案
+
+| 维度         | 改动                                                                                                                                                                                                                                                                                                |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **类型**     | [types.ts:223](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L223) 移除 `DashboardCard.sourceLink`；[types.ts:330](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L330) `RenderCallbacks.onCardAdd` 选项由 `sourceLink` 改为 `title` |
+| **解析器**   | [parser.ts:298](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L298) 移除 `extractSourceLink` 调用与 `metadata.type === "todoplus"` 分支；[parser.ts:1253](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L1253) 序列化时不再写 `type:` / `sourceLink:` 行；`parseColumns` 中若 `sectionType === "todoplus"` 则遍历 `cards`，把所有 card 的 `type` 直接设为 `"todoplus"` |
+| **渲染器**   | [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) 新增 `getTodoPlusSourceLinkFromTitle(card)` 辅助函数（解析首行 wikilink 返回 `note#heading`）；`renderTodoPlusBody` / `promptTodoPlusSourceLink` 中所有 `card.sourceLink` 引用改用该辅助函数；`addTodoPlusCard` 构造 `[[note#heading]]` 形式的 title 通过 `options.title` 传入 |
+| **视图**     | [view.ts:1082](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L1082) / [view.ts:2404](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L2404) 两处 `onCardAdd` 实现 `options` 形状由 `{sourceLink}` 改为 `{title}`，建卡时不再写 `sourceLink` 字段 |
+| **版本**     | 1.4.1 → 1.4.2                                                                                                                                                                                                                                                                                       |
+| **文档**     | CHANGELOG.md 新增 1.4.2 段落（"Changed" + "Migration" + "Notes"），Target.md §4.1 TodoPlus 行 + §8 版本表 + §1 版本号同步                                                                                                            |
+
+### 子任务
+
+- [x] parser.ts: 删除 `type: todoplus` / `sourceLink` 序列化 + 增加从 `sectionType` 推导 `card.type` 的逻辑
+- [x] types.ts: 移除 `DashboardCard.sourceLink` 字段；`onCardAdd` 选项改 `title`
+- [x] renderer.ts: 新增 `getTodoPlusSourceLinkFromTitle` 辅助函数，替换所有 `card.sourceLink` 引用
+- [x] view.ts: `onCardAdd` 移除 `sourceLink` option
+- [x] 构建 + 更新 CHANGELOG / Target.md / Plan.md
+
+### 验证
+
+- [x] `npm run build` 通过（tsc + esbuild 0 错误 0 警告）
+- [x] 全代码搜索 `card.sourceLink` / `options.sourceLink` 字段访问归零（仅剩局部变量名 `sourceLink` 作为 wikilink 字符串，与字段无关）
+- [x] 旧 dashboard 文件下次保存自动清理 `type: todoplus` / `sourceLink: "[[...]]"` 两行（parser 不再写出）
+- [x] renderer.ts：`isTask` / `isTaskCard` 判定加 `sectionType === "todoplus"`，让 todoplus 也获得眼按钮和无编辑铅笔
+- [x] tsc + esbuild 验证编译通过
+- [ ] Plan.md / Target.md / CHANGELOG.md / README.md / README_ZH.md / manifest.json / package.json 同步
+
+**对现有功能影响**：
+
+- 旧版 TodoPlus 卡的 `dashboard-todoplus-source` / `dashboard-todoplus-heading` DOM 节点不再渲染；老笔记中若没别的引用，纯展示层变更
+- `isTask` 扩展不会反向影响 project/memo/widget：判定顺序保持 `card.type === "task"` 优先，其次 `sectionType === "todo"`，最后新增 `sectionType === "todoplus"`
+- TodoPlus 卡现可与 Todo 卡同列存在；分区仍可单独存在
+

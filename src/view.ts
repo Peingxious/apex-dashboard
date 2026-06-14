@@ -1079,7 +1079,7 @@ export class DashboardView extends ItemView {
           await self.saveEmbeddedAndRefresh();
         }
       },
-      onCardAdd: async (columnName: string) => {
+      onCardAdd: async (columnName: string, options?: { title?: string }) => {
         if (!self.embeddedData) return;
         const col = self.embeddedData.columns.find(
           (c) => c.name === columnName,
@@ -1099,6 +1099,53 @@ export class DashboardView extends ItemView {
             body: "",
             tasks:
               effectiveType === "todo" ? [{ text: "", checked: false }] : [],
+            url: "",
+            wikiLink: "",
+            progress: -1,
+            streak: 0,
+            dueDate: "",
+            blockquote: "",
+            color: "",
+            coverImage: "",
+            width: 0,
+            size: "M",
+            gridCols: 0,
+            gridRows: 0,
+            gridCol: 0,
+            gridRow: 0,
+            hideCompleted: false,
+          });
+          await self.saveEmbeddedAndRefresh();
+        } else if (effectiveType === "todoplus") {
+          // TodoPlus section: don't open the project-search modal —
+          // we know the user wants a *mirror* card (a card whose body
+          // is rendered from another note's `## heading` block), so
+          // we push a pre-typed `type: "todoplus"` placeholder
+          // immediately.
+          //
+          // On-disk identity comes from two things that are already
+          // in the markdown — we don't write any per-card
+          // `type:` or `sourceLink:` metadata line:
+          //   1. The column's `sectionType: todoplus` (frontmatter,
+          //      single source of truth for the column kind).
+          //   2. The card's first-bullet title, which is a wikilink
+          //      of the form `[[note#heading]]` and is the
+          //      source-link pointer. The renderer parses the title
+          //      directly via `getTodoPlusSourceLinkFromTitle`.
+          //
+          // The caller (renderer.ts `addTodoPlusCard`) passes the
+          // wikilink-form title through `options.title`. If no
+          // title was supplied, the placeholder is created empty and
+          // the card UI shows the "Set source" button (handled in
+          // `renderTodoPlusBody` / `promptTodoPlusSourceLink`).
+          const initialTitle = options?.title?.trim() ?? "";
+          col.cards.push({
+            id: `${Date.now()}-todoplus`,
+            title: initialTitle,
+            type: "todoplus",
+            column: columnName,
+            body: "",
+            tasks: [],
             url: "",
             wikiLink: "",
             progress: -1,
@@ -2354,7 +2401,7 @@ export class DashboardView extends ItemView {
         this.sync.addDocToCard(card.id, docPath),
       onProjectDocsRemove: (card: DashboardCard, topIndex: number) =>
         this.sync.removeProjectDoc(card.id, topIndex),
-      onCardAdd: (colName: string) => {
+      onCardAdd: (colName: string, options?: { title?: string }) => {
         const column = this.data?.columns.find((col) => col.name === colName);
         const effectiveType = column?.sectionType ?? colName.toLowerCase();
         if (effectiveType === "dashboard") {
@@ -2362,6 +2409,24 @@ export class DashboardView extends ItemView {
         } else if (effectiveType === "memo" || effectiveType === "todo") {
           this.pendingScrollToLastCardOfColumn = colName;
           this.sync.addCard(colName);
+        } else if (effectiveType === "todoplus") {
+          // TodoPlus section: the caller (renderTodoPlus prompt) has
+          // already validated the source wikilink and may have passed
+          // a `title` to seed the new card with. We push a pre-typed
+          // `type: "todoplus"` card and forward the title so the
+          // card body is rendered on the very first refresh — no
+          // need for the user to click "Set source" again.
+          //
+          // Note: there is no per-card `sourceLink` field anymore —
+          // the source link lives in the card `title` (a wikilink
+          // `[[note#heading]]`).
+          this.pendingScrollToLastCardOfColumn = colName;
+          this.sync.addCard(colName, {
+            type: "todoplus",
+            ...(options?.title && options.title.trim().length > 0
+              ? { title: options.title.trim() }
+              : {}),
+          });
         } else {
           this.openProjectSearchModal(colName);
         }

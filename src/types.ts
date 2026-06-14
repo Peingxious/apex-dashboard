@@ -149,7 +149,8 @@ export type CardType =
   | "habit"
   | "generic"
   | "weather"
-  | "tracker";
+  | "tracker"
+  | "todoplus";
 
 export interface WeatherConfig {
   latitude: number;
@@ -219,9 +220,21 @@ export interface DashboardCard {
   gridRows: number;
   gridCol: number;
   gridRow: number;
-  /** When true, the todo card hides tasks with `checked === true` from its visible list.
-   *  Persisted as `hideCompleted: true` in card metadata. */
+  /** Session-only override: when true, the todo card hides tasks with
+   *  `checked === true` from its visible list. Falls back to
+   *  `settings.defaultHideCompleted` when unset. **Not persisted** to
+   *  the dashboard markdown (see parser.ts). */
   hideCompleted?: boolean;
+  /** For `type === "todoplus"`: the card mirrors a checklist under a
+   *  `## <heading>` block in another note. The source pointer is the
+   *  card's first-bullet `title` itself — a wikilink of the form
+   *  `[[note#heading]]`. The renderer parses the title with
+   *  `parseTodoPlusSourceLink` in renderer.ts; there is no separate
+   *  `sourceLink` field on the card. The card's `type` is also
+   *  derived: it's set to `"todoplus"` automatically when the
+   *  enclosing column has `sectionType: todoplus` (see `parseColumns`
+   *  in parser.ts), so we don't write a `type: todoplus` line into
+   *  the card body either. */
   chartConfig?: never;
   weatherConfig?: WeatherConfig;
   trackerConfig?: TrackerConfig;
@@ -310,7 +323,12 @@ export interface RenderCallbacks {
     destIndex: number,
   ): void;
   onTaskEdit(cardId: string, taskIndex: number, newText: string): void;
-  onCardAdd(columnName: string): void;
+  /** Add a new card to `columnName`. For TodoPlus columns, `title`
+   *  should be the source wikilink (e.g. `"[[dash002#To-do]]"`);
+   *  the renderer reads the source link from the title, and the
+   *  column's `sectionType: todoplus` (frontmatter) identifies the
+   *  card kind. No `sourceLink` option is needed. */
+  onCardAdd(columnName: string, options?: { title?: string }): void;
   onColumnAdd(name: string, sectionType?: string): void;
   onBannerEdit(): void;
   onQuickActionAdd(): void;

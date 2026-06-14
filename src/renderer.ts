@@ -1,4 +1,4 @@
-import { App, Menu, Notice, setIcon } from "obsidian";
+import { App, CachedMetadata, Menu, Notice, setIcon, TFile } from "obsidian";
 import type {
   DashboardData,
   DashboardColumn,
@@ -2660,6 +2660,7 @@ export function renderDashboard(
       { value: "memo", label: t("renderer.typeMemo") },
       { value: "notes", label: t("renderer.typeNotesPlain") },
       { value: "library", label: t("renderer.typeLibrary") },
+      { value: "todoplus", label: t("renderer.typeTodoPlus") },
     ];
 
     for (const opt of typeOptions) {
@@ -2908,7 +2909,7 @@ function renderSection(
     return el;
   }
 
-  // Section type dropdown selector (memo / todo / projects)
+  // Section type dropdown selector (memo / todo / projects / todoplus)
   const typeOptions = [
     { value: "memo", label: t("renderer.typeMemo"), icon: "sticky-note" },
     { value: "todo", label: t("renderer.typeTodo"), icon: "check-square" },
@@ -2916,6 +2917,11 @@ function renderSection(
       value: "projects",
       label: t("renderer.typeProjects"),
       icon: "folder-kanban",
+    },
+    {
+      value: "todoplus",
+      label: t("renderer.typeTodoPlus"),
+      icon: "list-checks",
     },
   ];
   const currentType =
@@ -2975,9 +2981,15 @@ function renderSection(
     { once: false },
   );
 
-  // Add card button: inline text input for projects, click callback for others
-  const isProjectSection = getSectionType(column) === "projects";
-  if (isProjectSection) {
+  // Add card button: inline text input for projects / todoplus, click
+  // callback for everything else. TodoPlus uses the same input UX as
+  // Project `addGroup` — the value is a wikilink like
+  // `dash002#To-do` (or `[[dash002#To-do]]` / `dash002`), not a
+  // free-form title.
+  const addCardSectionType = getSectionType(column);
+  const isProjectSection = addCardSectionType === "projects";
+  const isTodoPlusSection = addCardSectionType === "todoplus";
+  if (isProjectSection || isTodoPlusSection) {
     let addInputVisible = false;
     let addInputEl: HTMLInputElement | null = null;
 
@@ -3004,14 +3016,23 @@ function renderSection(
       });
       addInputEl = wrapper.createEl("input", {
         cls: "dashboard-task-input",
-        attr: { type: "text", placeholder: t("renderer.addGroup") },
+        attr: {
+          type: "text",
+          placeholder: isTodoPlusSection
+            ? t("renderer.todoPlusSourcePlaceholder")
+            : t("renderer.addGroup"),
+        },
       });
       addInputEl.focus();
 
       const finishAdd = () => {
         const val = addInputEl?.value.trim();
         if (val) {
-          callbacks.onProjectGroupAdd(column.name, val);
+          if (isTodoPlusSection) {
+            addTodoPlusCard(column, val, callbacks, app, data, settings);
+          } else {
+            callbacks.onProjectGroupAdd(column.name, val);
+          }
         }
         wrapper.remove();
         addInputVisible = false;
@@ -3123,7 +3144,15 @@ function renderCard(
   }
 
   const isMemo = sectionType === "memo";
-  const isTask = card.type === "task" || sectionType === "todo";
+  // Treat TodoPlus cards the same as plain Todo cards for header
+  // chrome (eye button, no edit pencil, project-like layout rules)
+  // — the user asked for visual parity with the regular Todo
+  // section, and that's the cheapest way to get it without forking
+  // the card-header logic.
+  const isTask =
+    card.type === "task" ||
+    sectionType === "todo" ||
+    sectionType === "todoplus";
   const isWeather = card.type === "weather";
   const isTracker = card.type === "tracker";
   const isWidget = isWeather || isTracker;
@@ -3503,8 +3532,19 @@ function renderCardBody(
     return;
   }
 
+  // TodoPlus cards are list-style bodies (like `task`), but the list
+  // lives in another note under a specific `## heading` — see
+  // `renderTodoPlusBody` for the full read/sync pipeline.
+  if (card.type === "todoplus") {
+    void renderTodoPlusBody(container, card, callbacks, app, settings);
+    return;
+  }
+
   const isMemo = sectionType === "memo";
-  const isTaskCard = card.type === "task" || sectionType === "todo";
+  const isTaskCard =
+    card.type === "task" ||
+    sectionType === "todo" ||
+    sectionType === "todoplus";
 
   if (isTaskCard) {
     renderTaskBody(container, card, callbacks, app, hideCompletedResolved);
@@ -4110,6 +4150,887 @@ function renderHabitBody(container: HTMLElement, card: DashboardCard): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// TodoPlus (`card.type === "todoplus"`)
+// ---------------------------------------------------------------------------
+//
+// A TodoPlus card is a **view window** onto a checklist that lives in
+// some other note under a `## <heading>` block. The card stores the
+// source link in its `title` field (a wikilink of the form
+// `[[note#heading]]`) and reads / writes the underlying file directly
+// via Obsidian's native APIs — no new persistence layer is introduced.
+//
+//   read:  metadataCache.getFileCache(file).headings
+//            → slice vault.cachedRead(file) between the target heading
+//              and the next same-or-higher level heading
+//   write: vault.process(file, content => …)  — only ever touches the
+//          lines inside the heading slice, never outside it, so we
+//          never corrupt neighbouring sections.
+//
+// The card body is built fresh on every render. We do not duplicate
+// the checklist onto the dashboard card, which keeps the dashboard
+// markdown clean and means the source note is the single source of
+// truth.
+interface TodoPlusChecklistItem {
+  /** Absolute byte offset of this line in the source note (0-based). */
+  lineStart: number;
+  /** Absolute byte offset of the end of this line (excluding newline). */
+  lineEnd: number;
+  /** Whether the markdown checkbox is filled (true = done). */
+  checked: boolean;
+  /** Checkbox label text, with leading list-marker / indent stripped. */
+  text: string;
+}
+
+interface TodoPlusSlice {
+  file: TFile;
+  heading: string;
+  /** Byte range (inclusive start, exclusive end) of the heading slice
+   *  in the cached file content. */
+  start: number;
+  end: number;
+  items: TodoPlusChecklistItem[];
+}
+
+/**
+ * Renders a TodoPlus card body. The card is a view onto a checklist
+ * stored under a `## <heading>` in another note — see the block
+ * comment above for the overall design. The body is rebuilt on every
+ * call, so callers should call this once per render pass.
+ *
+ * UI: deliberately identical to a regular Todo card body (checkbox
+ * list + add input + progress bar). The "Source: [[…]]" header and
+ * the "## heading" caption that the very first iteration of TodoPlus
+ * showed are gone — the source link is metadata on the card, and
+ * the only user-facing thing inside the body is the checklist. This
+ * way a TodoPlus column is visually indistinguishable from a plain
+ * Todo column except for the data source.
+ */
+async function renderTodoPlusBody(
+  container: HTMLElement,
+  card: DashboardCard,
+  callbacks: RenderCallbacks,
+  app: App,
+  settings?: DashboardSettings,
+): Promise<void> {
+  // The source link is read from the card's `title` (a wikilink of
+  // the form `[[note#heading]]`); there is no per-card `sourceLink`
+  // field anymore — see `getTodoPlusSourceLinkFromTitle` below.
+  const sourceLink = getTodoPlusSourceLinkFromTitle(card);
+  if (!sourceLink) {
+    // No source set yet — show a one-click hint to wire it up. (This
+    // path is rare: the add-card flow validates the source link
+    // before creating the card, so the placeholder only appears if
+    // a TodoPlus card was somehow created with an empty source.)
+    const empty = container.createDiv({ cls: "dashboard-todoplus-empty" });
+    empty.setText(t("renderer.todoPlusEmpty"));
+    const setBtn = empty.createEl("button", {
+      cls: "dashboard-todoplus-set-btn",
+      text: t("renderer.todoPlusSetSource"),
+    });
+    setBtn.addEventListener("click", () => {
+      void promptTodoPlusSourceLink(card, callbacks, app, settings);
+    });
+    return;
+  }
+
+  // Resolve the source file + heading slice. We render an empty-state
+  // message in the body if the link can't be resolved (broken link,
+  // missing file, etc.) so the user has clear feedback.
+  //
+  // We may need to wait for the metadata cache to index the source
+  // file (it can be empty / incomplete right after Obsidian opens the
+  // file, or right after the user opens the dashboard with a brand-new
+  // workspace). `resolveTodoPlusSlice` handles that internally via
+  // `waitForFileCache`, so this single call should be enough.
+  let slice = await resolveTodoPlusSlice(app, sourceLink);
+
+  // Belt-and-braces fallback: if the cache truly has no `## To-do`
+  // heading (maybe the user just typed the link but hasn't opened the
+  // file yet), give Obsidian one more chance to catch up before we
+  // report an error.
+  if (!slice) {
+    await new Promise<void>((r) => setTimeout(r, 400));
+    slice = await resolveTodoPlusSlice(app, sourceLink);
+  }
+  if (!slice) {
+    const err = container.createDiv({ cls: "dashboard-todoplus-error" });
+    err.setText(t("renderer.todoPlusUnresolved", { link: sourceLink }));
+    return;
+  }
+
+  // Same hide-completed resolution the regular Todo body uses:
+  //   1. The card's in-memory `hideCompleted` override wins when set.
+  //   2. Otherwise fall back to the global `defaultHideCompleted`
+  //      setting (default true).
+  const defaultHide = settings?.defaultHideCompleted ?? true;
+  const hideCompleted = card.hideCompleted ?? defaultHide;
+  // Always compute the progress from the full item list, not the
+  // filtered one — hiding completed tasks should not change the
+  // percentage the user sees.
+  const visibleItems = hideCompleted
+    ? slice.items.filter((it) => !it.checked)
+    : slice.items;
+
+  // Build the checklist using the **same DOM classes** as
+  // `renderTaskBody` so the CSS, the drag-handle expectations, and
+  // any future shared styles Just Work. The only divergence is that
+  // TodoPlus items aren't `draggable` (reordering would mean
+  // rewriting the source file mid-drag, which the user didn't ask
+  // for, so we leave that as a follow-up if needed).
+  const list = container.createDiv({ cls: "dashboard-task-list" });
+  list.dataset.cardId = card.id;
+  list.dataset.todoplus = "true";
+  list.dataset.todoplusFile = slice.file.path;
+  list.dataset.todoplusHeading = slice.heading;
+
+  if (visibleItems.length === 0) {
+    const empty = list.createDiv({ cls: "dashboard-task-empty" });
+    empty.setText(t("renderer.todoPlusNoItems"));
+  } else {
+    visibleItems.forEach((item, idx) => {
+      renderTodoPlusItem(list, card, slice, item, idx, app);
+    });
+  }
+
+  // Add-row: identical input UX to a regular Todo card. Pressing
+  // Enter (or picking from the file-suggest dropdown) writes
+  // `- [ ] <text>` to the end of the heading slice in the source
+  // file via `addTodoPlusItem`. The metadataCache `changed` event
+  // fires, our `scheduleTodoPlusRefresh` listener catches it, and
+  // the new item appears in the list — no extra refresh wiring.
+  const addRow = container.createDiv({ cls: "dashboard-task-add" });
+  const input = addRow.createEl("input", {
+    cls: "dashboard-task-input",
+    attr: { type: "text", placeholder: t("renderer.addTask") },
+  });
+  const submitNew = (rawValue: string) => {
+    const value = rawValue.trim();
+    if (!value) return;
+    void addTodoPlusItem(app, slice.file, slice.heading, value).catch((e) => {
+      console.error("[apex-dashboard] TodoPlus add failed", e);
+      new Notice(
+        t("renderer.todoPlusWriteError", { message: (e as Error).message }),
+      );
+    });
+  };
+  const taskSuggest = attachFileSuggest(input, app, (value) => {
+    // `value` here is the REPLACED input content (any leading
+    // prefix the user typed before `[[` is preserved, and the
+    // picked file's basename has been written in as `[[basename]]`).
+    // Mirrors the regular Todo behaviour: keep the user's prefix
+    // intact rather than collapsing the row to just the wikilink.
+    submitNew(value);
+    input.value = "";
+  });
+  input.addEventListener("keydown", (e) => {
+    // If the suggest popup has an active selection, Enter means
+    // "pick it", not "submit my current text". The handle takes
+    // care of the side effects (writing the wikilink into the
+    // input + calling the onPick callback above), so we just
+    // suppress the default submit.
+    if (e.key === "Enter" && taskSuggest.tryPickSelection()) {
+      e.preventDefault();
+      return;
+    }
+    if (e.key === "Enter" && input.value.trim()) {
+      e.preventDefault();
+      submitNew(input.value);
+      input.value = "";
+    }
+  });
+
+  // Progress bar: same DOM as `renderTaskBody`, computed from the
+  // full item list (not the filtered one) so hiding completed tasks
+  // doesn't move the percentage.
+  if (slice.items.length > 0) {
+    const checkedCount = slice.items.filter((it) => it.checked).length;
+    const total = slice.items.length;
+    const percent = Math.round((checkedCount / total) * 100);
+
+    const progressWrap = container.createDiv({ cls: "dashboard-progress" });
+    const bar = progressWrap.createDiv({ cls: "dashboard-progress-bar" });
+    bar.createDiv({
+      cls: "dashboard-progress-fill",
+      attr: { style: `width: ${percent}%` },
+    });
+    progressWrap.createSpan({
+      cls: "dashboard-progress-text",
+      text: `${percent}%`,
+    });
+  }
+
+  // Reactive refresh: when the source file changes (user adds a task
+  // in dash002, toggles a checkbox, renames the heading, etc.),
+  // re-render this card's body. We register a `metadataCache.on(
+  // "changed")` listener scoped to the source file and tear it down
+  // automatically when the card leaves the DOM (via MutationObserver
+  // on its parent). This keeps the dashboard in sync with the
+  // source note in real time, no reload required.
+  scheduleTodoPlusRefresh(app, list, card, callbacks, settings);
+  return;
+}
+
+/**
+ * Renders a single TodoPlus checklist item. The DOM mirrors a
+ * regular Todo item (`.dashboard-task-item` + checkbox + text +
+ * delete button) so the styling, the hover-revealed delete, and
+ * any future task-list styles apply uniformly.
+ *
+ * The three user actions (toggle, edit, delete) all write back to
+ * the source file via the `*TodoPlusItem` helpers — there is no
+ * in-memory copy of the checklist on the dashboard card. The
+ * `metadataCache.on("changed")` listener scheduled by
+ * `renderTodoPlusBody` will fire after the write and re-render the
+ * card body, so the user sees the new state without any extra
+ * wiring here.
+ */
+function renderTodoPlusItem(
+  list: HTMLElement,
+  card: DashboardCard,
+  slice: TodoPlusSlice,
+  item: TodoPlusChecklistItem,
+  _idx: number,
+  app: App,
+): void {
+  const li = list.createDiv({ cls: "dashboard-task-item" });
+  // Intentionally NOT `draggable="true"` — reordering would mean
+  // rewriting the source file mid-drag, and the user did not ask
+  // for that. Add later if requested.
+  li.dataset.todoplusItem = "true";
+
+  const checkbox = li.createEl("input", {
+    cls: "dashboard-task-checkbox",
+    attr: { type: "checkbox" },
+  });
+  checkbox.checked = item.checked;
+  checkbox.addEventListener("change", () => {
+    const newChecked = checkbox.checked;
+    void setTodoPlusItemChecked(app, slice.file, item, newChecked).catch(
+      (e) => {
+        console.error("[apex-dashboard] TodoPlus toggle failed", e);
+        new Notice(
+          t("renderer.todoPlusWriteError", { message: (e as Error).message }),
+        );
+      },
+    );
+  });
+
+  const label = li.createSpan({
+    cls: item.checked
+      ? "dashboard-task-text dashboard-task-text--done"
+      : "dashboard-task-text",
+  });
+  renderTextWithLinks(label, item.text, app);
+  label.addEventListener("dblclick", (e) => {
+    e.stopPropagation();
+    label.empty();
+
+    const textarea = label.createEl("textarea", {
+      cls: "dashboard-task-edit-textarea",
+      text: item.text,
+    });
+
+    // Auto-size: fit content and expand as the user types.
+    const autoResize = () => {
+      textarea.style.height = "auto";
+      textarea.style.height = textarea.scrollHeight + "px";
+    };
+    autoResize();
+
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    const finish = (save: boolean) => {
+      const newText = textarea.value.trim();
+      if (save && newText && newText !== item.text) {
+        void editTodoPlusItem(app, slice.file, item, newText).catch((err) => {
+          console.error("[apex-dashboard] TodoPlus edit failed", err);
+          new Notice(
+            t("renderer.todoPlusWriteError", {
+              message: (err as Error).message,
+            }),
+          );
+        });
+      } else {
+        label.empty();
+        try {
+          renderTextWithLinks(label, item.text, app);
+        } catch {
+          label.setText(item.text);
+        }
+      }
+    };
+
+    textarea.addEventListener("input", autoResize);
+    textarea.addEventListener("keydown", (ke) => {
+      if (ke.key === "Enter" && !ke.shiftKey) {
+        ke.preventDefault();
+        finish(true);
+      } else if (ke.key === "Escape") {
+        ke.preventDefault();
+        finish(false);
+      }
+    });
+    textarea.addEventListener("blur", () => {
+      finish(true);
+    });
+  });
+
+  const delBtn = li.createEl("button", {
+    cls: "dashboard-task-delete",
+    attr: { "aria-label": t("renderer.deleteTask") },
+  });
+  setIcon(delBtn, "x");
+  delBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    void removeTodoPlusItem(app, slice.file, item).catch((err) => {
+      console.error("[apex-dashboard] TodoPlus delete failed", err);
+      new Notice(
+        t("renderer.todoPlusWriteError", { message: (err as Error).message }),
+      );
+    });
+  });
+}
+
+/**
+ * Parses `card.sourceLink` and returns the matching checklist slice
+ * (file + heading + parsed items). Returns `null` when the file or
+ * heading can't be resolved, or when the source link is malformed.
+ *
+ * Note: this is an **async** function because `getFirstLinkpathDest`
+ * can resolve links that haven't been seen yet, but for files that
+ * have been observed we read the cache synchronously. The
+ * `metadataCache.on("resolve")` event isn't necessary here — we just
+ * call into Obsidian and let it return what it has.
+ */
+async function resolveTodoPlusSlice(
+  app: App,
+  sourceLink: string,
+): Promise<TodoPlusSlice | null> {
+  // Source link can be `dash002#To-do`, `[[dash002#To-do]]`, or
+  // `[[dash002#To-do|alias]]`. Normalize to a `{path, heading}` pair.
+  const parsed = parseTodoPlusSourceLink(sourceLink);
+  if (!parsed) return Promise.resolve(null);
+
+  // Resolve the path with `getFirstLinkpathDest` (Obsidian's standard
+  // link resolver, which handles aliases, basenames, etc.).
+  const dest = app.metadataCache.getFirstLinkpathDest(parsed.path, "");
+  if (!(dest instanceof TFile)) return Promise.resolve(null);
+
+  // Wait for the metadata cache to be populated for this file. On
+  // workspace open / plugin load, the cache can be empty or
+  // incomplete for files the user hasn't opened yet. We listen for
+  // the first `changed` event for this file, with a generous timeout
+  // so we don't hang indefinitely on weird states.
+  const cache =
+    (await waitForFileCache(app, dest)) ?? app.metadataCache.getFileCache(dest);
+  const headings = cache?.headings ?? [];
+  const target = headings.find(
+    (h) => h.level === 2 && h.heading === parsed.heading,
+  );
+  if (!target) return Promise.resolve(null);
+
+  // Find the end of the slice: the next heading at level <= 2, or
+  // EOF. We read the cached file once and compute offsets.
+  // `cachedRead` is preferred over `read` because it skips disk I/O
+  // when the file is already in memory.
+  const content = await app.vault.cachedRead(dest);
+  const start = target.position.start.offset ?? 0;
+  const endCandidates = headings
+    .filter(
+      (h) =>
+        (h.position.start.offset ?? 0) > start &&
+        h.level <= 2 &&
+        h.heading !== parsed.heading,
+    )
+    .map((h) => h.position.start.offset ?? content.length)
+    .filter((off) => off > start);
+  const end =
+    endCandidates.length > 0 ? Math.min(...endCandidates) : content.length;
+
+  // Parse `- [ ]` / `- [x]` items inside the slice.
+  const sliceContent = content.slice(start, end);
+  const items = parseTodoPlusChecklist(sliceContent, start);
+
+  return Promise.resolve({
+    file: dest,
+    heading: parsed.heading,
+    start,
+    end,
+    items,
+  });
+}
+
+/**
+ * Waits for `app.metadataCache.getFileCache(file)` to return a
+ * populated cache (with `headings` parsed). On a fresh Obsidian
+ * startup the cache can be empty / partial for files the user
+ * hasn't opened yet, so this returns the cache once the next
+ * `metadataCache.on("changed")` event for that file fires — or
+ * after a 2.5s timeout, whichever comes first. If the cache is
+ * already populated, returns synchronously.
+ */
+function waitForFileCache(
+  app: App,
+  file: TFile,
+  timeoutMs: number = 2500,
+): Promise<CachedMetadata | null> {
+  const initial = app.metadataCache.getFileCache(file);
+  if (initial && initial.headings) {
+    return Promise.resolve(initial);
+  }
+  return new Promise<CachedMetadata | null>((resolve) => {
+    let ref: any = null;
+    const cleanup = () => {
+      if (ref) {
+        app.metadataCache.offref(ref);
+        ref = null;
+      }
+    };
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve(app.metadataCache.getFileCache(file));
+    }, timeoutMs);
+    ref = app.metadataCache.on("changed", (f) => {
+      if (f === file) {
+        clearTimeout(timer);
+        cleanup();
+        resolve(app.metadataCache.getFileCache(file));
+      }
+    });
+  });
+}
+
+/**
+ * Schedules a reactive refresh for a TodoPlus card. Whenever the
+ * source file's metadataCache `changed` event fires (the user
+ * added/removed/checked/unchecked tasks in `dash002`), we wipe the
+ * card's body and re-render it. The listener is automatically torn
+ * down when the card leaves the DOM, so we don't leak observers on
+ * long-lived sessions.
+ */
+function scheduleTodoPlusRefresh(
+  app: App,
+  listEl: HTMLElement,
+  card: DashboardCard,
+  callbacks: RenderCallbacks,
+  settings?: DashboardSettings,
+): void {
+  const cardEl = listEl.closest(".dashboard-card") as HTMLElement | null;
+  if (!cardEl) return;
+  const sourcePath = listEl.dataset.todoplusFile;
+  if (!sourcePath) return;
+
+  const onChange = (file: TFile) => {
+    if (file.path !== sourcePath) return;
+    if (!document.body.contains(cardEl)) return;
+    // Re-render the entire body (clear + re-dispatch to
+    // renderTodoPlusBody). The header is a sibling in the parent
+    // container, so we only need to empty the listEl — but the
+    // body is built top-down in renderTodoPlusBody, so we instead
+    // rebuild from the closest `.dashboard-card-content` (or the
+    // body root) up.
+    const bodyRoot = cardEl.querySelector(
+      ".dashboard-card-body",
+    ) as HTMLElement | null;
+    if (bodyRoot) {
+      bodyRoot.empty();
+      void renderTodoPlusBody(bodyRoot, card, callbacks, app, settings);
+    }
+  };
+  const ref = app.metadataCache.on("changed", onChange);
+
+  // Tear down the listener when the card leaves the DOM. The
+  // MutationObserver on `document.body` is a deliberately broad
+  // subscription because Obsidian can detach and re-attach the
+  // card at any time (e.g. switching dashboard tabs, scrolling,
+  // re-rendering after a save).
+  const teardown = () => {
+    app.metadataCache.offref(ref);
+    observer.disconnect();
+  };
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(cardEl)) teardown();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}
+
+/**
+ * Splits `card.sourceLink` into `{path, heading}`. Accepts:
+ *
+ *   - `dash002#To-do`          → `{ path: "dash002", heading: "To-do" }`
+ *   - `[[dash002#To-do]]`      → same
+ *   - `[[dash002#To-do|alias]]`→ same
+ *   - `dash002`                → `{ path: "dash002", heading: "To-do" }` (default heading)
+ *
+ * Returns `null` if the input is empty.
+ *
+ * NOTE: there is no per-card `sourceLink` field anymore — the source
+ * link lives in the card's `title` (a wikilink). Callers pass
+ * `card.title` (or any source string) directly.
+ */
+function parseTodoPlusSourceLink(
+  raw: string,
+): { path: string; heading: string } | null {
+  const text = raw.trim();
+  if (!text) return null;
+  // Strip `[[ ]]` wrapper.
+  const inner = text.replace(/^\[\[/, "").replace(/]]$/, "").trim();
+  // Strip `|alias` tail.
+  const pipeIdx = inner.indexOf("|");
+  const linkPart = pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner;
+  // Split on first `#`.
+  const hashIdx = linkPart.indexOf("#");
+  if (hashIdx < 0) {
+    return { path: linkPart.trim(), heading: "To-do" };
+  }
+  const path = linkPart.slice(0, hashIdx).trim();
+  const heading = linkPart.slice(hashIdx + 1).trim();
+  if (!path || !heading) return null;
+  return { path, heading };
+}
+
+/**
+ * Reads the source link out of a TodoPlus card's `title`. The title
+ * is expected to be a wikilink of the form `[[note#heading]]` (the
+ * only on-disk representation). Returns the canonical
+ * `"note#heading"` string (no `[[ ]]` wrapper, no `|alias` tail), or
+ * `""` when the title is empty / not a usable wikilink. This is the
+ * single source-of-truth reader: there is no per-card `sourceLink`
+ * field on the DashboardCard type anymore.
+ */
+function getTodoPlusSourceLinkFromTitle(card: DashboardCard): string {
+  const title = (card.title ?? "").trim();
+  if (!title) return "";
+  const parsed = parseTodoPlusSourceLink(title);
+  if (!parsed) return "";
+  return `${parsed.path}#${parsed.heading}`;
+}
+
+/**
+ * Parses the checklist inside a heading slice. Each item carries
+ * absolute offsets into the source file so we can write back to the
+ * exact line later (we never recompute offsets against the full
+ * string, which avoids drift if the slice gets trimmed or the file
+ * is large).
+ */
+function parseTodoPlusChecklist(
+  slice: string,
+  baseOffset: number,
+): TodoPlusChecklistItem[] {
+  const items: TodoPlusChecklistItem[] = [];
+  const lineOffsets: number[] = [];
+  // Build a `lineStart` index for the slice (offsets relative to the
+  // slice, not the full file).
+  let cursor = 0;
+  for (const part of slice.split("\n")) {
+    lineOffsets.push(cursor);
+    cursor += part.length + 1; // +1 for the \n
+  }
+  for (let i = 0; i < lineOffsets.length; i++) {
+    const relStart = lineOffsets[i];
+    const lineEndRel = relStart + slice.slice(relStart).indexOf("\n");
+    const line = slice.slice(
+      relStart,
+      lineEndRel < relStart ? slice.length : lineEndRel,
+    );
+    // Match `- [ ] text` or `- [x] text` (case-insensitive on x).
+    // We deliberately do not allow other bullet styles (`*`, `+`,
+    // numbered lists) — TodoPlus mirrors a markdown task list and
+    // we don't want to silently misinterpret other bullets.
+    const m = line.match(/^\s*-\s+\[( |x|X)\]\s+(.*)$/);
+    if (!m) continue;
+    const checked = m[1].toLowerCase() === "x";
+    const text = m[2].trim();
+    items.push({
+      lineStart: baseOffset + relStart,
+      lineEnd: baseOffset + (lineEndRel < relStart ? slice.length : lineEndRel),
+      checked,
+      text,
+    });
+  }
+  return items;
+}
+
+/**
+ * Toggles a single TodoPlus checklist line in the source file by
+ * rewriting only the `- [ ]` / `- [x]` portion of that line. We use
+ * `vault.process` so Obsidian owns the file modification event
+ * (metadataCache refresh, file watchers, etc.).
+ */
+async function setTodoPlusItemChecked(
+  app: App,
+  file: TFile,
+  item: TodoPlusChecklistItem,
+  checked: boolean,
+): Promise<void> {
+  await app.vault.process(file, (content) => {
+    const before = content.slice(0, item.lineStart);
+    const line = content.slice(item.lineStart, item.lineEnd);
+    const after = content.slice(item.lineEnd);
+    const replaced = line.replace(
+      /^(\s*-\s+\[)( |x|X)(\]\s+.*)$/,
+      (_full, head: string, _box: string, tail: string) =>
+        `${head}${checked ? "x" : " "}${tail}`,
+    );
+    return before + replaced + after;
+  });
+}
+
+/**
+ * Appends a new unchecked `- [ ] text` line to the `## <heading>`
+ * block in `file`. Insertion point is the **end of the heading
+ * slice** (right before the next same-or-higher-level heading, or
+ * EOF if there isn't one). The trailing newline of the previous
+ * content is preserved so we never collapse two paragraphs into one.
+ *
+ * If the heading doesn't exist yet we append a fresh `## <heading>`
+ * block at the end of the file (so the user can start adding tasks
+ * immediately — matches the behaviour of the add-card flow).
+ */
+async function addTodoPlusItem(
+  app: App,
+  file: TFile,
+  heading: string,
+  text: string,
+): Promise<void> {
+  const safeText = text.replace(/\r?\n/g, " ").trim();
+  await app.vault.process(file, (content) => {
+    const lines = content.split("\n");
+    // Locate the heading line (exact text match, level-2 by convention).
+    const headingIdx = lines.findIndex(
+      (l) => /^##\s+/.test(l) && l.replace(/^##\s+/, "").trim() === heading,
+    );
+    if (headingIdx < 0) {
+      // Heading missing — append a fresh block.
+      const prefix = content.length > 0 && !content.endsWith("\n") ? "\n" : "";
+      return `${content}${prefix}\n## ${heading}\n- [ ] ${safeText}\n`;
+    }
+    // Find the end of the heading slice: the next heading at level
+    // <= 2 (we only auto-create level-2 headings, but be safe and
+    // match the same slice rule the read path uses).
+    const headingLevel = lines[headingIdx]!.match(/^#+/)?.[0].length ?? 2;
+    let endIdx = lines.length;
+    for (let i = headingIdx + 1; i < lines.length; i++) {
+      const m = lines[i]!.match(/^(#+)\s/);
+      if (m && m[1]!.length <= headingLevel) {
+        endIdx = i;
+        break;
+      }
+    }
+    // Insert a new unchecked item right before the end of the slice.
+    // The `lines` array was built by splitting on `\n`, so a single
+    // `splice + join` round-trip preserves the original line endings
+    // byte-for-byte.
+    const newLines = [...lines];
+    newLines.splice(endIdx, 0, `- [ ] ${safeText}`);
+    return newLines.join("\n");
+  });
+}
+
+/**
+ * Deletes a single TodoPlus checklist line from the source file.
+ * We slice from the start of the line up to and including the
+ * trailing newline (so we never leave a stray empty line behind).
+ * If the line happens to be the last line in the file and has no
+ * trailing newline, we drop the line content only.
+ */
+async function removeTodoPlusItem(
+  app: App,
+  file: TFile,
+  item: TodoPlusChecklistItem,
+): Promise<void> {
+  await app.vault.process(file, (content) => {
+    const before = content.slice(0, item.lineStart);
+    const after = content.slice(item.lineEnd);
+    // The character right after `item.lineEnd` should be a newline
+    // (that's where the line ended). Drop it too so we don't leave
+    // a blank line behind. If there is no trailing newline (last
+    // line in the file without `\n`), don't add one.
+    if (after.startsWith("\n")) {
+      return before + after.slice(1);
+    }
+    return before + after;
+  });
+}
+
+/**
+ * Rewrites the **text portion** of a TodoPlus checklist line,
+ * preserving the `- [ ]` / `- [x]` marker, the leading whitespace,
+ * and the trailing newline. We never touch the checkbox state from
+ * this path — use `setTodoPlusItemChecked` for that.
+ */
+async function editTodoPlusItem(
+  app: App,
+  file: TFile,
+  item: TodoPlusChecklistItem,
+  newText: string,
+): Promise<void> {
+  const safeText = newText.replace(/\r?\n/g, " ").trim();
+  await app.vault.process(file, (content) => {
+    const before = content.slice(0, item.lineStart);
+    const line = content.slice(item.lineStart, item.lineEnd);
+    const after = content.slice(item.lineEnd);
+    const replaced = line.replace(/^(\s*-\s+\[[ x]\])\s+.*$/, `$1 ${safeText}`);
+    return before + replaced + after;
+  });
+}
+
+/**
+ * Prompts the user to set / change the source link of a TodoPlus
+ * card. The link is stored in the card's `title` field (as a
+ * wikilink `[[note#heading]]`); there is no separate per-card
+ * `sourceLink` field. We use a `prompt` modal (matches the add-card
+ * flow) and write the result through `onCardEdit`.
+ */
+async function promptTodoPlusSourceLink(
+  card: DashboardCard,
+  callbacks: RenderCallbacks,
+  app: App,
+  _settings?: DashboardSettings,
+): Promise<void> {
+  // Prefill the prompt with the current source link (parsed from the
+  // card title for display — strip the `[[ ]]` so the user sees the
+  // canonical `note#heading` form).
+  const currentSource = getTodoPlusSourceLinkFromTitle(card);
+  const next = window.prompt(t("renderer.todoPlusPromptLabel"), currentSource);
+  if (next === null) return; // cancelled
+  const cleaned = next.trim();
+  if (!cleaned) return;
+  // Validate the link resolves to a real file.
+  const parsed = parseTodoPlusSourceLink(cleaned);
+  if (!parsed) {
+    new Notice(t("renderer.todoPlusInvalidLink"));
+    return;
+  }
+  const dest = app.metadataCache.getFirstLinkpathDest(parsed.path, "");
+  if (!(dest instanceof TFile)) {
+    new Notice(t("renderer.todoPlusFileNotFound", { path: parsed.path }));
+    return;
+  }
+  // If the heading doesn't exist yet, append it (so the user can
+  // start writing tasks immediately).
+  const cache = app.metadataCache.getFileCache(dest);
+  const headings = cache?.headings ?? [];
+  const exists = headings.some(
+    (h) => h.level === 2 && h.heading === parsed.heading,
+  );
+  if (!exists) {
+    try {
+      await app.vault.process(dest, (content) => {
+        // Make sure the file ends with a newline before we append.
+        const prefix =
+          content.length > 0 && !content.endsWith("\n") ? "\n" : "";
+        return `${content}${prefix}\n## ${parsed.heading}\n`;
+      });
+    } catch (e) {
+      new Notice(
+        t("renderer.todoPlusWriteError", { message: (e as Error).message }),
+      );
+      return;
+    }
+  }
+  // The source link is stored entirely in the card's `title` (a
+  // wikilink). Wrap with `[[ ]]` if the user gave a bare form so
+  // the header renders as a clickable `[[note#heading]]` label.
+  const titleWikilink = cleaned.startsWith("[[") ? cleaned : `[[${cleaned}]]`;
+  callbacks.onCardEdit({ ...card, title: titleWikilink });
+}
+
+/**
+ * Adds a new TodoPlus card to `column`. The user input is the source
+ * wikilink (e.g. `dash002#To-do` / `[[dash002#To-do]]` / `dash002`).
+ * We reuse the same `promptTodoPlusSourceLink` validation path: if the
+ * target file doesn't have the `## heading` yet, we append a fresh
+ * block to it before saving the card.
+ *
+ * The card's identity on disk is the column's `sectionType`
+ * (frontmatter) + the card's first-bullet title (a wikilink
+ * `[[note#heading]]`). No `type: todoplus` or `sourceLink: "..."`
+ * metadata lines are written into the card body. The view layer
+ * derives `card.type = "todoplus"` from the column and the source
+ * link is read back from `card.title` by
+ * `getTodoPlusSourceLinkFromTitle`.
+ */
+async function addTodoPlusCard(
+  column: DashboardColumn,
+  rawInput: string,
+  callbacks: RenderCallbacks,
+  app: App,
+  _data: DashboardData | undefined,
+  _settings: DashboardSettings | undefined,
+): Promise<void> {
+  // Normalize: `dash002#To-do` / `[[dash002#To-do]]` / `dash002` all
+  // funnel through the same validator as the per-card "Set source"
+  // button so behaviour is identical.
+  const parsed = parseTodoPlusSourceLink(rawInput);
+  if (!parsed) {
+    new Notice(t("renderer.todoPlusInvalidLink"));
+    return;
+  }
+  const dest = app.metadataCache.getFirstLinkpathDest(parsed.path, "");
+  if (!(dest instanceof TFile)) {
+    new Notice(t("renderer.todoPlusFileNotFound", { path: parsed.path }));
+    return;
+  }
+  // If the heading doesn't exist yet, append it so the user can start
+  // writing tasks immediately.
+  const cache = app.metadataCache.getFileCache(dest);
+  const headings = cache?.headings ?? [];
+  const exists = headings.some(
+    (h) => h.level === 2 && h.heading === parsed.heading,
+  );
+  if (!exists) {
+    try {
+      await app.vault.process(dest, (content) => {
+        const prefix =
+          content.length > 0 && !content.endsWith("\n") ? "\n" : "";
+        return `${content}${prefix}\n## ${parsed.heading}\n`;
+      });
+    } catch (e) {
+      new Notice(
+        t("renderer.todoPlusWriteError", { message: (e as Error).message }),
+      );
+      return;
+    }
+  }
+  // We pass the source link as the card `title` (wrapped in `[[ ]]`
+  // so the header renders as a clickable wikilink). The view layer
+  // (view.ts) creates a card with `type: "todoplus"` and uses this
+  // title. No follow-up `onCardEdit` is required.
+  //
+  // We snapshot the id set before the call so that, in the unlikely
+  // event the implementation **does** take a sync path (and the
+  // id-counter advances on the same tick), we can still find the
+  // new card and report a useful error to the user.
+  const beforeIds = new Set(column.cards.map((c) => c.id));
+  // Build the wikilink-form title: [[note#heading]].
+  const sourceLinkStr = `${parsed.path}#${parsed.heading}`;
+  const wikilinkTitle = `[[${sourceLinkStr}]]`;
+  // `onCardAdd` is declared `void` in `RenderCallbacks`, but the
+  // concrete implementations (in view.ts) are async and return a
+  // promise. We don't await it here — the actual save/refresh is
+  // performed inside the callback; the card will appear once that
+  // microtask completes.
+  callbacks.onCardAdd(column.name, { title: wikilinkTitle });
+  // Best-effort: if the implementation happened to be synchronous
+  // and the new card is already in the list, surface a useful log
+  // line; if it isn't, we trust the implementation to refresh
+  // shortly.
+  if (typeof window !== "undefined") {
+    setTimeout(() => {
+      const col = column;
+      const found = col.cards.find((c) => !beforeIds.has(c.id));
+      if (!found) {
+        console.warn(
+          "[apex-dashboard] addTodoPlusCard: onCardAdd did not produce a card — dashboard refresh will rely on the callback's internal save.",
+        );
+      }
+    }, 0);
+  }
+}
+
 function getSectionType(column: DashboardColumn): string {
   if (column.sectionType) return column.sectionType;
   const lower = column.name.toLowerCase();
@@ -4119,11 +5040,21 @@ function getSectionType(column: DashboardColumn): string {
   if (lower === "notes") return "notes";
   if (lower === "dashboard") return "dashboard";
   if (lower === "library") return "library";
+  // TodoPlus: explicit section name "TodoPlus" / "待办Plus" / "todo plus" /
+  // any time the column only contains `todoplus` cards.
+  if (
+    lower === "todoplus" ||
+    lower === "todo plus" ||
+    lower === "待办plus" ||
+    lower === "待办 plus"
+  )
+    return "todoplus";
   if (column.cards.length > 0) {
     const types = new Set(column.cards.map((c) => c.type));
     const dashboardTypes = new Set(["chart", "weather", "tracker"]);
     if ([...types].every((t) => dashboardTypes.has(t)) && types.size > 0)
       return "dashboard";
+    if (types.has("todoplus") && types.size === 1) return "todoplus";
     if (types.has("task") && types.size === 1) return "todo";
     if (types.has("task") && !types.has("project")) return "todo";
     if (types.has("project") && types.size === 1) return "projects";

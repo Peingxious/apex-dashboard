@@ -144,6 +144,7 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.typeProjects": "Projects",
     "renderer.typeDashboard": "Dashboard",
     "renderer.typeLibrary": "Library",
+    "renderer.typeTodoPlus": "TodoPlus",
     "renderer.switchSectionType": "Switch section type",
     "renderer.editCard": "Edit card",
     "renderer.deleteCard": "Delete card",
@@ -177,6 +178,21 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.setCoverImage": "Set cover image",
     "renderer.coverImagePath": "Cover image path (vault relative)",
     "renderer.dayStreak": "{count} day streak",
+
+    // TodoPlus (`card.type === "todoplus"`)
+    "renderer.todoPlusSourceLabel": "Source",
+    "renderer.todoPlusEmpty": "No source note linked yet.",
+    "renderer.todoPlusSetSource": "Set source…",
+    "renderer.todoPlusNoItems": "(empty checklist)",
+    "renderer.todoPlusUnresolved":
+      "Source not found: {link}. Check the note path and the `## heading`.",
+    "renderer.todoPlusPromptLabel":
+      "Link to a heading in another note (e.g. `dash002#To-do`)",
+    "renderer.todoPlusInvalidLink": "That link is empty or malformed.",
+    "renderer.todoPlusFileNotFound":
+      "Could not find a note named `{path}` in the vault.",
+    "renderer.todoPlusWriteError": "Failed to update source note: {message}",
+    "renderer.todoPlusSourcePlaceholder": "[[note#To-do]]",
 
     // Banner
     "banner.editLabel": "Edit banner",
@@ -708,8 +724,9 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.typeTodo": "待办",
     "renderer.typeMemo": "备忘",
     "renderer.typeProjects": "项目",
-    "renderer.typeDashboard": "仪表盘",
+    "renderer.typeDashboard": "工作台",
     "renderer.typeLibrary": "数据库",
+    "renderer.typeTodoPlus": "待办Plus",
     "renderer.switchSectionType": "切换分区类型",
     "renderer.editCard": "编辑卡片",
     "renderer.deleteCard": "删除卡片",
@@ -743,6 +760,20 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.setCoverImage": "设置封面图片",
     "renderer.coverImagePath": "封面图片路径（相对于仓库）",
     "renderer.dayStreak": "{count} 天连续",
+
+    // TodoPlus
+    "renderer.todoPlusSourceLabel": "来源",
+    "renderer.todoPlusEmpty": "还未设置来源笔记。",
+    "renderer.todoPlusSetSource": "设置来源…",
+    "renderer.todoPlusNoItems": "（清单为空）",
+    "renderer.todoPlusUnresolved":
+      "无法定位来源：{link}。请检查笔记路径和 `## 标题` 是否存在。",
+    "renderer.todoPlusPromptLabel":
+      "链接到另一篇笔记的标题（例如 `dash002#To-do`）",
+    "renderer.todoPlusInvalidLink": "链接为空或格式有误。",
+    "renderer.todoPlusFileNotFound": "在仓库中找不到笔记 `{path}`。",
+    "renderer.todoPlusWriteError": "更新原笔记失败：{message}",
+    "renderer.todoPlusSourcePlaceholder": "[[笔记名#标题]]",
 
     // Banner
     "banner.editLabel": "编辑横幅",

@@ -38,7 +38,11 @@
 
 ### 🧩 自定义分区
 
-创建分区时可选择 4 种内置类型 — **Memo**、**Todo**、**Projects**、**Notes** — 每种类型都有独立的布局和行为。自由组合，打造专属工作流。
+创建分区时可选择 5 种内置类型 — **Memo**、**Todo**、**Projects**、**Notes**、**TodoPlus** — 每种类型都有独立的布局和行为。自由组合，打造专属工作流。
+
+### 🔗 TodoPlus（待办Plus）
+
+一种分区类型：把另一篇笔记里 `## <二级标题>` 下的清单实时镜像到 Dashboard 上。把卡片指向 `[[dash002#To-do]]`，仪表盘就会从原笔记渲染最新清单——不存在第二份副本，永不漂移。从 1.4.1 起，**卡片 UI 与普通 Todo 卡片完全一致**（复选框列表、添加输入框、进度条、隐藏已完成眼按钮），且支持完整操作：勾选 / 添加 / 删除 / 编辑，全部通过 `vault.process` 写回原笔记对应行（只动一行，其他标题/段落完全不动）。点击分区中的 `+` 按钮，可以给新卡片指定 vault 中任意 `[[笔记名#标题]]`；如果原笔记里没有这个标题，插件会自动追加一个空的 `## 标题` 块让你立即开始写任务。
 
 ### 🕐 最近文档
 
@@ -113,6 +117,17 @@ Dashboard 使用缩进 bullet 列表格式组织数据：
 > **提示：** 每个分区标题右侧有垃圾桶按钮，可直接在 Dashboard 界面中删除分区。
 
 ## 更新日志
+
+### 1.4.1
+
+- **TodoPlus 卡片 UI 与操作完全对齐普通 Todo 卡片** — 1.4.0 版本的 TodoPlus 自带「Source: [[…]]」头与「## 标题」提示行，且只有勾选能写回；从 1.4.1 起这些装饰性元素全部移除，卡片 DOM 复用 `dashboard-task-list` / `dashboard-task-item` / `dashboard-task-add` / `dashboard-progress`，肉眼上与普通 Todo 卡片完全一致。卡片右上角的隐藏已完成眼按钮在 TodoPlus 卡片上同样生效（`isTask` / `isTaskCard` 判定扩展 `sectionType === "todoplus"`）
+- **添加 / 删除 / 编辑全部同步回原笔记** — 新增三个 `vault.process` 辅助函数（`addTodoPlusItem`、`removeTodoPlusItem`、`editTodoPlusItem`），分别处理新增 `- [ ]`、删除、文本编辑；都只动 `## <heading>` 切片内的字节，原笔记其他段落、标题、其他切片完全保持不变
+
+### 1.4.0
+
+- **新增分区类型：TodoPlus（待办Plus）** — 把另一篇笔记里 `## <二级标题>` 下的清单实时镜像到 Dashboard 上。卡片指向 `[[dash002#To-do]]`，仪表盘就渲染该原笔记的清单。勾选复选框通过 `vault.process` 改写原笔记对应行（只动一行，邻近 section 不受影响）。点击分区 `+` 按钮可以给新卡片指定 vault 中任意 `[[笔记名#标题]]`；若原笔记中无该标题，插件会自动追加一个空 `## 标题` 块
+- **完全使用 Obsidian 原生 API 读取** — TodoPlus 仅依赖 `metadataCache.getFirstLinkpathDest` + `metadataCache.getFileCache(file).headings` + `vault.cachedRead` 切片标题区间。无新持久化层、无 DOM hack
+- **sourceLink 存在卡片上，不在分区上** — 与 Project `addGroup` 风格一致：每张 TodoPlus 卡各自带 `sourceLink`（如 `dash002#To-do`），一个 TodoPlus 分区可以并排镜像多个不同的笔记/标题，也可以只镜像一个
 
 ### 1.3.0
 

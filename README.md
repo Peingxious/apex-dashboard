@@ -49,7 +49,11 @@ Drag cards between sections to reorganize your workspace. Drag task items within
 
 ### 🧩 Custom Sections
 
-Create sections with 4 built-in types — **Memo**, **Todo**, **Projects**, and **Notes** — each with its own layout and behavior. Mix and match to fit your workflow.
+Create sections with 4 built-in types — **Memo**, **Todo**, **Projects**, **Notes**, and **TodoPlus** — each with its own layout and behavior. Mix and match to fit your workflow.
+
+### 🔗 TodoPlus (`待办Plus`)
+
+A section type that mirrors a checklist that already lives in another note under a `## <heading>` block. Point a card at `[[dash002#To-do]]` and the dashboard will render the live checklist from the source note — no second copy, no drift. Since 1.4.1 the card body is visually **identical to a regular Todo card** (checkbox list, add input, progress bar, hide-completed eye button) and supports the full set of operations: toggle, add, delete, edit, all written back to the source note via `vault.process` (only the touched line is changed, so neighbouring sections stay intact). The card's `+` button lets you point it at any `[[note#heading]]` in the vault, and if the heading doesn't exist yet, the plugin appends a fresh `## heading` block for you.
 
 ### 🕐 Recent Documents
 
@@ -124,6 +128,17 @@ The dashboard uses an indented bullet-list format:
 > **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
+
+### 1.4.1
+
+- **TodoPlus card now matches the regular Todo card, body and all** — the 1.4.0 release shipped TodoPlus with its own header (a "Source: [[…]]" link + a "## heading" caption) and only a working checkbox toggle. In 1.4.1 those decorations are gone; the body reuses the standard `dashboard-task-list` / `dashboard-task-item` / `dashboard-task-add` / `dashboard-progress` DOM, so a TodoPlus card is visually identical to a plain Todo card. The hide-completed eye button in the card header now applies (the header's `isTask` / `isTaskCard` checks were extended to include `sectionType === "todoplus"`)
+- **Add / delete / edit all sync back to the source note** — three new `vault.process` helpers (`addTodoPlusItem`, `removeTodoPlusItem`, `editTodoPlusItem`) write the corresponding `- [ ]` / `- [x]` line in the source file. Only the bytes inside the `## <heading>` slice are touched, so neighbouring sections, paragraphs, and other headings stay byte-identical
+
+### 1.4.0
+
+- **New section type: TodoPlus (`待办Plus`)** — A card that mirrors a checklist that already lives in another note under a `## <heading>` block. Point it at `[[dash002#To-do]]` and the dashboard will render the live checklist from the source note. Toggling a checkbox rewrites the matching line in the source note via `vault.process` (only the touched line is changed, so neighbouring sections stay intact). Click the `+` in a TodoPlus section to point a new card at any `[[note#heading]]` in the vault; if the heading doesn't exist yet, the plugin appends a fresh `## heading` block for you
+- **Native read path** — TodoPlus uses only Obsidian's built-in APIs (`metadataCache.getFirstLinkpathDest` + `metadataCache.getFileCache(file).headings` + `vault.cachedRead`) to slice the heading range. No new persistence layer, no DOM hacks
+- **Source link is stored on the card, not the section** — like Project's `addGroup`, each TodoPlus card carries its own `sourceLink` (e.g. `dash002#To-do`). A single TodoPlus section can therefore mirror several different notes / headings side by side, or just one
 
 ### 1.3.0
 

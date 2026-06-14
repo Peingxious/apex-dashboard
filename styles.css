@@ -5652,8 +5652,9 @@
   user-select: none;
 }
 
-/* Todo cards: body uses flex column so task-list scrolls inside */
-.dashboard-section-row[data-section-type="todo"] .dashboard-card-body {
+/* Todo / TodoPlus cards: body uses flex column so task-list scrolls inside */
+.dashboard-section-row[data-section-type="todo"] .dashboard-card-body,
+.dashboard-section-row[data-section-type="todoplus"] .dashboard-card-body {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -5661,14 +5662,17 @@
   overflow: hidden;
 }
 
-.dashboard-section-row[data-section-type="todo"] .dashboard-task-list {
+.dashboard-section-row[data-section-type="todo"] .dashboard-task-list,
+.dashboard-section-row[data-section-type="todoplus"] .dashboard-task-list {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
 }
 
 .dashboard-section-row[data-section-type="todo"] .dashboard-task-add,
-.dashboard-section-row[data-section-type="todo"] .dashboard-progress {
+.dashboard-section-row[data-section-type="todo"] .dashboard-progress,
+.dashboard-section-row[data-section-type="todoplus"] .dashboard-task-add,
+.dashboard-section-row[data-section-type="todoplus"] .dashboard-progress {
   flex-shrink: 0;
 }
 
