@@ -193,6 +193,14 @@ export function serialize(data: DashboardData, app?: App): string {
     if (col.sectionType) {
       lines.push(`    type: ${col.sectionType}`);
     }
+    if (col.hideCompleted !== undefined) {
+      // Per-section "hide completed" override. Only written when
+      // explicitly set (i.e. the user has touched the column-level
+      // eye button at least once) so existing dashboard files stay
+      // byte-identical on the next save — backwards compatibility
+      // for users who have not opted in.
+      lines.push(`    hideCompleted: ${col.hideCompleted}`);
+    }
     if (col.libraryConfig) {
       lines.push("    library:");
       const lc = col.libraryConfig;
@@ -802,6 +810,7 @@ function parseColumnDefs(fm: Record<string, unknown>): Array<{
   color: string;
   sectionType?: string;
   libraryConfig?: LibraryConfig;
+  hideCompleted?: boolean;
 }> {
   const raw = fm.columns;
   if (!Array.isArray(raw)) return DEFAULT_COLUMNS;
@@ -813,6 +822,13 @@ function parseColumnDefs(fm: Record<string, unknown>): Array<{
     libraryConfig: item.library
       ? parseLibraryConfig(item.library as Record<string, unknown>)
       : undefined,
+    // Only set when the frontmatter explicitly says so — an absent
+    // key means "fall back to the global defaultHideCompleted
+    // setting", which is what every pre-v1.4.5 column expects.
+    hideCompleted:
+      typeof item.hideCompleted === "boolean"
+        ? (item.hideCompleted as boolean)
+        : undefined,
   }));
 }
 
@@ -823,6 +839,7 @@ function parseColumns(
     color: string;
     sectionType?: string;
     libraryConfig?: LibraryConfig;
+    hideCompleted?: boolean;
   }>,
 ): DashboardColumn[] {
   const sections = splitByH2(body);
@@ -862,6 +879,12 @@ function parseColumns(
       sectionType,
       cards,
       libraryConfig: def?.libraryConfig,
+      // Only forward the per-column "hide completed" override when
+      // it's truthy/falsy AND the section is a todo variant. For
+      // any other section type the renderer ignores the value, but
+      // we keep the frontmatter value round-tripped so nothing is
+      // lost when the user retypes the section.
+      hideCompleted: def?.hideCompleted,
     };
   });
 }

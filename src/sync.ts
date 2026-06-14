@@ -606,6 +606,39 @@ export class SyncEngine {
     await this.writeToDisk();
   }
 
+  /**
+   * Persist the per-column "hide completed tasks" state. Setting
+   * `hide` to `undefined` (or omitting it on the call) is treated
+   * as a reset: the column falls back to the global
+   * `defaultHideCompleted` setting on the next render. The new
+   * value is reflected in the dashboard file's `columns:` block as
+   * `hideCompleted: true|false`.
+   */
+  async setColumnHideCompleted(
+    columnName: string,
+    hide: boolean | undefined,
+  ): Promise<void> {
+    if (!this.data) return;
+
+    this.data = {
+      ...this.data,
+      columns: this.data.columns.map((col) =>
+        col.name === columnName
+          ? hide === undefined
+            ? // Strip the property entirely so the file round-trips
+              // back to its pre-override shape.
+              (() => {
+                const { hideCompleted: _drop, ...rest } = col;
+                void _drop;
+                return rest as typeof col;
+              })()
+            : { ...col, hideCompleted: hide }
+          : col,
+      ),
+    };
+    await this.writeToDisk();
+  }
+
   async deleteColumn(name: string): Promise<void> {
     if (!this.data) return;
 

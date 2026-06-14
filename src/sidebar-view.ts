@@ -261,6 +261,7 @@ export class SidebarView extends ItemView {
       onColumnRename: () => {},
       onColumnDelete: () => {},
       onColumnSectionTypeChange: () => {},
+      onColumnHideCompletedChange: () => {},
       onTaskReminderEdit: () => {},
       onProjectGroupAdd: () => {},
       onAddFromTemplate: () => {},
@@ -563,6 +564,22 @@ export class SidebarView extends ItemView {
         const col = findColumn(columnName);
         if (col) {
           col.sectionType = sectionType;
+          await saveAndRefresh();
+        }
+      },
+      onColumnHideCompletedChange: async (
+        columnName: string,
+        hide: boolean | undefined,
+      ) => {
+        // Sidebar view: writes through `saveAndRefresh` so the new
+        // `hideCompleted: bool` (or its absence) is persisted in the
+        // dashboard file's `columns:` block on the next save — this
+        // is the user-facing behaviour requested in v1.4.4
+        // ("todo / todoplus show/hide all completed, default on,
+        // write it into the column's properties").
+        const col = findColumn(columnName);
+        if (col) {
+          col.hideCompleted = hide;
           await saveAndRefresh();
         }
       },

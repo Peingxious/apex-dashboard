@@ -964,13 +964,123 @@ if (card.type === "todoplus") {
 - [x] `npm run build` 通过（tsc + esbuild 0 错误 0 警告）
 - [x] 全代码搜索 `card.sourceLink` / `options.sourceLink` 字段访问归零（仅剩局部变量名 `sourceLink` 作为 wikilink 字符串，与字段无关）
 - [x] 旧 dashboard 文件下次保存自动清理 `type: todoplus` / `sourceLink: "[[...]]"` 两行（parser 不再写出）
-- [x] renderer.ts：`isTask` / `isTaskCard` 判定加 `sectionType === "todoplus"`，让 todoplus 也获得眼按钮和无编辑铅笔
-- [x] tsc + esbuild 验证编译通过
-- [ ] Plan.md / Target.md / CHANGELOG.md / README.md / README_ZH.md / manifest.json / package.json 同步
+
+---
+
+## 新增 2026-06-14：TodoPlus 加卡改用笔记搜索 modal（不再手敲 wikilink）
+
+**用户原话**：
+
+> 1. todoplus 输入是搜索笔记添加，即使没有 To-do 的标题 也可以添加
+> 目的，指定的部分笔记是可以筛选的
+
+**问题**：v1.4.0–v1.4.2 的 TodoPlus 加卡 UX 是列头一个行内文本输入框，用户必须手敲 wikilink-form（`dash002#To-do` / `[[dash002#To-do]]` / `dash002`）然后我们解析 + 校验。两个痛点：
+
+1. 用户得记得这个特定语法（不是 vault 里的自然操作）
+2. 笔记里没有 `## To-do` heading 时还要先在原笔记里手建，门槛高
+3. 不能"在 vault 里挑一条笔记"——所有笔记都在备选范围，"指定的部分" 没法在加卡时筛选
+
+**目标**：
+
+- 列头 `+` 按钮 → 打开 vault 笔记搜索 modal（复用 Project 已有的 `DocSearchModal`）→ 用户挑一条笔记 → 创建 `[[note#To-do]]` 镜像卡
+- 不要求笔记预先有 `## To-do` heading —— 缺则 `vault.process` 自动追加
+- 搜索框本身就是"指定的部分笔记"的筛选器：输入关键字 → substring 过滤 basename/path → 最多 20 条结果
+
+### 方案
+
+| 维度            | 改动                                                                                                                                                                                                                                                                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **入口 UX**     | [renderer.ts:2999](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2999) 列头 `+` 按钮：`isTodoPlusSection` 分支独立出来，点击直接 `openTodoPlusNoteSearchModal(column, callbacks, app)`，不再走行内文本输入；projects 仍走原来的行内输入（自由文本分组名）              |
+| **搜索 modal**  | 新增 `openTodoPlusNoteSearchModal(column, callbacks, app)`：实例化 `DocSearchModal`（[quick-actions.ts:335](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/quick-actions.ts#L335)），`onSelect` 拿 `{name, path}` → `app.vault.getFileByPath(link.path)` 拿 TFile → 转交给 `addTodoPlusCardFromNote` |
+| **加卡核心**    | 新增 `addTodoPlusCardFromNote(column, file, callbacks, app)`：heading 固定 `To-do`；若 metadataCache 中无 `## To-do` 则 `vault.process` 追加；构造 `[[basename#To-do]]` wikilink 标题；`callbacks.onCardAdd(column.name, { title: wikilinkTitle })` 走 view 层（不变）                                                                                                                                              |
+| **删除**        | 旧的 `addTodoPlusCard(column, rawInput, ...)`（wikilink-form 解析 + 校验 + 入盘）整段删除 —— 没有调用方了；`parseTodoPlusSourceLink` 仍保留给"设置源"按钮                                                                                                                                                                                                                              |
+| **i18n**        | [i18n.ts:195](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts#L195) 新增 `renderer.todoPlusNoteSearchTitle` / `todoPlusNoteSearchPlaceholder` / `todoPlusNoteSearchHint`（中英文）；保留旧的 `todoPlusSourcePlaceholder` 以防外部脚本引用                                                                                                                                       |
+| **版本**        | 1.4.2 → 1.4.3（patch：UX 调整，磁盘格式不变）                                                                                                                                                                                                                                                                                                                  |
+| **文档**        | CHANGELOG.md 新增 1.4.3 段落；Target.md §4.1 TodoPlus 行 + §8 版本表 + §1 版本号同步                                                                                                                                                                                                                                                                                  |
+
+### 子任务
+
+- [x] i18n: 新增 `todoPlusNoteSearchTitle` / `todoPlusNoteSearchPlaceholder` / `todoPlusNoteSearchHint` 中英文
+- [x] renderer.ts: import `DocSearchModal` + `pathToWikiLink`
+- [x] renderer.ts: 列头 `+` 拆分 `isTodoPlusSection` 走 `openTodoPlusNoteSearchModal`；projects 保留行内输入
+- [x] renderer.ts: 新增 `openTodoPlusNoteSearchModal` + `addTodoPlusCardFromNote`
+- [x] renderer.ts: 移除旧 `addTodoPlusCard(column, rawInput, ...)`（无调用方）
+- [x] view.ts: 顺手刷新 `onCardAdd` 注释里的函数名引用
+- [x] 构建 + 更新 CHANGELOG / Plan.md / Target.md / manifest.json / package.json / versions.json（1.4.2 → 1.4.3）
+
+### 验证
+
+- [x] `npm run build` 通过（tsc + esbuild 0 错误 0 警告）
+- [x] 全代码搜索 `addTodoPlusCard\b`（不含 `addTodoPlusCardFromNote` / `addTodoPlusItem` / `addTodoPlusCard` 这个旧函数）只命中 import / 函数定义 / 注释，已彻底替换
+- [x] 列头 `+` 按钮：projects → 行内输入；todoplus → DocSearchModal；其他 → 普通 click 回调（三种路径互不串）
 
 **对现有功能影响**：
 
 - 旧版 TodoPlus 卡的 `dashboard-todoplus-source` / `dashboard-todoplus-heading` DOM 节点不再渲染；老笔记中若没别的引用，纯展示层变更
+
+---
+
+## 修复 2026-06-14：TodoPlus 标题双 `[[ ]]` 包裹 + 移除添加分区的"笔记(无封面)"选项（v1.4.4）
+
+**用户原话**：
+
+> 1. 写入的标题是 `[[[[dash03]]#To-do]]`，标题多了内部的双链
+> 2. 去掉添加分区中"笔记(无封面)"这个选项
+
+### Bug 1：标题双 `[[ ]]` 包裹
+
+**症状**：在 v1.4.3（昨天）刚切的 TodoPlus 加卡流程里，挑一条笔记后，md 文件里实际写入的是
+
+```md
+- [[[[dash03]]#To-do]]  (cover 略)
+```
+
+四个 `[` 四个 `]`，用户无法点击，渲染也炸。
+
+**根因**：[`addTodoPlusCardFromNote`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L5025) 用了 `pathToWikiLink(file.path)` 拿到 `noteRef`，但 `pathToWikiLink` 的契约就是返回**已经包好**的 `[[basename]]`（看 [parser.ts:116](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L116) 的注释 "Wraps the result in `[[...]]`"），然后我们又用 `[[${noteRef}#${heading}]]` 包了一次 → 双重包裹。
+
+**修复**：直接用 `file.basename`（TFile 自带的、`.md` 后缀已被剥掉的文件名），这是 `[[...#...]]` 内部期望的形态，且与 `getTodoPlusSourceLinkFromTitle` 这个 per-card 解析器的契约对齐（它本来就只接受单层包裹 `[[name#To-do]]`）。
+
+**修前**（v1.4.3）：
+
+```ts
+const noteRef = pathToWikiLink(file.path);   // → "[[dash03]]"
+const wikilinkTitle = `[[${noteRef}#${heading}]]`;  // → "[[[[dash03]]#To-do]]" ❌
+```
+
+**修后**（v1.4.4）：
+
+```ts
+const wikilinkTitle = `[[${file.basename}#${heading}]]`;  // → "[[dash03#To-do]]" ✅
+```
+
+**副作用**：`renderer.ts` 不再 import `pathToWikiLink`（这次 import 是上版临时加的）。`parser.ts` 继续 export 它（`view.ts` / `sync.ts` 还在用）。
+
+### Bug 2：移除"笔记(无封面)"分区类型
+
+**症状**：[`renderer.ts:2663`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2663) 添加分区的下拉里有 `{ value: "notes", label: t("renderer.typeNotesPlain") }`，对应 i18n `笔记 (无封面)`。这个 type 跟 `projects` 完全同形（无独立图标/样式/行为），只是 `sectionType` 字符串不同，是历史遗留的别名。
+
+**修复**：
+
+- 从 [`renderer.ts:2658`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2658) 的 `typeOptions` 数组里删掉这一行
+- 同步删 [`i18n.ts:140`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts#L140) 和 [`i18n.ts:725`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts#L725) 的 `renderer.typeNotesPlain` 中英文键（无剩余引用者）
+
+**不影响**：已有的 `sectionType: "notes"` 分区仍然能 parse / render / serialize 正确，只是**新分区下拉里不再有这一项**。`renderer.ts:2930` 的 `currentType = sectionType === "notes" ? "projects" : ...` 映射、`parser.ts:880` / `parser.ts:1186` 的 notes 路径处理、`sync.ts:1340` 的 `notes` 标题都保留。
+
+### 子任务
+
+- [x] renderer.ts: `addTodoPlusCardFromNote` 用 `file.basename` 替换 `pathToWikiLink(file.path)`
+- [x] renderer.ts: 移除 `pathToWikiLink` import
+- [x] renderer.ts: 添加分区 `typeOptions` 删 `notes` 项
+- [x] i18n.ts: 删 `renderer.typeNotesPlain` 中英文
+- [x] 构建验证 + 版本号 1.4.3 → 1.4.4 + CHANGELOG / Plan.md / Target.md / manifest.json / package.json / versions.json 同步
+
+### 验证
+
+- [x] `npm run build` 通过（tsc + esbuild 0 错误 0 警告）
+- [x] 全代码搜索 `typeNotesPlain` 已彻底归零（3 处 → 0 处）
+- [x] 全代码搜索 `pathToWikiLink` 在 `renderer.ts` 0 处代码引用（仅注释里讨论）
+- [x] 复现修复：add TodoPlus 卡片 → 选 `dash03` 笔记 → 写盘后 title 为 `[[dash03#To-do]]`（不再 `[[[[dash03]]#To-do]]`）
 - `isTask` 扩展不会反向影响 project/memo/widget：判定顺序保持 `card.type === "task"` 优先，其次 `sectionType === "todo"`，最后新增 `sectionType === "todoplus"`
 - TodoPlus 卡现可与 Todo 卡同列存在；分区仍可单独存在
 

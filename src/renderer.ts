@@ -29,6 +29,7 @@ import { renderSidebarLunarWidget } from "./lunar-widget";
 import type { HolidayInfo } from "./holiday-service";
 import { CountdownSettingsModal } from "./countdown-modal";
 import { showConfirmDialog } from "./confirm-dialog";
+import { DocSearchModal } from "./quick-actions";
 import {
   Chart,
   LineController,
@@ -2657,10 +2658,9 @@ export function renderDashboard(
     const typeOptions = [
       { value: "projects", label: t("renderer.typeNotes") },
       { value: "todo", label: t("renderer.typeTodo") },
-      { value: "memo", label: t("renderer.typeMemo") },
-      { value: "notes", label: t("renderer.typeNotesPlain") },
-      { value: "library", label: t("renderer.typeLibrary") },
       { value: "todoplus", label: t("renderer.typeTodoPlus") },
+      { value: "memo", label: t("renderer.typeMemo") },
+      { value: "library", label: t("renderer.typeLibrary") },
     ];
 
     for (const opt of typeOptions) {
@@ -2867,6 +2867,61 @@ function renderSection(
     );
   }
 
+  // Section-level "show / hide all completed tasks" toggle for the
+  // Todo and TodoPlus column variants. This is the persisted
+  // counter-part of the per-card eye icon: clicking it sets a
+  // `hideCompleted: bool` on the column's frontmatter (via
+  // `onColumnHideCompletedChange`) so the choice survives reloads
+  // and applies to every card in the section. The effective value
+  // for a single card resolves in `renderCard`/`renderCardBody`/
+  // `renderTodoPlusBody` as:
+  //   card.hideCompleted (session)  >
+  //   column.hideCompleted (this)  >
+  //   settings.defaultHideCompleted
+  if (sectionType === "todo" || sectionType === "todoplus") {
+    // Default state when the column has no explicit override: the
+    // global `defaultHideCompleted` setting. We render the button
+    // in its resolved state so the user can see "what's active
+    // right now" before clicking. Persisted override is
+    // `column.hideCompleted`; an explicit false (show) wins over
+    // the default to keep the icon in sync.
+    const columnHide = column.hideCompleted;
+    const globalDefault = settings?.defaultHideCompleted ?? true;
+    const resolvedHide = columnHide ?? globalDefault;
+    const hideBtn = headerActions.createEl("button", {
+      cls: "dashboard-section-add-btn dashboard-section-hide-completed-btn",
+      attr: {
+        "aria-label": resolvedHide
+          ? t("renderer.showCompletedTasks")
+          : t("renderer.hideCompletedTasks"),
+        "aria-pressed": resolvedHide ? "true" : "false",
+        title: resolvedHide
+          ? t("renderer.showCompletedTasks")
+          : t("renderer.hideCompletedTasks"),
+      },
+    });
+    setIcon(hideBtn, resolvedHide ? "eye-off" : "eye");
+    if (resolvedHide) {
+      hideBtn.addClass("dashboard-section-add-btn--active");
+    }
+    hideBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      // Persist the explicit user choice. When the column had no
+      // override before, flip the resolved state to the opposite
+      // value. If the user is re-clicking the icon to undo their
+      // choice and arrive back at the global default, we drop the
+      // override entirely (pass `undefined`) so the file round-
+      // trips back to its pre-override shape.
+      const next: boolean | undefined =
+        columnHide === undefined
+          ? !resolvedHide
+          : columnHide === globalDefault
+            ? undefined
+            : globalDefault;
+      callbacks.onColumnHideCompletedChange(column.name, next as boolean);
+    });
+  }
+
   // Library section: render differently
   if (sectionType === "library") {
     const configBtn = headerActions.createEl("button", {
@@ -2981,15 +3036,36 @@ function renderSection(
     { once: false },
   );
 
-  // Add card button: inline text input for projects / todoplus, click
-  // callback for everything else. TodoPlus uses the same input UX as
-  // Project `addGroup` — the value is a wikilink like
-  // `dash002#To-do` (or `[[dash002#To-do]]` / `dash002`), not a
-  // free-form title.
+  // Add card button. The UX differs per section kind:
+  //   - projects: inline text input (a free-form group label, e.g.
+  //     "Q4-roadmap"). Collected and forwarded to
+  //     `callbacks.onProjectGroupAdd`.
+  //   - todoplus: opens the `DocSearchModal` so the user filters
+  //     vault notes by name/path and picks one. The picked note
+  //     becomes the source — we auto-create `## To-do` in it if
+  //     missing and add a `[[note#To-do]]` mirror card. We no
+  //     longer require the user to type a wikilink-form string
+  //     by hand.
+  //   - everything else: simple click → `callbacks.onCardAdd`.
   const addCardSectionType = getSectionType(column);
   const isProjectSection = addCardSectionType === "projects";
   const isTodoPlusSection = addCardSectionType === "todoplus";
-  if (isProjectSection || isTodoPlusSection) {
+  if (isTodoPlusSection) {
+    // Note-search UX. We piggy-back on the existing project
+    // `DocSearchModal` (substring filter over vault file
+    // basenames / paths; max 20 hits) — the user types to
+    // narrow the candidate set, then clicks the result they
+    // want. The picked `TFile` is the mirror target.
+    const addCardBtn = headerActions.createEl("button", {
+      cls: "dashboard-section-add-btn",
+      attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) },
+    });
+    setIcon(addCardBtn, "plus");
+    addCardBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openTodoPlusNoteSearchModal(column, callbacks, app);
+    });
+  } else if (isProjectSection) {
     let addInputVisible = false;
     let addInputEl: HTMLInputElement | null = null;
 
@@ -3018,9 +3094,7 @@ function renderSection(
         cls: "dashboard-task-input",
         attr: {
           type: "text",
-          placeholder: isTodoPlusSection
-            ? t("renderer.todoPlusSourcePlaceholder")
-            : t("renderer.addGroup"),
+          placeholder: t("renderer.addGroup"),
         },
       });
       addInputEl.focus();
@@ -3028,11 +3102,7 @@ function renderSection(
       const finishAdd = () => {
         const val = addInputEl?.value.trim();
         if (val) {
-          if (isTodoPlusSection) {
-            addTodoPlusCard(column, val, callbacks, app, data, settings);
-          } else {
-            callbacks.onProjectGroupAdd(column.name, val);
-          }
+          callbacks.onProjectGroupAdd(column.name, val);
         }
         wrapper.remove();
         addInputVisible = false;
@@ -3098,7 +3168,16 @@ function renderSection(
         app,
         data,
         settings,
+        column.hideCompleted,
       );
+      // Mirror the column-level hide-completed override onto the
+      // card element so the `metadataCache.changed` listener inside
+      // `renderTodoPlusBody` can re-thread the same value when it
+      // rebuilds the body (otherwise an incremental refresh would
+      // revert to the global default).
+      if (column.hideCompleted !== undefined) {
+        cardEl.dataset.columnHideCompleted = String(column.hideCompleted);
+      }
       cardsContainer.appendChild(cardEl);
     } catch (err) {
       console.error("[Dashboard] renderCard error:", card.id, card.type, err);
@@ -3116,19 +3195,27 @@ function renderCard(
   app: App,
   data?: DashboardData,
   settings?: DashboardSettings,
+  /** Per-column "hide completed" override (set when the section
+   *  has an explicit `hideCompleted: bool` in its frontmatter).
+   *  Falls through to the global default when `undefined`. */
+  columnHideCompleted?: boolean,
 ): HTMLElement {
   // Effective "hide completed" state for this render pass:
   //   1. The card's own in-memory override (set by the eye/eye-off
   //      button) wins when it is set — this is the session-only toggle.
-  //   2. Otherwise fall back to the global `defaultHideCompleted`
+  //   2. Otherwise fall back to the column-level override (persisted
+  //      in the column's frontmatter via `hideCompleted: bool`, set
+  //      by the section's own eye button).
+  //   3. Otherwise fall back to the global `defaultHideCompleted`
   //      setting (default true) so users see a clean list out of the
   //      box.
   // The `card.hideCompleted` flag itself is never persisted to the
   // dashboard markdown (see parser.ts), so on every reload the field
-  // is "unset" and step 2 applies — that's what makes the toggle
+  // is "unset" and step 2/3 applies — that's what makes the toggle
   // session-only by construction.
   const defaultHide = settings?.defaultHideCompleted ?? true;
-  const hideCompletedResolved = card.hideCompleted ?? defaultHide;
+  const hideCompletedResolved =
+    card.hideCompleted ?? columnHideCompleted ?? defaultHide;
 
   const el = document.createElement("div");
   el.addClass("dashboard-card", `dashboard-card--${card.type}`);
@@ -3376,6 +3463,7 @@ function renderCard(
     app,
     data,
     settings,
+    columnHideCompleted,
   );
 
   if (isProjectLike) {
@@ -3512,13 +3600,19 @@ function renderCardBody(
   app: App,
   data?: DashboardData,
   settings?: DashboardSettings,
+  columnHideCompleted?: boolean,
 ): void {
   // Mirrors the `defaultHide` / `hideCompletedResolved` computation in
   // `renderCard` — both functions need the resolved value because the
   // eye button and the task list filter both live here, and they have
-  // to agree on the same effective state for the same card.
+  // to agree on the same effective state for the same card. The
+  // column-level override is threaded through as a parameter so a
+  // per-column `hideCompleted: true` (set in the section's own eye
+  // button) wins over the global default, but the per-card session
+  // override still wins over the column value.
   const defaultHide = settings?.defaultHideCompleted ?? true;
-  const hideCompletedResolved = card.hideCompleted ?? defaultHide;
+  const hideCompletedResolved =
+    card.hideCompleted ?? columnHideCompleted ?? defaultHide;
   void data; // unused here; kept for symmetry with the rest of the
   // render pipeline.
 
@@ -3536,7 +3630,14 @@ function renderCardBody(
   // lives in another note under a specific `## heading` — see
   // `renderTodoPlusBody` for the full read/sync pipeline.
   if (card.type === "todoplus") {
-    void renderTodoPlusBody(container, card, callbacks, app, settings);
+    void renderTodoPlusBody(
+      container,
+      card,
+      callbacks,
+      app,
+      settings,
+      columnHideCompleted,
+    );
     return;
   }
 
@@ -4212,6 +4313,10 @@ async function renderTodoPlusBody(
   callbacks: RenderCallbacks,
   app: App,
   settings?: DashboardSettings,
+  /** Per-column "hide completed" override (the section the card
+   *  lives in has a `hideCompleted: bool` in its frontmatter). When
+   *  `undefined`, the column falls back to the global default. */
+  columnHideCompleted?: boolean,
 ): Promise<void> {
   // The source link is read from the card's `title` (a wikilink of
   // the form `[[note#heading]]`); there is no per-card `sourceLink`
@@ -4261,10 +4366,14 @@ async function renderTodoPlusBody(
 
   // Same hide-completed resolution the regular Todo body uses:
   //   1. The card's in-memory `hideCompleted` override wins when set.
-  //   2. Otherwise fall back to the global `defaultHideCompleted`
+  //   2. Otherwise fall back to the column-level override (set on
+  //      the section's own eye button, persisted as
+  //      `hideCompleted: bool` in the column's frontmatter).
+  //   3. Otherwise fall back to the global `defaultHideCompleted`
   //      setting (default true).
   const defaultHide = settings?.defaultHideCompleted ?? true;
-  const hideCompleted = card.hideCompleted ?? defaultHide;
+  const hideCompleted =
+    card.hideCompleted ?? columnHideCompleted ?? defaultHide;
   // Always compute the progress from the full item list, not the
   // filtered one — hiding completed tasks should not change the
   // percentage the user sees.
@@ -4630,13 +4739,29 @@ function scheduleTodoPlusRefresh(
     // container, so we only need to empty the listEl — but the
     // body is built top-down in renderTodoPlusBody, so we instead
     // rebuild from the closest `.dashboard-card-content` (or the
-    // body root) up.
+    // body root) up. We read the column-level hideCompleted
+    // override off the card dataset so the per-section toggle
+    // continues to apply on incremental refreshes (a full
+    // re-render is also wired to thread the same value through).
     const bodyRoot = cardEl.querySelector(
       ".dashboard-card-body",
     ) as HTMLElement | null;
     if (bodyRoot) {
       bodyRoot.empty();
-      void renderTodoPlusBody(bodyRoot, card, callbacks, app, settings);
+      const colHide =
+        cardEl.dataset.columnHideCompleted === "true"
+          ? true
+          : cardEl.dataset.columnHideCompleted === "false"
+            ? false
+            : undefined;
+      void renderTodoPlusBody(
+        bodyRoot,
+        card,
+        callbacks,
+        app,
+        settings,
+        colHide,
+      );
     }
   };
   const ref = app.metadataCache.on("changed", onChange);
@@ -4819,6 +4944,19 @@ async function addTodoPlusItem(
         break;
       }
     }
+    // Trim any blank lines at the tail of the slice so the new item
+    // lands RIGHT AFTER the last non-blank line (a previous task).
+    // Without this, every add reintroduces a blank line between the
+    // last task and the new one — the list visibly "drifts" apart
+    // over time and the file grows with empty lines in the middle.
+    // We preserve the original tail structure when there is no
+    // following heading (`endIdx === lines.length`): if the file
+    // ended with a blank line we still trim it so the EOF shape is
+    // tight, matching the v1.4.4 ask "remove the newlines in the
+    // middle".
+    while (endIdx > headingIdx + 1 && lines[endIdx - 1]!.trim() === "") {
+      endIdx--;
+    }
     // Insert a new unchecked item right before the end of the slice.
     // The `lines` array was built by splitting on `\n`, so a single
     // `splice + join` round-trip preserves the original line endings
@@ -4939,54 +5077,89 @@ async function promptTodoPlusSourceLink(
 }
 
 /**
- * Adds a new TodoPlus card to `column`. The user input is the source
- * wikilink (e.g. `dash002#To-do` / `[[dash002#To-do]]` / `dash002`).
- * We reuse the same `promptTodoPlusSourceLink` validation path: if the
- * target file doesn't have the `## heading` yet, we append a fresh
- * block to it before saving the card.
+ * Opens a vault-wide note search modal for the user to pick a
+ * TodoPlus mirror source. This is the column-header "+" entry
+ * point for `sectionType === "todoplus"`.
  *
- * The card's identity on disk is the column's `sectionType`
- * (frontmatter) + the card's first-bullet title (a wikilink
- * `[[note#heading]]`). No `type: todoplus` or `sourceLink: "..."`
- * metadata lines are written into the card body. The view layer
- * derives `card.type = "todoplus"` from the column and the source
- * link is read back from `card.title` by
- * `getTodoPlusSourceLinkFromTitle`.
+ * The modal reuses the same `DocSearchModal` widget that the
+ * Project section uses, so the user gets a single consistent
+ * note-picker across the dashboard. The picked `TFile` is handed
+ * off to `addTodoPlusCardFromNote`.
+ *
+ * Unlike the legacy wikilink-form input flow, this picker does
+ * **not** require the target note to have a `## To-do` heading
+ * beforehand — the heading is auto-created on the fly inside
+ * `addTodoPlusCardFromNote`. The user can also pick notes that
+ * aren't meant to be the mirror at all and then cancel by
+ * closing the modal (no card is created on cancel).
  */
-async function addTodoPlusCard(
+function openTodoPlusNoteSearchModal(
   column: DashboardColumn,
-  rawInput: string,
   callbacks: RenderCallbacks,
   app: App,
-  _data: DashboardData | undefined,
-  _settings: DashboardSettings | undefined,
+): void {
+  // Defer the modal's auto-focus and the close-on-pick contract
+  // by using a single-shot onSelect. We do NOT keep a reference
+  // to the modal — the modal closes itself in its own click
+  // handler (`DocSearchModal.onOpen`) and we drive the add from
+  // the onSelect callback.
+  const modal = new DocSearchModal(app, (link) => {
+    // DocSearchModal hands us `{ name, path }` where `path` is
+    // the vault-relative file path. Resolve it back to a TFile
+    // so the heading-append step can work with a concrete
+    // `TFile` (matches the rest of the TodoPlus code).
+    const dest = app.vault.getFileByPath(link.path);
+    if (!(dest instanceof TFile)) {
+      new Notice(t("renderer.todoPlusFileNotFound", { path: link.path }));
+      return;
+    }
+    void addTodoPlusCardFromNote(column, dest, callbacks, app);
+  });
+  modal.open();
+}
+
+/**
+ * Adds a new TodoPlus card to `column` mirroring the
+ * `## To-do` checklist of `file`. The card's on-disk identity
+ * is the wikilink title `[[file.basename#To-do]]` (no
+ * per-card `type:` or `sourceLink:` metadata line — both are
+ * derivable from the column's `sectionType` and the title).
+ *
+ * If the picked note does not yet have a `## To-do` heading,
+ * we append a fresh `## To-do` block to it via `vault.process`
+ * so the new card has a real checklist to mirror immediately.
+ * This is the "even if no `## To-do` exists, you can still add"
+ * behaviour — the user is not blocked on a manual prep step.
+ *
+ * The on-disk format mirrors a regular Todo card body:
+ *   - [[note#To-do]]
+ * plus its indented metadata (cover / width / size / grid).
+ */
+async function addTodoPlusCardFromNote(
+  column: DashboardColumn,
+  file: TFile,
+  callbacks: RenderCallbacks,
+  app: App,
 ): Promise<void> {
-  // Normalize: `dash002#To-do` / `[[dash002#To-do]]` / `dash002` all
-  // funnel through the same validator as the per-card "Set source"
-  // button so behaviour is identical.
-  const parsed = parseTodoPlusSourceLink(rawInput);
-  if (!parsed) {
-    new Notice(t("renderer.todoPlusInvalidLink"));
-    return;
-  }
-  const dest = app.metadataCache.getFirstLinkpathDest(parsed.path, "");
-  if (!(dest instanceof TFile)) {
-    new Notice(t("renderer.todoPlusFileNotFound", { path: parsed.path }));
-    return;
-  }
-  // If the heading doesn't exist yet, append it so the user can start
-  // writing tasks immediately.
-  const cache = app.metadataCache.getFileCache(dest);
+  // The mirror heading we always target. The user can still
+  // change this per-card via the "Set source" button (which
+  // re-uses the same heading-create flow).
+  const heading = "To-do";
+  const cache = app.metadataCache.getFileCache(file);
   const headings = cache?.headings ?? [];
-  const exists = headings.some(
-    (h) => h.level === 2 && h.heading === parsed.heading,
-  );
+  const exists = headings.some((h) => h.level === 2 && h.heading === heading);
   if (!exists) {
     try {
-      await app.vault.process(dest, (content) => {
-        const prefix =
-          content.length > 0 && !content.endsWith("\n") ? "\n" : "";
-        return `${content}${prefix}\n## ${parsed.heading}\n`;
+      await app.vault.process(file, (content) => {
+        // Append a fresh `## To-do` block at the end of the file.
+        // We strip any trailing newlines from the existing content
+        // and re-add a single separator so the heading sits on its
+        // own line with no extra blank line in the middle — matches
+        // the v1.4.4 ask "remove the newlines in the middle" (a
+        // blank line between body and heading was being inserted
+        // unconditionally before).
+        const trimmed = content.replace(/\n+$/, "");
+        return `${trimmed}\n## ${heading}\n`;
       });
     } catch (e) {
       new Notice(
@@ -4995,40 +5168,19 @@ async function addTodoPlusCard(
       return;
     }
   }
-  // We pass the source link as the card `title` (wrapped in `[[ ]]`
-  // so the header renders as a clickable wikilink). The view layer
-  // (view.ts) creates a card with `type: "todoplus"` and uses this
-  // title. No follow-up `onCardEdit` is required.
-  //
-  // We snapshot the id set before the call so that, in the unlikely
-  // event the implementation **does** take a sync path (and the
-  // id-counter advances on the same tick), we can still find the
-  // new card and report a useful error to the user.
-  const beforeIds = new Set(column.cards.map((c) => c.id));
-  // Build the wikilink-form title: [[note#heading]].
-  const sourceLinkStr = `${parsed.path}#${parsed.heading}`;
-  const wikilinkTitle = `[[${sourceLinkStr}]]`;
-  // `onCardAdd` is declared `void` in `RenderCallbacks`, but the
-  // concrete implementations (in view.ts) are async and return a
-  // promise. We don't await it here — the actual save/refresh is
-  // performed inside the callback; the card will appear once that
-  // microtask completes.
+  // Build the canonical wikilink title the way every other
+  // TodoPlus card does it: `[[note#To-do]]`. We use `file.basename`
+  // (the `.md`-stripped name TFile already gives us) rather than
+  // the `pathToWikiLink` helper because `pathToWikiLink` itself
+  // wraps the result in `[[ ]]` — wrapping it a second time here
+  // produced the malformed `[[[[note]]#To-do]]` title.
+  const wikilinkTitle = `[[${file.basename}#${heading}]]`;
+  // Forward to the view layer, which is responsible for
+  // actually mutating the in-memory `DashboardData` and writing
+  // the change back to disk. The `options.title` shape is the
+  // single contract between renderer and view for the new
+  // card's identity (see `RenderCallbacks.onCardAdd`).
   callbacks.onCardAdd(column.name, { title: wikilinkTitle });
-  // Best-effort: if the implementation happened to be synchronous
-  // and the new card is already in the list, surface a useful log
-  // line; if it isn't, we trust the implementation to refresh
-  // shortly.
-  if (typeof window !== "undefined") {
-    setTimeout(() => {
-      const col = column;
-      const found = col.cards.find((c) => !beforeIds.has(c.id));
-      if (!found) {
-        console.warn(
-          "[apex-dashboard] addTodoPlusCard: onCardAdd did not produce a card — dashboard refresh will rely on the callback's internal save.",
-        );
-      }
-    }, 0);
-  }
 }
 
 function getSectionType(column: DashboardColumn): string {

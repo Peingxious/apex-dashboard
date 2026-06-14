@@ -138,7 +138,6 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.deleteSectionConfirm":
       'Are you sure you want to delete the section "{column}" and all its cards? This cannot be undone.',
     "renderer.typeNotes": "Notes",
-    "renderer.typeNotesPlain": "Notes (no cover)",
     "renderer.typeTodo": "Todo",
     "renderer.typeMemo": "Memo",
     "renderer.typeProjects": "Projects",
@@ -193,6 +192,10 @@ const translations: Record<Language, Record<string, string>> = {
       "Could not find a note named `{path}` in the vault.",
     "renderer.todoPlusWriteError": "Failed to update source note: {message}",
     "renderer.todoPlusSourcePlaceholder": "[[note#To-do]]",
+    "renderer.todoPlusNoteSearchTitle": "Pick a source note",
+    "renderer.todoPlusNoteSearchPlaceholder": "Search notes…",
+    "renderer.todoPlusNoteSearchHint":
+      "The card will mirror the `## To-do` checklist of the picked note (the heading is auto-created if missing).",
 
     // Banner
     "banner.editLabel": "Edit banner",
@@ -720,7 +723,6 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.deleteSectionConfirm":
       '确定要删除分区 "{column}" 及其所有卡片吗？此操作不可撤销。',
     "renderer.typeNotes": "笔记",
-    "renderer.typeNotesPlain": "笔记 (无封面)",
     "renderer.typeTodo": "待办",
     "renderer.typeMemo": "备忘",
     "renderer.typeProjects": "项目",
@@ -774,6 +776,10 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.todoPlusFileNotFound": "在仓库中找不到笔记 `{path}`。",
     "renderer.todoPlusWriteError": "更新原笔记失败：{message}",
     "renderer.todoPlusSourcePlaceholder": "[[笔记名#标题]]",
+    "renderer.todoPlusNoteSearchTitle": "选择来源笔记",
+    "renderer.todoPlusNoteSearchPlaceholder": "搜索笔记…",
+    "renderer.todoPlusNoteSearchHint":
+      "卡片会镜像所选笔记的 `## To-do` 清单（若该 heading 不存在则自动创建）。",
 
     // Banner
     "banner.editLabel": "编辑横幅",

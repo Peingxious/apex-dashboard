@@ -282,6 +282,17 @@ export interface DashboardColumn {
   sectionType?: string;
   cards: DashboardCard[];
   libraryConfig?: LibraryConfig;
+  /** Per-section "hide completed tasks" override. Only honoured when
+   *  the column's `sectionType` is `todo` or `todoplus` (the renderer
+   *  silently ignores the value for any other section type). When
+   *  set, it overrides the global `defaultHideCompleted` setting for
+   *  every card in this column. When `undefined`, the column falls
+   *  back to the global default. Persisted in the dashboard file's
+   *  `columns:` frontmatter block as `hideCompleted: true|false`
+   *  (see `parser.parseColumnDefs` / `parser.serialize`). The
+   *  per-card `card.hideCompleted` flag (session-only eye toggle)
+   *  still wins over this for the card that has it set. */
+  hideCompleted?: boolean;
 }
 
 export interface DashboardData {
@@ -380,6 +391,10 @@ export interface RenderCallbacks {
   onColumnRename(oldName: string, newName: string): void;
   onColumnDelete(columnName: string): void;
   onColumnSectionTypeChange(columnName: string, sectionType: string): void;
+  /** Toggle the per-section "hide completed tasks" state. Only
+   *  relevant for `sectionType: "todo" | "todoplus"`. Persisted
+   *  in the column's frontmatter property `hideCompleted: bool`. */
+  onColumnHideCompletedChange(columnName: string, hide: boolean): void;
   onTaskReminderEdit(
     cardId: string,
     taskIndex: number,

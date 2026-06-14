@@ -1133,11 +1133,13 @@ export class DashboardView extends ItemView {
           //      source-link pointer. The renderer parses the title
           //      directly via `getTodoPlusSourceLinkFromTitle`.
           //
-          // The caller (renderer.ts `addTodoPlusCard`) passes the
-          // wikilink-form title through `options.title`. If no
-          // title was supplied, the placeholder is created empty and
-          // the card UI shows the "Set source" button (handled in
-          // `renderTodoPlusBody` / `promptTodoPlusSourceLink`).
+          // The caller (renderer.ts `openTodoPlusNoteSearchModal` →
+          // `addTodoPlusCardFromNote`) passes the wikilink-form
+          // title `[[note#To-do]]` through `options.title`. If no
+          // title was supplied, the placeholder is created empty
+          // and the card UI shows the "Set source" button
+          // (handled in `renderTodoPlusBody` /
+          // `promptTodoPlusSourceLink`).
           const initialTitle = options?.title?.trim() ?? "";
           col.cards.push({
             id: `${Date.now()}-todoplus`,
@@ -1683,6 +1685,27 @@ export class DashboardView extends ItemView {
         );
         if (col) {
           col.sectionType = sectionType;
+          await self.saveEmbeddedAndRefresh();
+        }
+      },
+      onColumnHideCompletedChange: async (
+        columnName: string,
+        hide: boolean | undefined,
+      ) => {
+        // Embedded dashboard view: state lives entirely in memory
+        // (the embedded view re-derives the frontmatter from the
+        // snapshot in `self.embeddedData` on every refresh), so we
+        // just write the field in place and re-render. We do NOT
+        // call any disk-touching helper here — the embedded view
+        // is read-only with respect to the dashboard file by
+        // design, but the per-section toggle is a transient UX
+        // preference the user might re-flip on every reload, so
+        // an in-memory write is appropriate.
+        const col = self.embeddedData?.columns.find(
+          (c) => c.name === columnName,
+        );
+        if (col) {
+          col.hideCompleted = hide;
           await self.saveEmbeddedAndRefresh();
         }
       },
@@ -2517,6 +2540,10 @@ export class DashboardView extends ItemView {
       },
       onColumnSectionTypeChange: (columnName: string, sectionType: string) =>
         this.sync.setColumnSectionType(columnName, sectionType),
+      onColumnHideCompletedChange: (
+        columnName: string,
+        hide: boolean | undefined,
+      ) => this.sync.setColumnHideCompleted(columnName, hide),
       onTaskReminderEdit: (
         cardId: string,
         taskIndex: number,

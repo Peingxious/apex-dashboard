@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.4.5 (2026-06-14)
+
+### Fixed
+
+- **TodoPlus list items no longer accumulate blank lines in the middle** — every previous "add item" call appended the new `- [ ] …` line to the end of the heading slice, but the end-of-slice position drifted one newline to the right every time because the empty line that follows the last task was kept verbatim. After 5–6 adds, the file looked like:
+  ```
+  ## To-do
+  - [ ] 11
+  <blank>
+  - [ ] 22
+  <blank>
+  ```
+  Fix: in [`addTodoPlusItem`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L4825) the slice-end computation now walks backwards over trailing blank lines before splicing the new item in, so the new line lands right after the previous task. ([renderer.ts:4847](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L4847))
+- **TodoPlus first-time auto-append no longer inserts a stray blank line** — when a TodoPlus column was created and the picked source note did not yet have a `## To-do` heading, the previous code emitted `\n\n## To-do\n` (two newlines = one blank line) between the existing body and the new heading. Fix: trim trailing newlines on the existing content and emit a single `\n` separator, so the heading sits flush against the body. ([renderer.ts:5041](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L5041))
+
+### Added
+
+- **Per-section "show / hide all completed tasks" toggle (Todo and TodoPlus)** — the existing per-card eye icon was session-only and reset to the global default on every reload. The new section-level eye sits in the Todo / TodoPlus column header (next to the existing `+` and template buttons) and is **persisted in the column's frontmatter** as `hideCompleted: true|false`, so the choice survives reloads and applies to every card in the section. The state resolves in this order, most-specific wins: `card.hideCompleted` (session-only) → `column.hideCompleted` (this new feature) → `settings.defaultHideCompleted` (global). Clicking the section eye a third time drops the override (writes `undefined`) so the file round-trips back to its pre-override shape — no stale `hideCompleted: true` line accumulates in the file. Implementation:
+  - Type: [`DashboardColumn.hideCompleted?: boolean`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L285) (and matching [`RenderCallbacks.onColumnHideCompletedChange`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L394))
+  - Parser: [`parseColumnDefs`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L808) reads `hideCompleted:` and [`serialize`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L196) writes it (only when explicitly set, so existing dashboard files stay byte-identical on the next save)
+  - Sync: [`SyncService.setColumnHideCompleted`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L617) handles both set + reset
+  - Renderer: new eye button in [`renderSection`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2881), threaded through `renderCard` → `renderCardBody` → `renderTodoPlusBody`
+  - View / Sidebar: both call the new sync method ([view.ts:2543](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L2543), [sidebar-view.ts:570](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sidebar-view.ts#L570))
+- **"Add section" picker now groups `Todo` next to `TodoPlus`** — the dropdown order was `Notes / Todo / Memo / Library / Todoplus`, so the two related task types were on opposite ends of the bar. Re-ordered to `Notes / Todo / Todoplus / Memo / Library` so users picking a task-style section can see both variants next to each other. ([renderer.ts:2658](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2658))
+
+## 1.4.4 (2026-06-14)
+
+### Fixed
+
+- **TodoPlus new-card title had an extra `[[ ]]` wrapping** — 1.4.3 was emitting `[[[[dash03]]#To-do]]` (four `[` and four `]`). Root cause: [`addTodoPlusCardFromNote`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L5025) used `pathToWikiLink(file.path)` to build the inner half of the wikilink, but `pathToWikiLink` _already_ returns a fully-wrapped `[[basename]]` (it's the single source of truth for "write a file as a wikilink"). Re-wrapping that in `[[${noteRef}#To-do]]` produced the double-wrap. Fix: use `file.basename` directly (TFile's `.basename` is already the `.md`-stripped name, which is exactly what we want inside `[[...#...]]`). The pre-existing per-card parser `getTodoPlusSourceLinkFromTitle` already expects the single-wrap form `[[name#To-do]]`, so this also means the card title now actually matches the source-link parser's contract — clicking a TodoPlus card correctly resolves its source note again. ([renderer.ts:5050](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L5050))
+- **Removed `Notes (no cover)` / `笔记 (无封面)` entry from the "Add section" type picker** — it was a legacy alias for `Notes` / `projects` (no UI distinction, just a different `sectionType: "notes"` flag in the dashboard file) and had no separate icon/style. The new add-section dropdown now exposes: Notes / Todo / Memo / Library / Todoplus. Existing sections of type `notes` are still parsed, rendered, and serialised correctly — only the _new-section_ entry point is gone, so users can't accidentally create yet another alias. ([renderer.ts:2658](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2658), [i18n.ts:140](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts#L140))
+
+### Changed
+
+- `renderer.typeNotesPlain` i18n key removed (en + zh) — no remaining callers. ([i18n.ts:140](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/i18n.ts#L140))
+- `pathToWikiLink` import removed from `renderer.ts` — it was only used by the buggy TodoPlus title builder; the parser module keeps exporting it for `view.ts` / `sync.ts` callers.
+
+## 1.4.3 (2026-06-14)
+
+### Changed
+
+- **TodoPlus column "+" button now opens a note-search modal** — the 1.4.0–1.4.2 add-card UX was an inline text input that required the user to hand-type a wikilink-form string (`dash002#To-do` / `[[dash002#To-do]]` / `dash002`) and then validate it. That input is gone. The new flow:
+  1. Click `+` on the TodoPlus column header
+  2. A `DocSearchModal` opens (the same modal the Project section uses — substring filter over vault file basenames/paths, max 20 hits, refilters as you type)
+  3. Type to filter the candidate set, click the result you want, the modal closes
+  4. The picked note becomes the source — a `[[note#To-do]]` mirror card is added
+- **No `## To-do` heading required up-front** — if the picked note doesn't yet have a `## To-do` heading, we append a fresh one via `vault.process` so the new card has a real checklist to mirror immediately. The user is never blocked on a manual prep step. (The per-card "Set source" button still lets the user re-target a different heading afterwards — same `promptTodoPlusSourceLink` flow as before.)
+- **The note search IS the filter** — typing in the modal's search box narrows the candidate set live. The user can search by name or path; only matching vault notes show. This is the "指定的部分笔记是可以筛选的" behaviour: the search itself acts as a scoped picker.
+
+### Notes
+
+- The column-header inline-input UX is now projects-only. TodoPlus no longer accepts a hand-typed wikilink string from the column header; use the search modal.
+- The old `addTodoPlusCard(column, rawInput, ...)` helper in [renderer.ts](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts) (wikilink-form parsing) is removed; replaced by `openTodoPlusNoteSearchModal` + `addTodoPlusCardFromNote(column, file, ...)`.
+- `parseTodoPlusSourceLink` is still in the codebase — used by the per-card "Set source" button (`promptTodoPlusSourceLink`).
+
 ## 1.4.2 (2026-06-14)
 
 ### Changed
