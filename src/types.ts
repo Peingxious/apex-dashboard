@@ -282,17 +282,22 @@ export interface DashboardColumn {
   sectionType?: string;
   cards: DashboardCard[];
   libraryConfig?: LibraryConfig;
-  /** Per-section "hide completed tasks" override. Only honoured when
-   *  the column's `sectionType` is `todo` or `todoplus` (the renderer
-   *  silently ignores the value for any other section type). When
-   *  set, it overrides the global `defaultHideCompleted` setting for
-   *  every card in this column. When `undefined`, the column falls
-   *  back to the global default. Persisted in the dashboard file's
-   *  `columns:` frontmatter block as `hideCompleted: true|false`
-   *  (see `parser.parseColumnDefs` / `parser.serialize`). The
-   *  per-card `card.hideCompleted` flag (session-only eye toggle)
-   *  still wins over this for the card that has it set. */
-  hideCompleted?: boolean;
+  /** Per-section "auto-archive completed cards" toggle. Only
+   *  honoured when the column's `sectionType` is `todo` or
+   *  `todoplus` (the renderer silently ignores the value for any
+   *  other section type). When set to `true` (the default for new
+   *  sections, and what the user sees out of the box), any card in
+   *  this column whose task list is fully checked (i.e. all tasks
+   *  completed) is hidden from the dashboard. When `false`, all
+   *  cards are shown regardless of completion state. The choice
+   *  is persisted in the dashboard file's `columns:` frontmatter
+   *  block as `archiveCompleted: true|false` (see
+   *  `parser.parseColumnDefs` / `parser.serialize`). The per-card
+   *  `card.hideCompleted` flag (the session-only per-card eye
+   *  toggle) is independent — it controls whether the items
+   *  inside the card are filtered, NOT whether the whole card is
+   *  archived. */
+  archiveCompleted?: boolean;
 }
 
 export interface DashboardData {
@@ -391,10 +396,10 @@ export interface RenderCallbacks {
   onColumnRename(oldName: string, newName: string): void;
   onColumnDelete(columnName: string): void;
   onColumnSectionTypeChange(columnName: string, sectionType: string): void;
-  /** Toggle the per-section "hide completed tasks" state. Only
-   *  relevant for `sectionType: "todo" | "todoplus"`. Persisted
-   *  in the column's frontmatter property `hideCompleted: bool`. */
-  onColumnHideCompletedChange(columnName: string, hide: boolean): void;
+  /** Toggle the per-section "auto-archive completed cards" state.
+   *  Only relevant for `sectionType: "todo" | "todoplus"`. Persisted
+   *  in the column's frontmatter property `archiveCompleted: bool`. */
+  onColumnArchiveCompletedChange(columnName: string, archive: boolean): void;
   onTaskReminderEdit(
     cardId: string,
     taskIndex: number,

@@ -607,33 +607,25 @@ export class SyncEngine {
   }
 
   /**
-   * Persist the per-column "hide completed tasks" state. Setting
-   * `hide` to `undefined` (or omitting it on the call) is treated
-   * as a reset: the column falls back to the global
-   * `defaultHideCompleted` setting on the next render. The new
-   * value is reflected in the dashboard file's `columns:` block as
-   * `hideCompleted: true|false`.
+   * Persist the per-column "auto-archive completed cards" state.
+   * The new value is reflected in the dashboard file's `columns:`
+   * block as `archiveCompleted: true|false`. There is no "reset"
+   * mode for this property: the user is always ON or OFF (the
+   * renderer's default is ON when the frontmatter key is absent,
+   * so writing the property explicitly to `true` is a no-op
+   * semantically — but we still write it so the user's choice
+   * is visible in the file).
    */
-  async setColumnHideCompleted(
+  async setColumnArchiveCompleted(
     columnName: string,
-    hide: boolean | undefined,
+    archive: boolean,
   ): Promise<void> {
     if (!this.data) return;
 
     this.data = {
       ...this.data,
       columns: this.data.columns.map((col) =>
-        col.name === columnName
-          ? hide === undefined
-            ? // Strip the property entirely so the file round-trips
-              // back to its pre-override shape.
-              (() => {
-                const { hideCompleted: _drop, ...rest } = col;
-                void _drop;
-                return rest as typeof col;
-              })()
-            : { ...col, hideCompleted: hide }
-          : col,
+        col.name === columnName ? { ...col, archiveCompleted: archive } : col,
       ),
     };
     await this.writeToDisk();
@@ -1002,8 +994,7 @@ export class SyncEngine {
 
           // Mirror the removal into projectDocs (if the card
           // carries them) so the two data sources stay in lockstep.
-          const existingDocs = (card as { projectDocs?: unknown })
-            .projectDocs;
+          const existingDocs = (card as { projectDocs?: unknown }).projectDocs;
           if (Array.isArray(existingDocs)) {
             const docs = existingDocs as import("./types").ProjectDocNode[];
             if (itemIndex >= 0 && itemIndex < docs.length) {
@@ -1038,10 +1029,12 @@ export class SyncEngine {
             const docs: import("./types").ProjectDocNode[] = Array.isArray(
               existingDocs,
             )
-              ? (existingDocs as import("./types").ProjectDocNode[]).map((d) => ({
-                  path: d.path,
-                  children: d.children ?? [],
-                }))
+              ? (existingDocs as import("./types").ProjectDocNode[]).map(
+                  (d) => ({
+                    path: d.path,
+                    children: d.children ?? [],
+                  }),
+                )
               : [];
             const clamped = Math.min(destIndex, docs.length);
             docs.splice(clamped, 0, movedDoc);

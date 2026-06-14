@@ -2623,18 +2623,24 @@ function showReadingStats(doc: Document, service: ReadingService): void {
   renderContent();
 }
 
-export function renderDashboard(
+export async function renderDashboard(
   container: HTMLElement,
   data: DashboardData,
   callbacks: RenderCallbacks,
   app: App,
   settings?: DashboardSettings,
-): void {
+): Promise<void> {
   container.empty();
   container.addClass("dashboard-kanban");
 
+  // `renderSection` is async (v1.4.6 introduced an async auto-
+  // archive filter for todo / todoplus cards). We render columns
+  // sequentially because the section-building is itself synchronous
+  // — only the per-card isCardAllCompleted check awaits — so the
+  // DOM mutations are interleaved and a long TodoPlus chain can't
+  // stall the visible UI for a noticeable beat.
   for (const column of data.columns) {
-    const section = renderSection(column, callbacks, app, data, settings);
+    const section = await renderSection(column, callbacks, app, data, settings);
     container.appendChild(section);
   }
 
@@ -2764,13 +2770,50 @@ function isColumnProtected(columnName: string, data?: DashboardData): boolean {
   return false;
 }
 
-function renderSection(
+/**
+ * Computes whether a card's task list is "all completed" — i.e.
+ * every task is checked. Returns `false` for empty task lists so
+ * a brand-new card with no tasks yet is NOT auto-archived (an
+ * empty list isn't a "finished" list, it's a fresh one).
+ *
+ * For a regular `task` card, the source of truth is the in-memory
+ * `card.tasks` array. For a `todoplus` card, the source is the
+ * checklist in the linked source note under the card's heading —
+ * we have to read & parse the file. This is `async` because the
+ * file read may need to wait for the metadata cache to settle on
+ * a fresh workspace.
+ */
+async function isCardAllCompleted(
+  card: DashboardCard,
+  app: App,
+): Promise<boolean> {
+  // Regular Todo card: use the in-memory task list.
+  if (card.type !== "todoplus") {
+    if (!card.tasks || card.tasks.length === 0) return false;
+    return card.tasks.every((t) => t.checked);
+  }
+  // TodoPlus card: parse the source file's heading slice.
+  const sourceLink = getTodoPlusSourceLinkFromTitle(card);
+  if (!sourceLink) return false;
+  let slice = await resolveTodoPlusSlice(app, sourceLink);
+  if (!slice) {
+    // Cache may not have indexed the file yet (fresh workspace).
+    // Give it one more chance.
+    await new Promise<void>((r) => setTimeout(r, 200));
+    slice = await resolveTodoPlusSlice(app, sourceLink);
+  }
+  if (!slice) return false;
+  if (slice.items.length === 0) return false;
+  return slice.items.every((it) => it.checked);
+}
+
+async function renderSection(
   column: DashboardColumn,
   callbacks: RenderCallbacks,
   app: App,
   data?: DashboardData,
   settings?: DashboardSettings,
-): HTMLElement {
+): Promise<HTMLElement> {
   const el = document.createElement("div");
   el.addClass("dashboard-section-row");
   el.dataset.column = column.name;
@@ -2867,58 +2910,40 @@ function renderSection(
     );
   }
 
-  // Section-level "show / hide all completed tasks" toggle for the
-  // Todo and TodoPlus column variants. This is the persisted
-  // counter-part of the per-card eye icon: clicking it sets a
-  // `hideCompleted: bool` on the column's frontmatter (via
-  // `onColumnHideCompletedChange`) so the choice survives reloads
-  // and applies to every card in the section. The effective value
-  // for a single card resolves in `renderCard`/`renderCardBody`/
-  // `renderTodoPlusBody` as:
-  //   card.hideCompleted (session)  >
-  //   column.hideCompleted (this)  >
-  //   settings.defaultHideCompleted
+  // Section-level "auto-archive completed cards" toggle for the
+  // Todo and TodoPlus column variants. The v1.4.5 implementation
+  // was a per-card "hide completed items" eye button (item-level
+  // filter); v1.4.6 changed the semantic to card-level archive:
+  // when ON, any card whose task list is fully checked disappears
+  // from the dashboard entirely. The state is persisted in the
+  // column's frontmatter via `archiveCompleted: bool` (the
+  // callback `onColumnArchiveCompletedChange` writes through to
+  // `SyncService.setColumnArchiveCompleted`). Default ON — when
+  // the frontmatter key is absent, the column behaves as if
+  // `archiveCompleted: true` is set, matching the user request
+  // "默认开启". A non-task section type is ignored: the button
+  // is not rendered for projects / memo / library.
   if (sectionType === "todo" || sectionType === "todoplus") {
-    // Default state when the column has no explicit override: the
-    // global `defaultHideCompleted` setting. We render the button
-    // in its resolved state so the user can see "what's active
-    // right now" before clicking. Persisted override is
-    // `column.hideCompleted`; an explicit false (show) wins over
-    // the default to keep the icon in sync.
-    const columnHide = column.hideCompleted;
-    const globalDefault = settings?.defaultHideCompleted ?? true;
-    const resolvedHide = columnHide ?? globalDefault;
-    const hideBtn = headerActions.createEl("button", {
-      cls: "dashboard-section-add-btn dashboard-section-hide-completed-btn",
+    const columnArchive = column.archiveCompleted ?? true;
+    const archiveBtn = headerActions.createEl("button", {
+      cls: "dashboard-section-add-btn dashboard-section-archive-completed-btn",
       attr: {
-        "aria-label": resolvedHide
-          ? t("renderer.showCompletedTasks")
-          : t("renderer.hideCompletedTasks"),
-        "aria-pressed": resolvedHide ? "true" : "false",
-        title: resolvedHide
-          ? t("renderer.showCompletedTasks")
-          : t("renderer.hideCompletedTasks"),
+        "aria-label": columnArchive
+          ? t("renderer.showArchivedCards")
+          : t("renderer.hideArchivedCards"),
+        "aria-pressed": columnArchive ? "true" : "false",
+        title: columnArchive
+          ? t("renderer.showArchivedCards")
+          : t("renderer.hideArchivedCards"),
       },
     });
-    setIcon(hideBtn, resolvedHide ? "eye-off" : "eye");
-    if (resolvedHide) {
-      hideBtn.addClass("dashboard-section-add-btn--active");
+    setIcon(archiveBtn, columnArchive ? "archive-restore" : "archive");
+    if (columnArchive) {
+      archiveBtn.addClass("dashboard-section-add-btn--active");
     }
-    hideBtn.addEventListener("click", (e) => {
+    archiveBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      // Persist the explicit user choice. When the column had no
-      // override before, flip the resolved state to the opposite
-      // value. If the user is re-clicking the icon to undo their
-      // choice and arrive back at the global default, we drop the
-      // override entirely (pass `undefined`) so the file round-
-      // trips back to its pre-override shape.
-      const next: boolean | undefined =
-        columnHide === undefined
-          ? !resolvedHide
-          : columnHide === globalDefault
-            ? undefined
-            : globalDefault;
-      callbacks.onColumnHideCompletedChange(column.name, next as boolean);
+      callbacks.onColumnArchiveCompletedChange(column.name, !columnArchive);
     });
   }
 
@@ -3158,8 +3183,28 @@ function renderSection(
 
   const cardsContainer = el.createDiv({ cls: "dashboard-section-cards" });
 
+  // v1.4.6 auto-archive filter: for todo / todoplus columns with
+  // the section-level archive toggle enabled (default true), drop
+  // any card whose task list is fully checked. The check is async
+  // for todoplus cards (we have to read the source file) and sync
+  // for regular task cards.
+  const archiveEnabled =
+    (sectionType === "todo" || sectionType === "todoplus") &&
+    (column.archiveCompleted ?? true);
+
   for (const card of column.cards) {
     try {
+      if (archiveEnabled) {
+        const allDone = await isCardAllCompleted(card, app);
+        if (allDone) {
+          // Skip rendering — the card is "archived". The card is
+          // NOT deleted from `column.cards` in the underlying
+          // data; this filter is a render-time concern only, so
+          // the user can flip the archive button back off and
+          // see the card again.
+          continue;
+        }
+      }
       const cardEl = renderCard(
         card,
         column.name,
@@ -3168,20 +3213,23 @@ function renderSection(
         app,
         data,
         settings,
-        column.hideCompleted,
       );
-      // Mirror the column-level hide-completed override onto the
-      // card element so the `metadataCache.changed` listener inside
-      // `renderTodoPlusBody` can re-thread the same value when it
-      // rebuilds the body (otherwise an incremental refresh would
-      // revert to the global default).
-      if (column.hideCompleted !== undefined) {
-        cardEl.dataset.columnHideCompleted = String(column.hideCompleted);
-      }
       cardsContainer.appendChild(cardEl);
     } catch (err) {
       console.error("[Dashboard] renderCard error:", card.id, card.type, err);
     }
+  }
+
+  // When ALL cards in the column are archived, show a small
+  // placeholder so the user has feedback that the section isn't
+  // empty by accident — the placeholder is muted and a single
+  // line, no button or interaction. The user can flip the archive
+  // button in the header to see the cards again.
+  if (archiveEnabled && cardsContainer.children.length === 0) {
+    const archivedAll = cardsContainer.createDiv({
+      cls: "dashboard-section-archived-empty",
+    });
+    archivedAll.setText(t("renderer.allCardsArchived"));
   }
 
   return el;
@@ -3195,27 +3243,23 @@ function renderCard(
   app: App,
   data?: DashboardData,
   settings?: DashboardSettings,
-  /** Per-column "hide completed" override (set when the section
-   *  has an explicit `hideCompleted: bool` in its frontmatter).
-   *  Falls through to the global default when `undefined`. */
-  columnHideCompleted?: boolean,
 ): HTMLElement {
   // Effective "hide completed" state for this render pass:
   //   1. The card's own in-memory override (set by the eye/eye-off
-  //      button) wins when it is set — this is the session-only toggle.
-  //   2. Otherwise fall back to the column-level override (persisted
-  //      in the column's frontmatter via `hideCompleted: bool`, set
-  //      by the section's own eye button).
-  //   3. Otherwise fall back to the global `defaultHideCompleted`
-  //      setting (default true) so users see a clean list out of the
-  //      box.
+  //      button) wins when it is set — this is the session-only
+  //      item-level toggle.
+  //   2. Otherwise fall back to the global `defaultHideCompleted`
+  //      setting (default true) so users see a clean list out of
+  //      the box.
   // The `card.hideCompleted` flag itself is never persisted to the
-  // dashboard markdown (see parser.ts), so on every reload the field
-  // is "unset" and step 2/3 applies — that's what makes the toggle
-  // session-only by construction.
+  // dashboard markdown (see parser.ts), so on every reload the
+  // field is "unset" and step 2 applies — that's what makes the
+  // toggle session-only by construction.
+  // (The v1.4.5 column-level `columnHideCompleted` was removed in
+  //  v1.4.6: the section-level button is now an "archive completed
+  //  cards" toggle, not an item-level filter override.)
   const defaultHide = settings?.defaultHideCompleted ?? true;
-  const hideCompletedResolved =
-    card.hideCompleted ?? columnHideCompleted ?? defaultHide;
+  const hideCompletedResolved = card.hideCompleted ?? defaultHide;
 
   const el = document.createElement("div");
   el.addClass("dashboard-card", `dashboard-card--${card.type}`);
@@ -3463,7 +3507,6 @@ function renderCard(
     app,
     data,
     settings,
-    columnHideCompleted,
   );
 
   if (isProjectLike) {
@@ -3600,19 +3643,16 @@ function renderCardBody(
   app: App,
   data?: DashboardData,
   settings?: DashboardSettings,
-  columnHideCompleted?: boolean,
 ): void {
   // Mirrors the `defaultHide` / `hideCompletedResolved` computation in
   // `renderCard` — both functions need the resolved value because the
   // eye button and the task list filter both live here, and they have
   // to agree on the same effective state for the same card. The
-  // column-level override is threaded through as a parameter so a
-  // per-column `hideCompleted: true` (set in the section's own eye
-  // button) wins over the global default, but the per-card session
-  // override still wins over the column value.
+  // v1.4.5 column-level override was removed in v1.4.6 (the section
+  // toggle is now an "archive completed cards" semantic, not an
+  // item-level filter override).
   const defaultHide = settings?.defaultHideCompleted ?? true;
-  const hideCompletedResolved =
-    card.hideCompleted ?? columnHideCompleted ?? defaultHide;
+  const hideCompletedResolved = card.hideCompleted ?? defaultHide;
   void data; // unused here; kept for symmetry with the rest of the
   // render pipeline.
 
@@ -3630,14 +3670,7 @@ function renderCardBody(
   // lives in another note under a specific `## heading` — see
   // `renderTodoPlusBody` for the full read/sync pipeline.
   if (card.type === "todoplus") {
-    void renderTodoPlusBody(
-      container,
-      card,
-      callbacks,
-      app,
-      settings,
-      columnHideCompleted,
-    );
+    void renderTodoPlusBody(container, card, callbacks, app, settings);
     return;
   }
 
@@ -4313,10 +4346,6 @@ async function renderTodoPlusBody(
   callbacks: RenderCallbacks,
   app: App,
   settings?: DashboardSettings,
-  /** Per-column "hide completed" override (the section the card
-   *  lives in has a `hideCompleted: bool` in its frontmatter). When
-   *  `undefined`, the column falls back to the global default. */
-  columnHideCompleted?: boolean,
 ): Promise<void> {
   // The source link is read from the card's `title` (a wikilink of
   // the form `[[note#heading]]`); there is no per-card `sourceLink`
@@ -4366,14 +4395,13 @@ async function renderTodoPlusBody(
 
   // Same hide-completed resolution the regular Todo body uses:
   //   1. The card's in-memory `hideCompleted` override wins when set.
-  //   2. Otherwise fall back to the column-level override (set on
-  //      the section's own eye button, persisted as
-  //      `hideCompleted: bool` in the column's frontmatter).
-  //   3. Otherwise fall back to the global `defaultHideCompleted`
+  //   2. Otherwise fall back to the global `defaultHideCompleted`
   //      setting (default true).
+  // (The v1.4.5 column-level `columnHideCompleted` was removed in
+  //  v1.4.6: the section-level button is now an "archive completed
+  //  cards" toggle, not an item-level filter override.)
   const defaultHide = settings?.defaultHideCompleted ?? true;
-  const hideCompleted =
-    card.hideCompleted ?? columnHideCompleted ?? defaultHide;
+  const hideCompleted = card.hideCompleted ?? defaultHide;
   // Always compute the progress from the full item list, not the
   // filtered one — hiding completed tasks should not change the
   // percentage the user sees.
@@ -4739,29 +4767,13 @@ function scheduleTodoPlusRefresh(
     // container, so we only need to empty the listEl — but the
     // body is built top-down in renderTodoPlusBody, so we instead
     // rebuild from the closest `.dashboard-card-content` (or the
-    // body root) up. We read the column-level hideCompleted
-    // override off the card dataset so the per-section toggle
-    // continues to apply on incremental refreshes (a full
-    // re-render is also wired to thread the same value through).
+    // body root) up.
     const bodyRoot = cardEl.querySelector(
       ".dashboard-card-body",
     ) as HTMLElement | null;
     if (bodyRoot) {
       bodyRoot.empty();
-      const colHide =
-        cardEl.dataset.columnHideCompleted === "true"
-          ? true
-          : cardEl.dataset.columnHideCompleted === "false"
-            ? false
-            : undefined;
-      void renderTodoPlusBody(
-        bodyRoot,
-        card,
-        callbacks,
-        app,
-        settings,
-        colHide,
-      );
+      void renderTodoPlusBody(bodyRoot, card, callbacks, app, settings);
     }
   };
   const ref = app.metadataCache.on("changed", onChange);

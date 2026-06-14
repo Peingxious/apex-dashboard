@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.4.6 (2026-06-14)
+
+### Changed
+
+- **Section-level toggle semantics: "show / hide all completed tasks" → "archive completed cards"** — the v1.4.5 build introduced a section-level eye button that filtered completed items _inside_ each card. The user clarified the intent: hide the entire card from the dashboard when **all** of its tasks are checked. The v1.4.6 button does exactly that:
+  - When ON (the default for new and existing Todo / TodoPlus sections), any card whose task list is fully checked is hidden from the dashboard.
+  - When OFF, every card is shown regardless of completion state.
+  - The new section button is rendered with `archive` / `archive-restore` lucide icons (the old eye icons stay on the per-card eye for the in-card hide-completed-items filter).
+  - Property name in the column frontmatter is `archiveCompleted: true|false` (replaces the v1.4.5 `hideCompleted: true|false` line — files written by v1.4.5 will round-trip with the new key on the next save).
+  - When **every** card in a section is archived, a muted single-line placeholder `"所有卡片都已归档…"` is shown inside the section so the user has feedback that the section is not accidentally empty.
+
+### Added
+
+- **Auto-archive filter (Todo / TodoPlus cards)** — implemented in [`isCardAllCompleted`](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2780). For regular Todo cards the check is a simple `every(t => t.checked)` over the in-memory `card.tasks`. For TodoPlus cards the check parses the source file's heading slice via the existing `resolveTodoPlusSlice` helper, so the archive decision reflects the _source note_ state, not a stale mirror. Empty task lists (brand-new cards) are NOT auto-archived.
+- **Default ON, no opt-out migration needed** — the `archiveCompleted` frontmatter key is treated as `true` when absent, matching the user request "默认开启". Existing v1.4.5 dashboard files will, on the next save, gain the new key (the parser writes it only when explicitly set by the user, so users who have never clicked the section button get the default behaviour silently).
+
+### Implementation
+
+- Type: [`DashboardColumn.archiveCompleted?: boolean`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L285) (and matching [`RenderCallbacks.onColumnArchiveCompletedChange`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/types.ts#L394))
+- Parser: [`parseColumnDefs`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L808) reads `archiveCompleted:` and [`serialize`](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L196) writes it
+- Sync: [`SyncService.setColumnArchiveCompleted`](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L619)
+- Renderer: archive button in [`renderSection`](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L2883), filter loop in [`renderSection`](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/renderer.ts#L3189)
+- View / Sidebar: both call the new sync method ([view.ts:2541](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts#L2541), [sidebar-view.ts:570](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sidebar-view.ts#L570))
+- `renderDashboard` is now `async` (the archive filter awaits a `metadataCache` lookup for TodoPlus cards); all callers in [view.ts](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/view.ts) and [sidebar-view.ts](file:///d:/BauduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sidebar-view.ts) continue to fire-and-forget, no breaking signature change.
+
+### Fixed
+
+- **Removed the v1.4.5 column-level "hide completed items" override** that threaded `columnHideCompleted` through `renderCard` → `renderCardBody` → `renderTodoPlusBody`. The per-card eye icon (session-only, persisted as `card.hideCompleted` in memory only) is the sole item-level filter.
+
 ## 1.4.5 (2026-06-14)
 
 ### Fixed

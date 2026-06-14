@@ -193,13 +193,17 @@ export function serialize(data: DashboardData, app?: App): string {
     if (col.sectionType) {
       lines.push(`    type: ${col.sectionType}`);
     }
-    if (col.hideCompleted !== undefined) {
-      // Per-section "hide completed" override. Only written when
-      // explicitly set (i.e. the user has touched the column-level
-      // eye button at least once) so existing dashboard files stay
-      // byte-identical on the next save — backwards compatibility
-      // for users who have not opted in.
-      lines.push(`    hideCompleted: ${col.hideCompleted}`);
+    if (col.archiveCompleted !== undefined) {
+      // Per-section "auto-archive completed cards" toggle. Only
+      // written when explicitly set (i.e. the user has touched the
+      // section-level archive button at least once) so existing
+      // dashboard files stay byte-identical on the next save —
+      // backwards compatibility for users who have not opted in.
+      // (The default is `true` in the renderer when this field is
+      // absent, so omitting the line is equivalent to enabling the
+      // archive behaviour — a deliberate match with the v1.4.6
+      // user request "默认开启".)
+      lines.push(`    archiveCompleted: ${col.archiveCompleted}`);
     }
     if (col.libraryConfig) {
       lines.push("    library:");
@@ -548,6 +552,7 @@ export function generateDefaultMarkdown(): string {
               { text: t("default.todo2"), checked: false },
               { text: t("default.todo3"), checked: false },
               { text: t("default.todo4"), checked: false },
+              { text: t("default.todo5"), checked: false },
             ],
             url: "",
             wikiLink: "",
@@ -810,7 +815,7 @@ function parseColumnDefs(fm: Record<string, unknown>): Array<{
   color: string;
   sectionType?: string;
   libraryConfig?: LibraryConfig;
-  hideCompleted?: boolean;
+  archiveCompleted?: boolean;
 }> {
   const raw = fm.columns;
   if (!Array.isArray(raw)) return DEFAULT_COLUMNS;
@@ -823,11 +828,11 @@ function parseColumnDefs(fm: Record<string, unknown>): Array<{
       ? parseLibraryConfig(item.library as Record<string, unknown>)
       : undefined,
     // Only set when the frontmatter explicitly says so — an absent
-    // key means "fall back to the global defaultHideCompleted
-    // setting", which is what every pre-v1.4.5 column expects.
-    hideCompleted:
-      typeof item.hideCompleted === "boolean"
-        ? (item.hideCompleted as boolean)
+    // key means "use the renderer default (true = archive on)",
+    // which is what every pre-v1.4.6 column expects.
+    archiveCompleted:
+      typeof item.archiveCompleted === "boolean"
+        ? (item.archiveCompleted as boolean)
         : undefined,
   }));
 }
@@ -839,7 +844,7 @@ function parseColumns(
     color: string;
     sectionType?: string;
     libraryConfig?: LibraryConfig;
-    hideCompleted?: boolean;
+    archiveCompleted?: boolean;
   }>,
 ): DashboardColumn[] {
   const sections = splitByH2(body);
@@ -879,12 +884,12 @@ function parseColumns(
       sectionType,
       cards,
       libraryConfig: def?.libraryConfig,
-      // Only forward the per-column "hide completed" override when
-      // it's truthy/falsy AND the section is a todo variant. For
-      // any other section type the renderer ignores the value, but
-      // we keep the frontmatter value round-tripped so nothing is
-      // lost when the user retypes the section.
-      hideCompleted: def?.hideCompleted,
+      // Only forward the per-column "auto-archive completed"
+      // override when it's explicitly set. For any other section
+      // type the renderer ignores the value, but we keep the
+      // frontmatter value round-tripped so nothing is lost when
+      // the user retypes the section.
+      archiveCompleted: def?.archiveCompleted,
     };
   });
 }

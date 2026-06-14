@@ -1688,24 +1688,22 @@ export class DashboardView extends ItemView {
           await self.saveEmbeddedAndRefresh();
         }
       },
-      onColumnHideCompletedChange: async (
+      onColumnArchiveCompletedChange: async (
         columnName: string,
-        hide: boolean | undefined,
+        archive: boolean,
       ) => {
         // Embedded dashboard view: state lives entirely in memory
         // (the embedded view re-derives the frontmatter from the
         // snapshot in `self.embeddedData` on every refresh), so we
-        // just write the field in place and re-render. We do NOT
-        // call any disk-touching helper here — the embedded view
-        // is read-only with respect to the dashboard file by
-        // design, but the per-section toggle is a transient UX
-        // preference the user might re-flip on every reload, so
-        // an in-memory write is appropriate.
+        // just write the field in place and re-render. The property
+        // name is intentionally `archiveCompleted` (not the v1.4.5
+        // `hideCompleted`): the user request was for a "card-level
+        // archive" semantic, not a "hide items" semantic.
         const col = self.embeddedData?.columns.find(
           (c) => c.name === columnName,
         );
         if (col) {
-          col.hideCompleted = hide;
+          col.archiveCompleted = archive;
           await self.saveEmbeddedAndRefresh();
         }
       },
@@ -2540,10 +2538,8 @@ export class DashboardView extends ItemView {
       },
       onColumnSectionTypeChange: (columnName: string, sectionType: string) =>
         this.sync.setColumnSectionType(columnName, sectionType),
-      onColumnHideCompletedChange: (
-        columnName: string,
-        hide: boolean | undefined,
-      ) => this.sync.setColumnHideCompleted(columnName, hide),
+      onColumnArchiveCompletedChange: (columnName: string, archive: boolean) =>
+        this.sync.setColumnArchiveCompleted(columnName, archive),
       onTaskReminderEdit: (
         cardId: string,
         taskIndex: number,
