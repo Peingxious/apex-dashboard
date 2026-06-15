@@ -2851,6 +2851,18 @@ async function renderSection(
   el.dataset.column = column.name;
   const sectionType = getSectionType(column);
   el.dataset.sectionType = sectionType;
+  // v1.4.9 BUG-003a — diag: confirm renderSection actually runs and
+  // with which section type / how many cards. Remove after verify.
+  console.log(
+    "[apex-dashboard][diag] renderSection column=",
+    column.name,
+    "sectionType=",
+    sectionType,
+    "cards=",
+    column.cards.length,
+    "cardTypes=",
+    column.cards.map((c) => c.type).join(","),
+  );
 
   const collapsed = getCollapsedSections();
   if (collapsed.has(column.name)) {

@@ -64,12 +64,17 @@ export function renderBanner(
 }
 
 /**
- * Modal for editing banner settings (image only).
+ * Modal for editing banner settings (single image only).
+ *
+ * v1.4.8: removed the rotation-images UI and `localImages` field.
+ * Banner is single-image: `banner.image` is the only user-facing
+ * input. The `banner.images` field is still tolerated on read
+ * (for users with older dashboard files), but the modal no longer
+ * writes it.
  */
 export class BannerEditModal extends Modal {
   private banner: BannerData;
   private onSave: (updates: Partial<BannerData>) => void;
-  private localImages: string[];
 
   constructor(
     app: App,
@@ -80,7 +85,6 @@ export class BannerEditModal extends Modal {
     super(app);
     this.banner = { ...banner };
     this.onSave = onSave;
-    this.localImages = banner.images ? [...banner.images] : [];
   }
 
   onOpen(): void {
@@ -90,7 +94,7 @@ export class BannerEditModal extends Modal {
 
     contentEl.createEl("h2", { text: t("banner.editTitle") });
 
-    // Main image
+    // Single image input
     new Setting(contentEl)
       .setName(t("banner.image"))
       .setDesc(t("banner.imageDesc"))
@@ -101,73 +105,14 @@ export class BannerEditModal extends Modal {
           .onChange((val) => (this.banner.image = val));
       });
 
-    // Rotation images
-    contentEl.createEl("h3", { text: t("banner.rotationImages") });
-    const imagesContainer = contentEl.createDiv({
-      cls: "dashboard-banner-images-list",
-    });
-    this.renderImagesList(imagesContainer);
-
-    const addImageBtn = contentEl.createEl("button", {
-      cls: "dashboard-banner-add-btn",
-      text: t("banner.addImage"),
-    });
-    addImageBtn.addEventListener("click", () => {
-      this.localImages.push("");
-      this.renderImagesList(imagesContainer);
-    });
-
     // Save button
     const saveBtn = contentEl.createEl("button", {
       cls: "dashboard-banner-save-btn",
       text: t("banner.save"),
     });
     saveBtn.addEventListener("click", () => {
-      // Build the partial update carefully:
-      // - Always include `image` (the user might or might not have
-      //   changed it, but it must be a string value).
-      // - Only include `images` when there is at least one rotation
-      //   image. Setting `images: undefined` via Object.assign or
-      //   spread would WIPE OUT the existing rotation array on the
-      //   target banner, even when the user did not intend to
-      //   touch the rotation list at all. This is the multi-
-      //   attribute update bug: only the fields the user actually
-      //   changed should be present in the update payload.
-      const updates: Partial<BannerData> = {
-        image: this.banner.image,
-      };
-      if (this.localImages.length > 0) {
-        updates.images = this.localImages;
-      }
-      this.onSave(updates);
+      this.onSave({ image: this.banner.image });
       this.close();
-    });
-  }
-
-  private renderImagesList(container: HTMLElement): void {
-    container.empty();
-    this.localImages.forEach((img, index) => {
-      const row = container.createDiv({ cls: "dashboard-banner-image-row" });
-
-      row.createEl("input", {
-        cls: "dashboard-banner-image-input",
-        attr: { type: "text", placeholder: t("banner.imagePlaceholder") },
-      }).value = img;
-      (row.querySelector("input") as HTMLInputElement)?.addEventListener(
-        "input",
-        (e) => {
-          this.localImages[index] = (e.target as HTMLInputElement).value;
-        },
-      );
-
-      const delBtn = row.createEl("button", {
-        cls: "dashboard-banner-remove-btn",
-        text: "×",
-      });
-      delBtn.addEventListener("click", () => {
-        this.localImages.splice(index, 1);
-        this.renderImagesList(container);
-      });
     });
   }
 

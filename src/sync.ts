@@ -14,7 +14,7 @@ import {
   parse,
   serialize,
   serializeInto,
-  generateDefaultMarkdown,
+  generateEmptyDashboardMarkdown,
   pathToWikiLink,
 } from "./parser";
 import { t } from "./i18n";
@@ -599,14 +599,20 @@ export class SyncEngine {
     sectionType: string,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) =>
+    // v1.4.9 BUG-003a / BUG-003c: switch to a columns-only write path
+    // (processFrontMatter) so the banner block, extra frontmatter and
+    // comment lines in `dashboard.md` stay byte-identical. The old
+    // full-file rewrite also dropped the re-render signal on the
+    // floor (the vault 'modify' listener only refreshes library
+    // sections; the dashboard view itself only re-renders via the
+    // explicit `notifyCallbacks` here). Going through
+    // `updateColumnsField` guarantees the data update is followed by
+    // a synchronous `notifyCallbacks` → `view.requestRender(newData)`.
+    await this.updateColumnsField((cols) =>
+      cols.map((col) =>
         col.name === columnName ? { ...col, sectionType } : col,
       ),
-    };
-    await this.writeToDisk();
+    );
   }
 
   /**
@@ -624,14 +630,13 @@ export class SyncEngine {
     archive: boolean,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) =>
+    // v1.4.9 BUG-003c: columns-only write path (see
+    // `setColumnSectionType` for rationale).
+    await this.updateColumnsField((cols) =>
+      cols.map((col) =>
         col.name === columnName ? { ...col, archiveCompleted: archive } : col,
       ),
-    };
-    await this.writeToDisk();
+    );
   }
 
   async deleteColumn(name: string): Promise<void> {
@@ -1416,7 +1421,7 @@ export class SyncEngine {
       return;
     }
 
-    const content = generateDefaultMarkdown();
+    const content = generateEmptyDashboardMarkdown();
     this.file = await this.app.vault.create(path, content);
   }
 
@@ -1533,6 +1538,201 @@ export class SyncEngine {
       if (!present.has(key)) this.hideCompletedOverrides.delete(key);
     }
     return { ...data, columns };
+  }
+
+  /**
+   * v1.4.9 BUG-003c — column-level frontmatter write path.
+   *
+   * Calls `app.fileManager.processFrontMatter(file, mutate)` so the
+   * plugin only touches the frontmatter key the caller specifies —
+   * banner, quickActions, extra frontmatter, and YAML comment lines
+   * stay byte-identical on disk. This is the official Obsidian API
+   * for "mutate one frontmatter key without rewriting the whole
+   * file" and avoids the heavyweight `serializeInto` + `vault.modify`
+   * round-trip we use for full-file writes.
+   *
+   * Behaviour:
+   *   1. The `mutate` callback is invoked with the live frontmatter
+   *      object; whatever fields it mutates get persisted.
+   *   2. After Obsidian writes the file, we re-parse the new contents
+   *      and refresh `this.data` so in-memory state (including
+   *      `extraFrontmatter`) matches the post-write file.
+   *   3. Callers MUST update `this.data` themselves BEFORE invoking
+   *      this — `updateColumnsField` does that for them.
+   *   4. We do NOT call `writeToDisk`, so the banner size-protection
+   *      guard (which is only meaningful for the full-file path) is
+   *      not triggered.
+   */
+  private async updateFrontmatterField(
+    file: TFile,
+    mutate: (fm: Record<string, unknown>) => void,
+  ): Promise<void> {
+    try {
+      await this.app.fileManager.processFrontMatter(file, (fm) => {
+        mutate(fm as Record<string, unknown>);
+      });
+      // Re-parse the file so this.data reflects the on-disk truth
+      // (any side-effects of processFrontMatter on other keys, plus
+      // a fresh `extraFrontmatter` snapshot, are picked up here).
+      const updated = await this.app.vault.read(file);
+      const parsed = parse(updated);
+      // Preserve the in-memory column objects the caller just
+      // mutated — `parse` rebuilds them from scratch and would
+      // drop the sectionType / archiveCompleted edit. We restore
+      // those from `this.data` so the live state survives the
+      // round-trip.
+      this.data = this.applySessionOverrides(this.mergeColumnState(parsed));
+    } catch (e) {
+      console.error("[apex-dashboard] processFrontMatter failed", e);
+      new (await import("obsidian")).Notice(
+        t("error.saveFailed") || "Failed to save dashboard changes",
+      );
+    }
+  }
+
+  /**
+   * v1.4.9 BUG-003a — fix #2 path: the view computes the next
+   * `DashboardData` (with the new sectionType baked in) and hands
+   * it to us. We:
+   *   1. adopt it as `this.data` synchronously, so any subsequent
+   *      `getData()` / `notifyCallbacks` returns the new state
+   *   2. fire `notifyCallbacks` so listeners (e.g. a sync-managed
+   *      re-render) see the new state immediately
+   *   3. persist ONLY the `columns:` block via `processFrontMatter`,
+   *      leaving banner / quickActions / extra frontmatter / YAML
+   *      comments byte-identical on disk
+   *
+   * This is the path that fixes the "styles refresh, data does
+   * not" symptom: the view renders with the same object reference
+   * it built the next-data from, so there is no opportunity for a
+   * stale snapshot to leak back into the render pipeline.
+   */
+  async persistColumnMutation(nextData: DashboardData): Promise<void> {
+    if (!this.file) return;
+    if (this.data) {
+      this.data = nextData;
+    }
+    this.notifyCallbacks();
+    const fmColumns = nextData.columns.map((col) =>
+      this.columnToFrontmatter(col),
+    );
+    await this.updateFrontmatterField(this.file, (fm) => {
+      fm.columns = fmColumns;
+    });
+  }
+
+  /**
+   * v1.4.9 BUG-003c — public wrapper that updates ONLY the `columns`
+   * frontmatter field. Use this for sectionType / archiveCompleted
+   * edits where banner / quickActions / extra frontmatter must be
+   * left alone.
+   *
+   * The `updater` receives the current in-memory columns and returns
+   * the new column array. The returned array is:
+   *   1. assigned to `this.data.columns` synchronously (so the view
+   *      can re-render against the new state in the same tick)
+   *   2. serialised into the file's `columns:` block via
+   *      `processFrontMatter`
+   *   3. followed by `notifyCallbacks` to push the new data to the
+   *      view (this is what fixes BUG-003a: previously, the
+   *      vault 'modify' listener refreshed only library sections
+   *      and the dashboard view never got a re-render signal).
+   */
+  async updateColumnsField(
+    updater: (cols: DashboardColumn[]) => DashboardColumn[],
+  ): Promise<void> {
+    if (!this.data || !this.file) return;
+
+    const nextColumns = updater(this.data.columns);
+    this.data = {
+      ...this.data,
+      columns: nextColumns,
+    };
+    this.notifyCallbacks();
+    // Build a YAML-shaped array of plain objects matching the
+    // frontmatter schema. We do NOT go through `serialize` here —
+    // processFrontMatter accepts a JS object directly and the YAML
+    // library Obsidian uses (js-yaml) will dump it.
+    const fmColumns = nextColumns.map((col) => this.columnToFrontmatter(col));
+
+    await this.updateFrontmatterField(this.file, (fm) => {
+      fm.columns = fmColumns;
+    });
+  }
+
+  /**
+   * v1.4.9 helper — convert a `DashboardColumn` to the plain-object
+   * shape that processFrontMatter expects inside `fm.columns`. We
+   * deliberately emit only the keys the user-facing parser writes
+   * (name / type / archiveCompleted / library) and let js-yaml handle
+   * the YAML serialisation — this way we never accidentally re-emit
+   * `cards` or other non-frontmatter fields into the YAML block.
+   */
+  private columnToFrontmatter(col: DashboardColumn): Record<string, unknown> {
+    const out: Record<string, unknown> = {
+      name: col.name,
+    };
+    if (col.sectionType) out.type = col.sectionType;
+    if (col.archiveCompleted !== undefined) {
+      out.archiveCompleted = col.archiveCompleted;
+    }
+    if (col.libraryConfig) {
+      const lc = col.libraryConfig;
+      const libOut: Record<string, unknown> = {
+        viewMode: lc.viewMode,
+        sortBy: lc.sortBy,
+        sortDesc: lc.sortDesc,
+      };
+      if (lc.kanbanGroupBy) libOut.kanbanGroupBy = lc.kanbanGroupBy;
+      if (lc.pageSize) libOut.pageSize = lc.pageSize;
+      if (lc.visibleProperties && lc.visibleProperties.length > 0) {
+        libOut.visibleProperties = lc.visibleProperties;
+      }
+      if (lc.quickDateFilter) {
+        libOut.quickDateFilter = {
+          property: lc.quickDateFilter.property,
+          start: lc.quickDateFilter.start,
+          end: lc.quickDateFilter.end,
+        };
+      }
+      if (lc.filters.length > 0) {
+        libOut.filters = lc.filters.map((f) => {
+          const fo: Record<string, unknown> = {
+            property: f.property,
+            values: f.values,
+          };
+          if (f.dateRange) {
+            if (f.dateRange.start) fo.dateStart = f.dateRange.start;
+            if (f.dateRange.end) fo.dateEnd = f.dateRange.end;
+          }
+          return fo;
+        });
+      }
+      out.library = libOut;
+    }
+    return out;
+  }
+
+  /**
+   * v1.4.9 helper — re-apply the current `this.data.columns` state
+   * over the freshly-parsed columns coming from disk. processFrontMatter
+   * writes the YAML, but the in-memory columns we just updated
+   * (sectionType / archiveCompleted) are otherwise lost in the
+   * re-parse round-trip.
+   */
+  private mergeColumnState(parsed: DashboardData): DashboardData {
+    if (!this.data) return parsed;
+    const byName = new Map(this.data.columns.map((c) => [c.name, c]));
+    const merged = parsed.columns.map((parsedCol) => {
+      const live = byName.get(parsedCol.name);
+      if (!live) return parsedCol;
+      return {
+        ...parsedCol,
+        sectionType: live.sectionType,
+        archiveCompleted: live.archiveCompleted,
+      };
+    });
+    return { ...parsed, columns: merged };
   }
 
   private async writeToDisk(): Promise<void> {

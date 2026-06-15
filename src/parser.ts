@@ -45,6 +45,14 @@ const DEFAULT_BANNER: BannerData = {
   image: "",
 };
 
+/**
+ * v1.4.8: This constant is kept for potential future use (e.g. a
+ * user-toggleable "insert sample dashboard" command), but is no
+ * longer used as a fallback when `columns:` is missing in the
+ * frontmatter. If a user clears the `columns:` key from their
+ * dashboard file, the plugin will respect that and render an
+ * empty workspace, NOT silently inject these defaults.
+ */
 const DEFAULT_COLUMNS = [
   { name: "Memo", color: "#f59e0b", sectionType: "memo" },
   { name: "Todo", color: "#6366f1", sectionType: "todo" },
@@ -134,13 +142,23 @@ function splitFrontmatterRaw(markdown: string): RawFrontmatterSplit {
     ? "\uFEFF---" + nl
     : "---" + nl;
   if (!markdown.startsWith(startLine)) {
-    return { hasFrontmatter: false, newline: nl, frontmatterRaw: "", body: markdown };
+    return {
+      hasFrontmatter: false,
+      newline: nl,
+      frontmatterRaw: "",
+      body: markdown,
+    };
   }
 
   const endMarker = nl + "---";
   const endIdx = markdown.indexOf(endMarker, startLine.length);
   if (endIdx < 0) {
-    return { hasFrontmatter: false, newline: nl, frontmatterRaw: "", body: markdown };
+    return {
+      hasFrontmatter: false,
+      newline: nl,
+      frontmatterRaw: "",
+      body: markdown,
+    };
   }
 
   const frontmatterRaw = markdown.slice(startLine.length, endIdx);
@@ -159,7 +177,10 @@ function isTopLevelKeyLine(line: string): boolean {
   return true;
 }
 
-function findYamlBlockRange(lines: string[], key: string): [number, number] | null {
+function findYamlBlockRange(
+  lines: string[],
+  key: string,
+): [number, number] | null {
   const start = lines.findIndex((l) => l.startsWith(key + ":"));
   if (start < 0) return null;
   let end = lines.length;
@@ -195,10 +216,14 @@ function patchYamlBlock(
 
   const [start, end] = range;
   let replaceEnd = end;
-  while (replaceEnd > start && lines[replaceEnd - 1]!.trim() === "") replaceEnd--;
+  while (replaceEnd > start && lines[replaceEnd - 1]!.trim() === "")
+    replaceEnd--;
   const trailing = lines.slice(replaceEnd, end);
   const out = [...lines];
-  const replacement = newBlockLines && newBlockLines.length > 0 ? [...newBlockLines, ...trailing] : trailing;
+  const replacement =
+    newBlockLines && newBlockLines.length > 0
+      ? [...newBlockLines, ...trailing]
+      : trailing;
   out.splice(start, end - start, ...replacement);
   return out;
 }
@@ -274,15 +299,17 @@ export function serialize(data: DashboardData, app?: App): string {
     }
   }
 
-  lines.push("banner:");
+  // v1.4.9 BUG-003b: banner block is only emitted when the user has
+  // actually populated it (currently we gate on `image` — the
+  // primary, non-deprecated field). If a user has never edited the
+  // banner, `data.banner.image === ""` and we emit NO `banner:` line
+  // at all, keeping the file free of stray top-level keys. The
+  // `parseBanner` counterpart is unchanged so old dashboard files
+  // with a `banner:` block still parse and render correctly — this
+  // is a write-side tightening, not a read-side contract change.
   if (data.banner.image) {
+    lines.push("banner:");
     lines.push(`  image: "${data.banner.image}"`);
-  }
-  if (data.banner.images && data.banner.images.length > 0) {
-    lines.push("  images:");
-    for (const img of data.banner.images) {
-      lines.push(`    - "${escapeYamlString(img)}"`);
-    }
   }
 
   if (data.quickActions.length > 0) {
@@ -577,6 +604,38 @@ export function serialize(data: DashboardData, app?: App): string {
   return lines.join("\n");
 }
 
+/**
+ * v1.4.8: Build the minimal dashboard file used when the
+ * configured dashboard file does not exist on disk. The output is
+ * intentionally bare:
+ * - NO `banner:` block (v1.4.9 BUG-003b: banner is only written
+ *   when the user has actually populated it; a brand-new file has
+ *   an empty `data.banner.image`, so we emit nothing)
+ * - one `columns: []` block
+ * - no H2 sections, no example cards, no default columns
+ *
+ * This is what `findOrCreateFile()` in `sync.ts` now calls. The
+ * plugin used to call `generateDefaultMarkdown()` here, which
+ * silently injected Memo / Todo / Projects / Library — every user
+ * got the same four sample columns on first run, and clearing
+ * them from the file caused the plugin to resurrect them on the
+ * next save. v1.4.8 fixed that by treating the file itself as
+ * the source of truth.
+ */
+export function generateEmptyDashboardMarkdown(): string {
+  return serialize({
+    banner: { ...DEFAULT_BANNER },
+    quickActions: [],
+    columns: [],
+  });
+}
+
+/**
+ * @deprecated for default-creation since v1.4.8. Kept around for
+ * potential future "insert sample dashboard" / "reset to sample"
+ * user actions. The first-run flow now uses
+ * `generateEmptyDashboardMarkdown()` instead.
+ */
 export function generateDefaultMarkdown(): string {
   const today = new Date();
   const dateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -939,7 +998,12 @@ function parseColumnDefs(fm: Record<string, unknown>): Array<{
   archiveCompleted?: boolean;
 }> {
   const raw = fm.columns;
-  if (!Array.isArray(raw)) return DEFAULT_COLUMNS;
+  // v1.4.8: when `columns:` is absent, return an empty list rather
+  // than the legacy DEFAULT_COLUMNS. The plugin now respects the
+  // user's file as the source of truth — if they remove every
+  // column definition, the dashboard renders empty instead of
+  // silently re-injecting the four sample columns.
+  if (!Array.isArray(raw)) return [];
 
   return (raw as Array<Record<string, unknown>>).map((item) => ({
     name: String(item.name ?? "Unnamed"),

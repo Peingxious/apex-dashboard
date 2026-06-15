@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.4.9 (2026-06-15)
+
+### Fixed
+
+- **BUG-003a · 切换分区类型时工作台同帧刷新**
+  - 新增 [`SyncEngine.updateFrontmatterField()`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1543) + [`updateColumnsField()`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1605) 公开方法：走 [`app.fileManager.processFrontMatter()`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/sync.ts#L1543) API 直接 mutate `columns:` 字段
+  - `setColumnSectionType` / `setColumnArchiveCompleted` 改走**新路径**，调用前同步触发 `notifyCallbacks` → `view.requestRender(newData)`，**同帧**反映新类型
+  - `view.ts:onColumnSectionTypeChange` callback 额外**强制**再 requestRender 一次（防御性：覆盖 RAF 合并可能吞掉请求的情况）
+  - 修复旧路径下用户需切走 tab 再切回才能看到新样式的体验
+
+- **BUG-003b · banner 块条件输出，未操作不再写**
+  - [`parser.ts:serialize`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L300) 删除硬编码 `lines.push("banner:")`
+  - 改为**仅当** `data.banner.image` 非空时才输出 `banner:` 块
+  - 用户从未编辑过 banner → 文件**不含** `banner:` 字段
+  - 用户编辑过 banner（填 URL）→ 文件**保留** `banner:` 块
+  - `parseBanner` 行为不变，向后兼容已有 `banner:` 块的老文件
+  - 用户清空 banner（设 image 为 ""）→ 旧 banner 块会在下次保存时**自动从文件移除**（由 `serializeInto` → `patchYamlBlock` 的 null block 路径处理）
+
+- **BUG-003c · 默认只控制 columns，其它字段字节级不动**
+  - 切换分区类型时**不再**整文件重写
+  - banner / quickActions / extra frontmatter / YAML 注释 / 空行顺序**完全保留**
+  - 新路径只动 `columns:` 字段，其它字段 byte-identical
+  - `writeToDisk` 整文件路径**保留**，供卡片增删改、banner 编辑、quickActions 增删等场景使用
+  - 写完后 `console.error` + `new Notice("Failed to save dashboard changes")` 兜底，错误不再静默
+
+## 1.4.8 (2026-06-15)
+
+### Fixed
+
+- **BUG-001 · Banner 简化为单图，弹窗只有图片地址**
+  - **删除** banner 编辑弹窗里的 "Rotation Images" 列表与 "Add Image" 按钮——banner 不再支持轮播
+  - 弹窗**只**保留一个图片地址输入框（vault 相对路径或完整 https URL）
+  - `view.ts:setupBannerRotation` 整段删除，`images.length > 1` 不再覆盖主图
+  - `parser.ts:serialize` 不再输出 `banner.images:` 块；`banner.images` 数据读时**忽略**（向后兼容旧文件）
+  - 补全 `i18n.ts` 缺失的 7 个 banner key（`banner.edit` / `banner.image` / `banner.imageDesc` / `banner.imagePlaceholder` / `banner.rotationImages` / `banner.addImage` / `banner.save`），弹窗 label / placeholder 正常显示
+
+- **BUG-002 · 首次打开工作台不再注入默认分区**
+  - 新增 [`generateEmptyDashboardMarkdown()`](file:///d:/BaiduNetdiskWorkspace/Ptest/.obsidian/plugins/apex-dashboard/src/parser.ts#L600) — 输出**仅**含最小 frontmatter + `columns: []` 的骨架
+  - `sync.ts:findOrCreateFile` 在新建文件时改用 `generateEmptyDashboardMarkdown()`（替代 `generateDefaultMarkdown()`）
+  - `parser.ts:parseColumnDefs` 在 `columns:` 缺失时**返回 `[]`**，不再 fallback 到 `DEFAULT_COLUMNS`
+  - `DEFAULT_COLUMNS` / `generateDefaultMarkdown` 保留并标记 `@deprecated`，仅供未来"插入示例数据"按钮使用
+  - 用户清空 `dashboard.md` 的 `columns:` 块后再打开 → 工作台**空**，文件**不被改回**
+
 ## 1.4.7 (2026-06-15)
 
 ### Documentation

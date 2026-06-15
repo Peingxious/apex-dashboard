@@ -27,7 +27,7 @@ import {
   renderSidebarReading,
 } from "./renderer";
 import { closeAllFileSuggests } from "./file-suggest";
-import { renderBanner, BannerEditModal, resolveVaultImage } from "./banner";
+import { renderBanner, BannerEditModal } from "./banner";
 import { getRecentDocs, renderRecentDocs } from "./recent";
 import {
   renderQuickActions,
@@ -66,8 +66,6 @@ export class DashboardView extends ItemView {
   private recentDocsTimer: ReturnType<typeof setTimeout> | null = null;
   private libraryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly RECENT_DOCS_DEBOUNCE = 500;
-  private bannerImageIndex = 0;
-  private static readonly BANNER_IMAGE_ROTATION_MS = 30 * 60 * 1000; // 30 min (on the half)
   private static readonly REMINDER_CHECK_MS = 60 * 1000; // 1 minute
   private reminderTimer: ReturnType<typeof setInterval> | null = null;
   private firedReminders = new Set<string>();
@@ -220,6 +218,16 @@ export class DashboardView extends ItemView {
 
     // Use embedded note data if in embedded mode
     const activeData = this.embeddedData ?? data;
+    // v1.4.9 BUG-003a — diag: confirm render runs and which data ref
+    // it's using. Remove after verify.
+    console.log(
+      "[apex-dashboard][diag] view.render called — embeddedMode=",
+      !!this.embeddedNotePath,
+      "activeDataId=",
+      (activeData as any).__diagId ?? "(no id)",
+      "sectionTypes=",
+      activeData.columns.map((c) => `${c.name}:${c.sectionType ?? "?"}`).join(","),
+    );
 
     // Save scroll positions before re-render
     const root = this.containerEl.children[1] as HTMLElement;
@@ -265,9 +273,6 @@ export class DashboardView extends ItemView {
       bannerEl.addClass("dashboard-banner--collapsed");
     }
     this.setupBannerBehavior(bannerEl);
-
-    // Banner quote rotation
-    this.setupBannerRotation(container, activeData.banner);
 
     this.renderMobileWidgetBar(container);
 
@@ -1516,13 +1521,27 @@ export class DashboardView extends ItemView {
         columnName: string,
         sectionType: string,
       ) => {
-        const col = self.embeddedData?.columns.find(
-          (c) => c.name === columnName,
+        // v1.4.9 BUG-003a — fix #2 (embedded variant): build the
+        // next columns array first, assign it to `self.embeddedData`
+        // synchronously, then persist + render with the same
+        // reference. This avoids the "styles refresh, data does
+        // not" symptom in the embedded view too.
+        if (!self.embeddedData) return;
+        const nextColumns = self.embeddedData.columns.map((col) =>
+          col.name === columnName ? { ...col, sectionType } : col,
         );
-        if (col) {
-          col.sectionType = sectionType;
-          await self.saveEmbeddedAndRefresh();
-        }
+        self.embeddedData = {
+          ...self.embeddedData,
+          columns: nextColumns,
+        };
+        // Force an immediate re-render with the new data, then
+        // persist to disk in the background. `saveEmbeddedAndRefresh`
+        // is still awaited for its own side-effects (cache update,
+        // embeddedDataCache write) but the view is already showing
+        // the new state by then.
+        const currentData = self.sync.getData();
+        if (currentData) self.render(currentData);
+        await self.saveEmbeddedAndRefresh();
       },
       onColumnArchiveCompletedChange: async (
         columnName: string,
@@ -1978,51 +1997,6 @@ export class DashboardView extends ItemView {
     this.cleanupFns.push(() => window.removeEventListener("resize", onResize));
   }
 
-  private setupBannerRotation(
-    container: HTMLElement,
-    banner: BannerData,
-  ): void {
-    // Image rotation only
-    const images = banner.images;
-    if (images && images.length > 1) {
-      const imgIndex =
-        Math.floor(Date.now() / DashboardView.BANNER_IMAGE_ROTATION_MS) %
-        images.length;
-      this.bannerImageIndex = imgIndex;
-
-      const bannerEl = container.querySelector(
-        ".dashboard-banner",
-      ) as HTMLElement;
-      if (bannerEl) {
-        const resolved = resolveVaultImage(this.app, images[imgIndex]!);
-        if (resolved) {
-          bannerEl.style.backgroundImage = `url("${resolved}")`;
-        }
-
-        const rotateImage = () => {
-          this.bannerImageIndex = (this.bannerImageIndex + 1) % images.length;
-          const nextPath = images[this.bannerImageIndex]!;
-          const nextResolved = resolveVaultImage(this.app, nextPath);
-
-          bannerEl.addClass("dashboard-banner--fading");
-
-          setTimeout(() => {
-            if (nextResolved) {
-              bannerEl.style.backgroundImage = `url("${nextResolved}")`;
-            }
-            bannerEl.removeClass("dashboard-banner--fading");
-          }, 600);
-        };
-
-        const imgTimer = setInterval(
-          rotateImage,
-          DashboardView.BANNER_IMAGE_ROTATION_MS,
-        );
-        this.cleanupFns.push(() => clearInterval(imgTimer));
-      }
-    }
-  }
-
   private openMobileDrawer(type: "quickActions" | "recent"): void {
     this.closeMobileDrawer();
 
@@ -2372,8 +2346,45 @@ export class DashboardView extends ItemView {
           this.sync.deleteColumn(columnName);
         }
       },
-      onColumnSectionTypeChange: (columnName: string, sectionType: string) =>
-        this.sync.setColumnSectionType(columnName, sectionType),
+      onColumnSectionTypeChange: (columnName: string, sectionType: string) => {
+        // v1.4.9 BUG-003a — fix #2: the data handed to `requestRender`
+        // must be the post-mutation snapshot, NOT the pre-call
+        // snapshot. The previous version called
+        // `setColumnSectionType(...)` (which synchronously updates
+        // `sync.data` and fires `notifyCallbacks` → a RAF-coalesced
+        // `requestRender(OLD_DATA_REFERENCE)`) and then *re-read*
+        // `sync.getData()`. The re-read did pick up the new
+        // `sectionType` for the *primitives* on each column, but
+        // the columns array itself was the same object reference
+        // the render had already started walking — by the time
+        // the RAF fired, the render was working against a mix of
+        // "new primitives" and "old object identity", which is
+        // exactly the symptom the user reported: styles refresh,
+        // data does not.
+        //
+        // Fix: build the next columns array IN PLACE here, hand it
+        // to the sync engine, and render with the same array.
+        // The sync engine then mutates `this.data.columns` to point
+        // at this array and persists the frontmatter in the
+        // background. From the view's perspective there is no longer
+        // any "old reference" in flight.
+        const currentData = this.sync.getData();
+        if (!currentData) return;
+        const nextColumns = currentData.columns.map((col) =>
+          col.name === columnName ? { ...col, sectionType } : col,
+        );
+        const nextData: DashboardData = {
+          ...currentData,
+          columns: nextColumns,
+        };
+        // Kick off persistence; the actual re-render uses `nextData`
+        // which already reflects the new sectionType in the SAME
+        // call frame as the click event.
+        this.sync.persistColumnMutation(nextData).catch((e) => {
+          console.error("[apex-dashboard] persistColumnMutation failed", e);
+        });
+        this.requestRender(nextData);
+      },
       onColumnArchiveCompletedChange: (columnName: string, archive: boolean) =>
         this.sync.setColumnArchiveCompleted(columnName, archive),
       onTaskReminderEdit: (
