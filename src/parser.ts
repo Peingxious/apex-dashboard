@@ -470,16 +470,25 @@ export function serialize(data: DashboardData, app?: App): string {
   }
 
   // v1.4.9 BUG-003b: banner block is only emitted when the user has
-  // actually populated it (currently we gate on `image` — the
-  // primary, non-deprecated field). If a user has never edited the
-  // banner, `data.banner.image === ""` and we emit NO `banner:` line
-  // at all, keeping the file free of stray top-level keys. The
-  // `parseBanner` counterpart is unchanged so old dashboard files
-  // with a `banner:` block still parse and render correctly — this
-  // is a write-side tightening, not a read-side contract change.
+  // actually populated it. If a user has never edited the banner,
+  // `data.banner.image === ""` and we emit NO `banner:` line at all,
+  // keeping the file free of stray top-level keys. The
+  // `parseBanner` counterpart still accepts the legacy object form
+  // `banner:\n  image: "<url>"` so old dashboard files continue to
+  // round-trip — this is a write-side tightening, not a read-side
+  // contract change.
+  //
+  // v1.4.10 — user-facing cleanup + single-image rule: the banner
+  // is single-image only, so emit it as a scalar `banner: "<url>"`
+  // line. No `image:` nested key, no `images:` array. Per user
+  // request: "图片只能有一张，不是多张的" — multi-image is not a
+  // supported concept for this plugin, period. URLs are quoted with
+  // `"` because banner URLs may contain `?`, `&`, `#`, or unicode
+  // (e.g. huaban URLs) where YAML's plain-string handling is
+  // fragile; quoting makes the form unambiguous and the
+  // `parseBanner` `.trim()` strips the quotes on the way in.
   if (data.banner.image) {
-    lines.push("banner:");
-    lines.push(`  image: "${data.banner.image}"`);
+    lines.push(`banner: "${data.banner.image}"`);
   }
 
   if (data.quickActions.length > 0) {
