@@ -129,6 +129,176 @@ export function pathToWikiLink(rawPath: string): string {
   return `[[${basename}]]`;
 }
 
+/**
+ * Migrate a column's cards so their `type` / `tasks` / `projectDocs`
+ * shape matches the column's new `sectionType`. Called from the
+ * "switch section type" callback in all three views (main / embedded /
+ * sidebar). The renderer dispatcher now trusts `sectionType` over
+ * `card.type`, so an in-memory card with stale `type: "task"` in a
+ * projects column will not be re-rendered as a task list — but we
+ * still want the on-disk markdown to be clean on the next save, so
+ * we mutate the cards here and the serializer (which now also gates
+ * on `column.sectionType`) writes the right shape.
+ *
+ * v1.4.10 — minimal-change rule: do NOT delete the user's content
+ * on a switch. The previous version dropped `card.tasks` outright
+ * when leaving `todo`, which deleted every project the user had
+ * typed. Per user request, the only thing that should change is the
+ * `[ ]` bracket syntax — task text must survive a round-trip.
+ *
+ * Migration rules (data-preserving):
+ *   - `memo`       → `type: "note"`. Tasks are converted to memo body
+ *                    lines (one `task.text` per line, no `- ` prefix
+ *                    — memo is free-form text, the leading dash would
+ *                    look out of place in a textarea). `body` is
+ *                    preserved and the converted tasks are appended.
+ *   - `projects`   → `type: "project"` if projectDocs exist, else
+ *                    `"generic"`. Tasks are converted to project body
+ *                    items (one `- task.text` per line, dash kept so
+ *                    `renderProjectBody` lists them as items). `body`
+ *                    and `projectDocs` are preserved, converted tasks
+ *                    are appended.
+ *   - `todo`       → `type: "task"`. `tasks` are preserved. If the
+ *                    card has `body` lines that look like `- [ ]` /
+ *                    `- [x]` patterns, they are extracted into
+ *                    `card.tasks` so the user does not lose content
+ *                    when switching back from projects / memo.
+ *   - `todoplus`   → `type: "todoplus"`, `tasks: []` (the live
+ *                    checklist is owned by the source note). `body`
+ *                    is preserved; the user's todo text is appended
+ *                    to the body as a record of intent, but no card
+ *                    tasks are written for the dashboard file.
+ *   - `notes` / unknown → same as `projects` (the renderer maps these
+ *                    to projects at display time).
+ */
+export function migrateCardsForSectionType(
+  cards: DashboardCard[],
+  newSectionType: string,
+): DashboardCard[] {
+  const effective = newSectionType.toLowerCase();
+  return cards.map((card) => {
+    if (effective === "memo") {
+      if (card.tasks.length === 0 && card.type === "note") return card;
+      // Strip "[ ]": each task becomes a memo body line. Keep the
+      // "- " prefix even for memo (rather than dropping it like the
+      // first pass did) so the round-trip back to `todo` can pick
+      // the lines out unambiguously via `extractTasksFromBody`
+      // without also eating any free-form paragraph text the user
+      // typed into the memo. The dash still reads sensibly in the
+      // textarea — markdown bullet rendering is the common case.
+      const taskLines = card.tasks.map((t) => `- ${t.text}`);
+      const appended = taskLines.join("\n");
+      return {
+        ...card,
+        type: "note" as CardType,
+        tasks: [],
+        body: card.body
+          ? appended
+            ? `${card.body}\n${appended}`
+            : card.body
+          : appended,
+      };
+    }
+    if (effective === "projects" || effective === "notes") {
+      const hasDocs =
+        Array.isArray(card.projectDocs) && card.projectDocs.length > 0;
+      const newType: CardType = hasDocs ? "project" : "generic";
+      if (card.tasks.length === 0 && card.type === newType) return card;
+      // Strip "[ ]": each task becomes a project body item. Keep the
+      // "- " prefix so `renderProjectBody` lists them as items.
+      const taskLines = card.tasks.map((t) => `- ${t.text}`);
+      const appended = taskLines.join("\n");
+      return {
+        ...card,
+        type: newType,
+        tasks: [],
+        body: card.body
+          ? appended
+            ? `${card.body}\n${appended}`
+            : card.body
+          : appended,
+      };
+    }
+    if (effective === "todo") {
+      // Re-hydrate tasks from body if the card came in from a
+      // projects / memo switch that converted tasks to body lines.
+      // Pattern matches the parser's `extractCardParts` so the
+      // round-trip is stable.
+      const rehydrated = extractTasksFromBody(card.body);
+      if (rehydrated.length === 0) {
+        if (card.type === "task") return card;
+        return { ...card, type: "task" as CardType };
+      }
+      const remainingBody = stripTaskLinesFromBody(card.body);
+      return {
+        ...card,
+        type: "task" as CardType,
+        tasks: rehydrated,
+        body: remainingBody,
+      };
+    }
+    if (effective === "todoplus") {
+      if (card.type === "todoplus" && card.tasks.length === 0) return card;
+      // Keep task text in body as a record of intent; the live
+      // checklist lives in the linked source note, not the dashboard.
+      const taskLines = card.tasks.map((t) => `- ${t.text}`);
+      const appended = taskLines.join("\n");
+      return {
+        ...card,
+        type: "todoplus" as CardType,
+        tasks: [],
+        body: card.body
+          ? appended
+            ? `${card.body}\n${appended}`
+            : card.body
+          : appended,
+      };
+    }
+    return card;
+  });
+}
+
+/**
+ * Inverse of the task-serialization step in `serializeColumnToMarkdown`:
+ * given a card body that may contain `- [ ]` / `- [x] foo` lines (and
+ * `- foo` lines from a previous projects-switch round-trip), extract
+ * them into `TaskItem[]` so a switch back to `todo` is data-preserving.
+ */
+function extractTasksFromBody(body: string | undefined): Array<{
+  text: string;
+  checked: boolean;
+  reminder?: string;
+}> {
+  if (!body) return [];
+  const out: Array<{ text: string; checked: boolean; reminder?: string }> = [];
+  for (const raw of body.split(/\r?\n/)) {
+    const line = raw.replace(/^\s+/, "");
+    let m = line.match(/^-\s+\[(x| )\]\s+(.+)$/i);
+    if (m) {
+      out.push({ checked: m[1].toLowerCase() === "x", text: m[2] });
+      continue;
+    }
+    m = line.match(/^-\s+(.+)$/);
+    if (m) {
+      out.push({ checked: false, text: m[1] });
+    }
+  }
+  return out;
+}
+
+/** Remove the lines that `extractTasksFromBody` consumed. */
+function stripTaskLinesFromBody(body: string | undefined): string {
+  if (!body) return "";
+  return body
+    .split(/\r?\n/)
+    .filter((raw) => {
+      const line = raw.replace(/^\s+/, "");
+      return !/^-\s+(\[[xX ]\]\s+)?/.test(line);
+    })
+    .join("\n")
+    .replace(/^\n+|\n+$/g, "");
+}
+
 type RawFrontmatterSplit = {
   hasFrontmatter: boolean;
   newline: "\n" | "\r\n";
@@ -499,8 +669,19 @@ export function serialize(data: DashboardData, app?: App): string {
         lines.push(`\t- ${ml}`);
       }
 
-      // Indented tasks
-      if (card.tasks.length > 0) {
+      // Indented tasks — gated on the *column's* sectionType, not the
+      // card's. A card in a projects / memo column that still has
+      // leftover `card.tasks` from a previous todo type must NOT be
+      // written as `- [ ]` lines, because the parser would then
+      // re-ingest them as project docs / memo text on the next load
+      // and silently lose the task structure. The renderer + the
+      // switch callback now migrate `card.type` and clear `card.tasks`
+      // when the column's sectionType changes, so this guard is the
+      // last line of defence against a stale in-memory snapshot.
+      if (
+        card.tasks.length > 0 &&
+        (column.sectionType === "todo" || column.sectionType === "todoplus")
+      ) {
         for (const task of card.tasks) {
           let taskLine = `\t- [${task.checked ? "x" : " "}] ${task.text}`;
           if (task.reminder) taskLine += ` ⏰ ${task.reminder}`;

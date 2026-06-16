@@ -3713,10 +3713,18 @@ function renderCardBody(
   }
 
   const isMemo = sectionType === "memo";
+  // sectionType is the single source of truth for which body
+  // renderer to use. We deliberately drop the historical
+  // `card.type === "task"` short-circuit: a card in a memo / projects
+  // column can still have `type: "task"` if it was migrated from a
+  // previous todo column and the in-memory snapshot was not refreshed
+  // (the v1.4.9 BUG-003a fix renders with the post-mutation data,
+  // but the per-card `type` is still the old value). Honoring the
+  // card's stale type here caused the "switch todo→projects keeps the
+  // checkboxes" bug. Trust the column's sectionType; the switch
+  // callback in view.ts migrates `card.type` to match.
   const isTaskCard =
-    card.type === "task" ||
-    sectionType === "todo" ||
-    sectionType === "todoplus";
+    sectionType === "todo" || sectionType === "todoplus";
 
   if (isTaskCard) {
     renderTaskBody(container, card, callbacks, app, hideCompletedResolved);

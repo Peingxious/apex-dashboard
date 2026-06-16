@@ -49,7 +49,7 @@ import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
 import { ReminderNoticeModal } from "./reminder-notice";
 import { t } from "./i18n";
-import { parse, pathToWikiLink } from "./parser";
+import { parse, pathToWikiLink, migrateCardsForSectionType } from "./parser";
 import { RafCoalescer } from "./utils/raf-coalescer";
 import { MOBILE_BREAKPOINT_PX, NAV_DBLCLICK_THRESHOLD_MS } from "./constants";
 import { reportError } from "./utils/report";
@@ -1526,10 +1526,21 @@ export class DashboardView extends ItemView {
         // synchronously, then persist + render with the same
         // reference. This avoids the "styles refresh, data does
         // not" symptom in the embedded view too.
+        //
+        // v1.4.10 — sectionType migration: same as the main view,
+        // migrate the column's cards so `card.type` / `card.tasks`
+        // / `card.projectDocs` match the new sectionType. Without
+        // this, the serializer would still write the old card shape
+        // (e.g. `- [ ]` lines under a projects column).
         if (!self.embeddedData) return;
-        const nextColumns = self.embeddedData.columns.map((col) =>
-          col.name === columnName ? { ...col, sectionType } : col,
-        );
+        const nextColumns = self.embeddedData.columns.map((col) => {
+          if (col.name !== columnName) return col;
+          return {
+            ...col,
+            sectionType,
+            cards: migrateCardsForSectionType(col.cards, sectionType),
+          };
+        });
         self.embeddedData = {
           ...self.embeddedData,
           columns: nextColumns,
@@ -2362,6 +2373,18 @@ export class DashboardView extends ItemView {
         // exactly the symptom the user reported: styles refresh,
         // data does not.
         //
+        // v1.4.10 — sectionType migration: the column's `cards` must
+        // also be migrated so `card.type` / `card.tasks` /
+        // `card.projectDocs` match the new sectionType. Without this
+        // step the in-memory cards still carry the old `type: "task"`
+        // (or `type: "project"` etc.) and the renderer dispatcher —
+        // which now trusts `sectionType` exclusively — will keep
+        // rendering the column with the new section's body, but the
+        // serializer would still write the old shape to disk on the
+        // next save. The migration helper drops / keeps the right
+        // fields per target type and is the single source of truth
+        // for the per-type card shape.
+        //
         // Fix: build the next columns array IN PLACE here, hand it
         // to the sync engine, and render with the same array.
         // The sync engine then mutates `this.data.columns` to point
@@ -2370,9 +2393,14 @@ export class DashboardView extends ItemView {
         // any "old reference" in flight.
         const currentData = this.sync.getData();
         if (!currentData) return;
-        const nextColumns = currentData.columns.map((col) =>
-          col.name === columnName ? { ...col, sectionType } : col,
-        );
+        const nextColumns = currentData.columns.map((col) => {
+          if (col.name !== columnName) return col;
+          return {
+            ...col,
+            sectionType,
+            cards: migrateCardsForSectionType(col.cards, sectionType),
+          };
+        });
         const nextData: DashboardData = {
           ...currentData,
           columns: nextColumns,

@@ -14,7 +14,11 @@ import { t } from "./i18n";
 import type { HolidayInfo } from "./holiday-service";
 import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
-import { parse as parseMarkdown, serializeInto } from "./parser";
+import {
+  parse as parseMarkdown,
+  serializeInto,
+  migrateCardsForSectionType,
+} from "./parser";
 
 export const SIDEBAR_VIEW_TYPE = "peingxious-dashboard-sidebar";
 
@@ -559,7 +563,15 @@ export class SidebarView extends ItemView {
       ) => {
         const col = findColumn(columnName);
         if (col) {
+          // v1.4.10 — sectionType migration: same as the main /
+          // embedded views, migrate the column's cards so the
+          // in-memory shape and the on-disk shape match the new
+          // sectionType. Without this the sidebar would silently
+          // keep the old `card.type` / `card.tasks` even though the
+          // header now says the new section, and the next save would
+          // write a mix of formats inside a single column.
           col.sectionType = sectionType;
+          col.cards = migrateCardsForSectionType(col.cards, sectionType);
           await saveAndRefresh();
         }
       },
