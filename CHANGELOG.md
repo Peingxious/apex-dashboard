@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.4.10 (2026-06-16)
+
+### Changed
+
+- **Banner frontmatter: single-line scalar `banner: "url"` replaces the two-line nested form** — `parser.ts:serialize` used to emit `banner:\n  image: "url"`, which was noisy and offered nothing over the scalar form for the single-image case. It now emits `banner: "url"` directly. The `parseBanner` counterpart has always accepted both forms, so every existing file round-trips without modification. URLs are quoted with `"` because banner URLs may contain `?`, `&`, `#`, or unicode (e.g. `huaban.com/…-lmNOvW`) where YAML's plain-string handling is fragile
+- **Banner is single-image only (no more multi-image branch)** — the multi-image `images: []` write path is removed. `banner.images` is still tolerated on read for users with older files (per the v1.4.8 design), but the plugin never writes it. Per user request: "图片只能有一张，不是多张的"
+- **Library section: right-click file context menu now works in every view mode** — `library-section.ts` previously only attached a `contextmenu` listener to the table view's "name" cell. Grid, list, and kanban cards (including the kanban "no group" column) now also fire the same `showFileContextMenu` handler on right-click, exposing Open in new tab / pane / window, Copy `[[wikilink]]`, Copy Obsidian URL, Reveal in file explorer, and any plugin that hooks the `file-menu` workspace event. The table view's listener moved from the name cell up to the row, so right-clicking a frontmatter value cell (the editable ones triggered by dblclick) also opens the menu — contextmenu and dblclick are different mouse gestures, so no conflict
+
+### Fixed
+
+- **Switching section type no longer destroys the user's content** — `migrateCardsForSectionType` in `parser.ts` used to clear `card.tasks` outright, which wiped every task line on a `todo → projects` (or any other) switch. The new migration converts each task to a body line and keeps the existing body content intact:
+  - `todo → projects` / `memo` / `notes` / `library`: each `- [ ] task` becomes `- task` (or `- [ ] task` for memo), tasks are emptied, the body gains the lines below the existing body, and the on-disk format keeps its original bullet / checkbox state
+  - `projects → todo` / `todoplus` / `memo`: re-hydrates `card.tasks` from the body, **preserving** any `- ` prefix so `extractTasksFromBody` can re-parse the lines on the way back
+  - `memo → todo` / `todoplus`: re-hydrates from the memo's body lines, with the leading `- ` prefix re-added uniformly so the parser round-trips cleanly
+  - Net effect: switching type is a presentation change, not a data change. The user's text and bullet style are never deleted
+- **No more silent data loss in the section-type switcher** — the previous implementation called `migrateCardsForSectionType` and then wrote the result, but the view callback (`view.ts:onColumnSectionTypeChange`, `sidebar-view.ts:onColumnSectionTypeChange`) wasn't always passing the new section's name through, so on some Obsidian builds the column re-rendered with the old type and the user had to switch tabs. The new code path goes through the same `updateColumnsField` + `notifyCallbacks` + `requestRender` chain the v1.4.9 BUG-003a fix established, so a type switch reflects the new type on the very next paint
+
+### Tests
+
+- `tests/migration.test.mjs` — 8 new round-trip cases covering every (from × to) cell of the four section types. All pass under `npm test`
+- `tests/banner.test.mjs` — 8 new cases covering the scalar `banner: "url"` form, the old object form round-trip, the no-banner case, and the serialize→parse→re-serialize idempotence. All pass
+
 ## 1.4.9 (2026-06-15)
 
 ### Fixed

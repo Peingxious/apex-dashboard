@@ -36,7 +36,7 @@
 
 ### 🎨 Banner（横幅）
 
-可自定义的横幅区域，支持编辑引言和背景图片（支持本地 Vault 图片和网络图片链接）。可添加多条引言和多张背景图，引言每小时自动轮换，背景图每 30 分钟自动轮播，带淡入淡出过渡。双击即可修改。
+可自定义的横幅区域，支持编辑引言和**单张**背景图片（本地 Vault 图片或网络图片链接，含 `?` / `&` / `#` / unicode 字符的 URL 如 `huaban.com/…` 也安全）。双击即可编辑。从 1.4.8 起 banner 简化为单图（轮播已移除）；从 1.4.10 起磁盘 YAML 由 `banner:\n  image:` 嵌套形式改为单行标量 `banner: "url"`。
 
 ### 🔄 拖拽排列
 
@@ -160,6 +160,25 @@ columns:
 > **提示：** 每个分区标题右侧有垃圾桶按钮，可直接在 Dashboard 界面中删除分区。
 
 ## 更新日志
+
+### 1.4.10 (2026-06-16)
+
+- **banner frontmatter 简化为单行标量** — 写入由 `banner:\n  image: "url"` 嵌套形式改为 `banner: "url"`。文件更干净，行为不变：旧文件照常加载，URL 用 `"` 引号包裹以兼容 `?` / `&` / `#` / unicode（如 `huaban.com/…-lmNOvW`）等 YAML plain-string 容易出问题的字符
+- **banner 只支持单图** — 多图 `images: []` 写入分支删除。`banner.images` 读取时仍保留兼容旧文件，但插件永远不会写出来。按用户要求："图片只能有一张，不是多张的"
+- **切换分区类型不再破坏用户内容** — `migrateCardsForSectionType` 不再清空 `card.tasks`，而是把每条任务转为 body 行并保留原有 body。`todo → projects` 切换保留任务文本（按用户"去掉 [ ] 就可以了"的规则去掉复选框），`projects → todo` 切换从 body 重新构建 `card.tasks` 并保留 `- ` 前缀以便回环。数据在四种分区类型任意 (from × to) 切换中严格保留
+- **Library 分区四种视图都支持右键文件菜单** — Grid、List、Kanban 卡片（含 Kanban 的"未分组"列）现在都会触发与 Table 视图"文件名"列同样的 `showFileContextMenu`：Open in new tab / pane / window、Copy `[[wikilink]]`、Copy Obsidian URL、Reveal in file explorer，以及任何 hook 了 `file-menu` 事件的第三方插件。Table 视图的监听器从 name 列上移到整行 `tr`，所以右键 frontmatter 值列（dblclick 触发的可编辑列）也会弹出菜单——`contextmenu` 和 `dblclick` 是不同鼠标动作，无冲突
+- **测试** — `tests/migration.test.mjs`（8 个用例）、`tests/banner.test.mjs`（8 个用例）已加入 `tests/`
+
+### 1.4.9 (2026-06-15)
+
+- **BUG-003a · 切换分区类型时工作台同帧刷新** — 新增 [`SyncEngine.updateFrontmatterField()`](file:///d:/BaiduNetdiskWorkspace/test/.obsidian/plugins/apex-dashboard/src/sync.ts#L1543) + [`updateColumnsField()`](file:///d:/BaiduNetdiskWorkspace/test/.obsidian/plugins/apex-dashboard/src/sync.ts#L1605) 公开方法：走 `app.fileManager.processFrontMatter()` API 直接 mutate `columns:` 字段。`setColumnSectionType` / `setColumnArchiveCompleted` 改走**新路径**，调用前同步触发 `notifyCallbacks` → `view.requestRender(newData)`，**同帧**反映新类型。`view.ts:onColumnSectionTypeChange` callback 额外**强制**再 requestRender 一次（防御性：覆盖 RAF 合并可能吞掉请求的情况）。修复旧路径下用户需切走 tab 再切回才能看到新样式的体验
+- **BUG-003b · banner 块条件输出，未操作不再写** — `parser.ts:serialize` 删除硬编码 `lines.push("banner:")`，改为**仅当** `data.banner.image` 非空时才输出 `banner:` 块。用户从未编辑过 banner → 文件**不含** `banner:` 字段；编辑过 banner（填 URL）→ 文件**保留** `banner:` 块；清空 banner（设 image 为 ""）→ 旧 banner 块会在下次保存时**自动从文件移除**（由 `serializeInto` → `patchYamlBlock` 的 null block 路径处理）。`parseBanner` 行为不变，向后兼容已有 `banner:` 块的老文件
+- **BUG-003c · 默认只控制 columns，其它字段字节级不动** — 切换分区类型时**不再**整文件重写。banner / quickActions / extra frontmatter / YAML 注释 / 空行顺序**完全保留**。新路径只动 `columns:` 字段，其它字段 byte-identical。`writeToDisk` 整文件路径**保留**，供卡片增删改、banner 编辑、quickActions 增删等场景使用。写完后 `console.error` + `new Notice("Failed to save dashboard changes")` 兜底，错误不再静默
+
+### 1.4.8 (2026-06-15)
+
+- **BUG-001 · Banner 简化为单图，弹窗只有图片地址** — **删除** banner 编辑弹窗里的 "Rotation Images" 列表与 "Add Image" 按钮——banner 不再支持轮播。弹窗**只**保留一个图片地址输入框（vault 相对路径或完整 https URL）。`view.ts:setupBannerRotation` 整段删除，`images.length > 1` 不再覆盖主图。`parser.ts:serialize` 不再输出 `banner.images:` 块；`banner.images` 数据读时**忽略**（向后兼容旧文件）。补全 `i18n.ts` 缺失的 7 个 banner key（`banner.edit` / `banner.image` / `banner.imageDesc` / `banner.imagePlaceholder` / `banner.rotationImages` / `banner.addImage` / `banner.save`），弹窗 label / placeholder 正常显示
+- **BUG-002 · 首次打开工作台不再注入默认分区** — 新增 `generateEmptyDashboardMarkdown()`（`parser.ts:600`）——输出**仅**含最小 frontmatter + `columns: []` 的骨架。`sync.ts:findOrCreateFile` 在新建文件时改用 `generateEmptyDashboardMarkdown()`（替代 `generateDefaultMarkdown()`）。`parser.ts:parseColumnDefs` 在 `columns:` 缺失时**返回 `[]`**，不再 fallback 到 `DEFAULT_COLUMNS`。`DEFAULT_COLUMNS` / `generateDefaultMarkdown` 保留并标记 `@deprecated`，仅供未来"插入示例数据"按钮使用。用户清空 `dashboard.md` 的 `columns:` 块后再打开 → 工作台**空**，文件**不被改回**
 
 ### 1.4.7 (2026-06-15)
 

@@ -1198,6 +1198,16 @@ function renderGridView(
   for (const result of results) {
     const card = grid.createDiv({ cls: "dashboard-library-card" });
     card.addEventListener("click", () => openFile(app, result.file));
+    // Right-click → same file-explorer-style context menu the table
+    // view's "name" cell already exposes (Open in new tab/window,
+    // Copy link, Reveal in file explorer, plus any plugin that hooks
+    // the "file-menu" workspace event). Library cards represent real
+    // TFiles, so the menu works without falling back to openLinkText.
+    card.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFileContextMenu(e, result.file, app, result.basename);
+    });
 
     card.createDiv({
       cls: "dashboard-library-card-title",
@@ -1267,6 +1277,15 @@ function renderListView(
   for (const result of results) {
     const item = list.createDiv({ cls: "dashboard-library-list-item" });
     item.addEventListener("click", () => openFile(app, result.file));
+    // Right-click → same file context menu as grid/table. Mirrors
+    // Obsidian's File Explorer behavior so users can open-in-new-pane,
+    // copy link, reveal, etc. without first navigating back to the
+    // explorer.
+    item.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFileContextMenu(e, result.file, app, result.basename);
+    });
 
     const main = item.createDiv({ cls: "dashboard-library-list-main" });
     main.createDiv({
@@ -1452,6 +1471,20 @@ function renderTableView(
   const tbody = table.createEl("tbody");
   for (const result of results) {
     const tr = tbody.createEl("tr");
+    // Right-click on any cell in this row opens the file context menu.
+    // Attached to the row (not the name cell, as it used to be) so
+    // frontmatter value cells — the editable ones triggered by
+    // dblclick — also expose Open in new pane / Copy link / Reveal,
+    // matching what the user gets in the File Explorer. The dblclick
+    // handler on individual cells is preserved: contextmenu and
+    // dblclick are different mouse gestures and don't conflict, but
+    // we still stopPropagation on the name cell so the click-to-open
+    // behavior stays explicit.
+    tr.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFileContextMenu(e, result.file, app, result.basename);
+    });
 
     for (const col of columns) {
       const td = tr.createEl("td");
@@ -1462,10 +1495,8 @@ function renderTableView(
           e.stopPropagation();
           openFile(app, result.file);
         });
-        td.addEventListener("contextmenu", (e) => {
-          e.stopPropagation();
-          showFileContextMenu(e, result.file, app, result.basename);
-        });
+        // No per-cell contextmenu here — the row-level handler above
+        // already covers it. Adding another would fire the menu twice.
       } else if (col === "modified") {
         td.textContent = formatDate(result.mtime);
       } else if (col === "created") {
@@ -1534,6 +1565,15 @@ function renderKanbanView(
     for (const result of groupResults) {
       const card = col.createDiv({ cls: "dashboard-library-kanban-card" });
       card.addEventListener("click", () => openFile(app, result.file));
+      // Right-click → file context menu. Same rationale as the
+      // grid/list views: the user can open-in-new-pane, copy link,
+      // reveal in explorer, or any plugin-provided item without
+      // leaving the kanban.
+      card.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showFileContextMenu(e, result.file, app, result.basename);
+      });
       card.createDiv({
         cls: "dashboard-library-kanban-card-title",
         text: result.basename,
@@ -1554,6 +1594,12 @@ function renderKanbanView(
     for (const result of noGroup) {
       const card = col.createDiv({ cls: "dashboard-library-kanban-card" });
       card.addEventListener("click", () => openFile(app, result.file));
+      // Right-click → file context menu (uncategorized column).
+      card.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        showFileContextMenu(e, result.file, app, result.basename);
+      });
       card.createDiv({
         cls: "dashboard-library-kanban-card-title",
         text: result.basename,

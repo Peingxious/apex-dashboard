@@ -28,7 +28,7 @@ A compact, list-style section for organizing reference documents and quick-acces
 
 ### 📚 Library
 
-A database-style section that aggregates vault notes by frontmatter properties. Pick a view mode (Grid / List / Table / Kanban), set filters, sort, and group-by, and the dashboard will render matching notes live. Supports date-range filters, multi-value property filters, and per-view property visibility (Table / List only).
+A database-style section that aggregates vault notes by frontmatter properties. Pick a view mode (Grid / List / Table / Kanban), set filters, sort, and group-by, and the dashboard will render matching notes live. Supports date-range filters, multi-value property filters, and per-view property visibility (Table / List only). Right-click any row in any view to open the file context menu (Open in new tab / pane / window, Copy `[[wikilink]]`, Copy Obsidian URL, Reveal in file explorer, plus any plugin that hooks the `file-menu` event) — the same menu you get from a right-click in the File Explorer.
 
 ### ⚡ Quick Actions
 
@@ -172,6 +172,25 @@ columns:
 > **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
+
+### 1.4.10 (2026-06-16)
+
+- **Banner frontmatter simplified to a single-line scalar** — `banner: "url"` is now written instead of the two-line `banner:\n  image: "url"` nested form. Cleaner, no behavioural change: existing files load unchanged, URLs are quoted with `"` so URLs containing `?` / `&` / `#` / unicode (e.g. `huaban.com/…-lmNOvW`) round-trip safely
+- **Banner is single-image only** — the multi-image `images: []` write path is removed. `banner.images` is still tolerated on read for legacy files, but the plugin never writes it. Per user request: "图片只能有一张，不是多张的"
+- **Switching section type no longer destroys the user's content** — `migrateCardsForSectionType` now converts each task to a body line and keeps the existing body intact, instead of clearing `card.tasks` outright. Net effect: a `todo → projects` switch keeps the original task text (with `[ ]` removed per the user's "去掉 [ ] 就可以了" rule), and a `projects → todo` switch re-hydrates `card.tasks` from the body, preserving the leading `- ` prefix so the round-trip is byte-stable. The data is now strictly preserved across every (from × to) cell of the four section types
+- **Library section: right-click file context menu works in every view mode** — Grid, list, and kanban cards (including the kanban "no group" column) now fire the same `showFileContextMenu` handler on right-click that the table view's "name" cell already had. Right-clicking any library row exposes Open in new tab / pane / window, Copy `[[wikilink]]`, Copy Obsidian URL, Reveal in file explorer, plus any plugin that hooks the `file-menu` workspace event. The table view's listener moved from the name cell up to the row, so right-clicking a frontmatter value cell (the editable ones triggered by dblclick) also opens the menu
+- **Tests** — `tests/migration.test.mjs` (8 cases, all pass) and `tests/banner.test.mjs` (8 cases, all pass) added under `tests/`
+
+### 1.4.9 (2026-06-15)
+
+- **BUG-003a · 切换分区类型时工作台同帧刷新** — added [`SyncEngine.updateFrontmatterField()`](file:///d:/BaiduNetdiskWorkspace/test/.obsidian/plugins/apex-dashboard/src/sync.ts#L1543) + [`updateColumnsField()`](file:///d:/BaiduNetdiskWorkspace/test/.obsidian/plugins/apex-dashboard/src/sync.ts#L1605) public methods that go through `app.fileManager.processFrontMatter()` to mutate the `columns:` field in place. `setColumnSectionType` / `setColumnArchiveCompleted` switched to the new path and synchronously fire `notifyCallbacks` → `view.requestRender(newData)` so the new type reflects in the same frame. The view's `onColumnSectionTypeChange` callback forces a second `requestRender` defensively (covers the case where RAF coalescing swallows the first). Fixes the previous "switch tab and switch back" UX
+- **BUG-003b · banner block conditional output** — `parser.ts:serialize` no longer hard-codes `lines.push("banner:")`; the `banner:` block is only emitted when `data.banner.image` is non-empty. A user who has never edited the banner now has a file with **no** `banner:` field, a user who has edited it keeps the block, and a user who clears the banner image gets the block auto-removed on the next save (via `serializeInto` → `patchYamlBlock`'s null block path). `parseBanner` is unchanged, so old files with a `banner:` block still load
+- **BUG-003c · columns-only write path** — switching the section type no longer rewrites the entire file. The new path only mutates the `columns:` field; `banner` / `quickActions` / extra frontmatter / YAML comments / blank-line order are byte-identical before and after. `writeToDisk` (full-file path) is preserved for the card add/delete/edit, banner edit, and quickActions add/delete flows. Errors are no longer silent — `console.error` + a `new Notice("Failed to save dashboard changes")` surfaces failures
+
+### 1.4.8 (2026-06-15)
+
+- **BUG-001 · Banner simplified to a single image, the edit modal only shows the image address** — removed the "Rotation Images" list and the "Add Image" button from the banner edit modal. The banner is no longer a carousel. The modal keeps exactly one image-address input (vault-relative path or full https URL). `view.ts:setupBannerRotation` is deleted; `images.length > 1` no longer overrides the primary image. `parser.ts:serialize` no longer emits a `banner.images:` block; `banner.images` is ignored on read (backward-compat with old files). The 7 missing banner i18n keys in `i18n.ts` (`banner.edit` / `banner.image` / `banner.imageDesc` / `banner.imagePlaceholder` / `banner.rotationImages` / `banner.addImage` / `banner.save`) are filled in so modal labels / placeholders display correctly
+- **BUG-002 · First-open no longer injects default sections** — added `generateEmptyDashboardMarkdown()` to `parser.ts:600` which outputs only the minimum frontmatter + `columns: []` skeleton. `sync.ts:findOrCreateFile` now uses `generateEmptyDashboardMarkdown()` for new files (replacing `generateDefaultMarkdown()`). `parser.ts:parseColumnDefs` returns `[]` when `columns:` is missing, no longer falling back to `DEFAULT_COLUMNS`. `DEFAULT_COLUMNS` / `generateDefaultMarkdown` are kept and marked `@deprecated` for a future "insert sample data" button. A user who clears the `columns:` block from `dashboard.md` and reopens gets an empty dashboard, the file is **not** rewritten back to defaults
 
 ### 1.4.7 (2026-06-15)
 
