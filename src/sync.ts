@@ -78,8 +78,6 @@ export class SyncEngine {
   private writeQueue: Promise<void> = Promise.resolve();
   private callbacks: DataCallback[] = [];
   private eventRef: ReturnType<typeof this.app.vault.on> | null = null;
-  private static readonly BACKUP_DIR = ".dashboard-backup";
-  private static readonly MAX_BACKUPS = 5;
   /** Stack of in-memory undo entries for the most recent destructive ops. */
   private undoStack: UndoEntry[] = [];
   private static readonly MAX_UNDO = 50;
@@ -1765,42 +1763,12 @@ export class SyncEngine {
           return;
         }
 
-        // Backup current file before overwriting
-        await this.createBackup(current);
-
         await this.app.vault.modify(fileRef, content);
         this.lastWrittenHash = hash;
       } catch {}
     });
 
     this.notifyCallbacks();
-  }
-
-  private async createBackup(currentContent: string): Promise<void> {
-    try {
-      const adapter = this.app.vault.adapter;
-      const dir = SyncEngine.BACKUP_DIR;
-      if (!(await adapter.exists(dir))) {
-        await adapter.mkdir(dir);
-      }
-
-      const ts = new Date().toISOString().replace(/[:.]/g, "-");
-      const backupPath = dir + "/dashboard-" + ts + ".md";
-      await adapter.write(backupPath, currentContent);
-
-      // Prune old backups, keep only MAX_BACKUPS
-      const files = await adapter.list(dir);
-      const backups = files.files
-        .filter(
-          (f: string) => f.startsWith(dir + "/dashboard-") && f.endsWith(".md"),
-        )
-        .sort();
-      while (backups.length > SyncEngine.MAX_BACKUPS) {
-        await adapter.remove(backups.shift()!);
-      }
-    } catch {
-      // Backup failure should never block the main write
-    }
   }
 
   private notifyCallbacks(): void {
