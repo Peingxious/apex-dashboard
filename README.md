@@ -173,6 +173,10 @@ columns:
 
 ## What's New
 
+### 1.4.11 (2026-06-23)
+
+- **`.dashboard-backup` automatic backup removed** — `SyncEngine` no longer writes `.dashboard-backup/dashboard-<timestamp>.md` snapshots before overwriting the dashboard file. The `BACKUP_DIR` / `MAX_BACKUPS` constants and the entire `createBackup()` method are deleted. The dashboard's source of truth is now strictly the single dashboard markdown — no parallel copies in the vault. The in-app `Ctrl/Cmd+Z` undo stack is unchanged and remains the recovery path for destructive operations. Note: any `.dashboard-backup/` directory created by older versions will remain in your vault until you delete it manually (one-time cleanup, the plugin no longer produces new files there)
+
 ### 1.4.10 (2026-06-16)
 
 - **Banner frontmatter simplified to a single-line scalar** — `banner: "url"` is now written instead of the two-line `banner:\n  image: "url"` nested form. Cleaner, no behavioural change: existing files load unchanged, URLs are quoted with `"` so URLs containing `?` / `&` / `#` / unicode (e.g. `huaban.com/…-lmNOvW`) round-trip safely

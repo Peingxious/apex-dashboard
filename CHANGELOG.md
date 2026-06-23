@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4.11 (2026-06-23)
+
+### Removed
+
+- **`.dashboard-backup` automatic backup is gone** — `SyncEngine` no longer writes `.dashboard-backup/dashboard-<timestamp>.md` snapshots before overwriting the dashboard file. The `BACKUP_DIR` / `MAX_BACKUPS` constants and the entire `createBackup()` method are deleted. The dashboard's source of truth is now strictly the single dashboard markdown — no parallel copies in the vault. The in-app `Ctrl/Cmd+Z` undo stack is unchanged and remains the recovery path for destructive operations. Note: any `.dashboard-backup/` directory created by older versions will remain in your vault until you delete it manually (one-time cleanup, the plugin no longer produces new files there)
+
 ## 1.4.10 (2026-06-16)
 
 ### Changed

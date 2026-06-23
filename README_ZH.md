@@ -161,6 +161,10 @@ columns:
 
 ## 更新日志
 
+### 1.4.11 (2026-06-23)
+
+- **移除 `.dashboard-backup` 自动备份** — `SyncEngine` 不再在覆盖 dashboard 文件前向 `.dashboard-backup/dashboard-<timestamp>.md` 写入快照。`BACKUP_DIR` / `MAX_BACKUPS` 常量与整个 `createBackup()` 方法已删除。Dashboard 的真实数据源现在**严格**只有那一份 dashboard markdown——vault 中不再保留并行副本。应用内的 `Ctrl/Cmd+Z` 撤销栈**保持不变**，仍是破坏性操作的恢复途径。注意：旧版本遗留的 `.dashboard-backup/` 目录仍会留在 vault 中，需手动删除（一次性清理，插件不再产生新文件）
+
 ### 1.4.10 (2026-06-16)
 
 - **banner frontmatter 简化为单行标量** — 写入由 `banner:\n  image: "url"` 嵌套形式改为 `banner: "url"`。文件更干净，行为不变：旧文件照常加载，URL 用 `"` 引号包裹以兼容 `?` / `&` / `#` / unicode（如 `huaban.com/…-lmNOvW`）等 YAML plain-string 容易出问题的字符
