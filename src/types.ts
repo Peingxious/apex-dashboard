@@ -53,6 +53,21 @@ export interface DashboardSettings {
    * main dashboard file or other notes that should not be opened as tabs.
    */
   excludedNotePaths: string[];
+  /**
+   * Folder root paths that scope the "+ Open" picker scan. Each entry is a
+   * folder path relative to the vault root (e.g. "Notes" or "Projects/2026").
+   * When empty, the picker scans the entire vault (the historical default).
+   * Matching is case-insensitive and folder paths are compared with leading/
+   * trailing slashes trimmed.
+   */
+  openFolders: string[];
+  /**
+   * When `openFolders` is non-empty, controls whether files inside
+   * subfolders of the listed roots are also included. Has no effect when
+   * `openFolders` is empty (the picker falls back to the legacy full-vault
+   * scan). Defaults to `true` to match recursive folder expectations.
+   */
+  openIncludeSubfolders: boolean;
 }
 
 export const DEFAULT_SETTINGS: DashboardSettings = {
@@ -98,6 +113,8 @@ export const DEFAULT_SETTINGS: DashboardSettings = {
   embeddedNoteTabs: [],
   activeEmbeddedNoteTab: null,
   excludedNotePaths: ["dashboard"],
+  openFolders: [],
+  openIncludeSubfolders: true,
 };
 
 export interface QuoteItem {
@@ -370,6 +387,13 @@ export interface RenderCallbacks {
   onProjectDocsRemove(card: DashboardCard, topIndex: number): void;
   onMemoColorChange(card: DashboardCard, color: string): void;
   onProjectCoverChange(card: DashboardCard, imagePath: string): void;
+  /**
+   * Convert a Memo card into a standalone markdown note in the vault's
+   * default new-file location. The new file's body is built from the
+   * card's `body` + blockquote (each blockquote line prefixed with
+   * `> `). The original card is NOT deleted.
+   */
+  onMemoConvertToNote(card: DashboardCard): void;
   onCardTitleEdit(cardId: string, newTitle: string): void;
   onCardWidthChange(cardId: string, width: number): void;
   onCardSizeChange(cardId: string, size: CardSize): void;

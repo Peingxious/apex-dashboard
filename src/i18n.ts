@@ -189,6 +189,7 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.todoPlusNoItems": "(empty checklist)",
     "renderer.todoPlusUnresolved":
       "Source not found: {link}. Check the note path and the `## heading`.",
+    "renderer.todoPlusPreparing": "Preparing {heading} block…",
     "renderer.todoPlusPromptLabel":
       "Link to a heading in another note (e.g. `dash002#To-do`)",
     "renderer.todoPlusInvalidLink": "That link is empty or malformed.",
@@ -200,6 +201,11 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.todoPlusNoteSearchPlaceholder": "Search notes…",
     "renderer.todoPlusNoteSearchHint":
       "The card will mirror the `## To-do` checklist of the picked note (the heading is auto-created if missing).",
+
+    // Memo (right-click context menu on Memo card header)
+    "memo.convertToNote": "Convert to note",
+    "memo.converted": "Note created: {path}",
+    "memo.convertError": "Failed to create note: {message}",
 
     // Banner
     "banner.editLabel": "Edit banner",
@@ -784,6 +790,7 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.todoPlusNoItems": "（清单为空）",
     "renderer.todoPlusUnresolved":
       "无法定位来源：{link}。请检查笔记路径和 `## 标题` 是否存在。",
+    "renderer.todoPlusPreparing": "正在准备 {heading} 区块…",
     "renderer.todoPlusPromptLabel":
       "链接到另一篇笔记的标题（例如 `dash002#To-do`）",
     "renderer.todoPlusInvalidLink": "链接为空或格式有误。",
@@ -794,6 +801,11 @@ const translations: Record<Language, Record<string, string>> = {
     "renderer.todoPlusNoteSearchPlaceholder": "搜索笔记…",
     "renderer.todoPlusNoteSearchHint":
       "卡片会镜像所选笔记的 `## To-do` 清单（若该 heading 不存在则自动创建）。",
+
+    // Memo（右键 Memo 卡片头部的上下文菜单）
+    "memo.convertToNote": "转化为笔记",
+    "memo.converted": "已创建 {path}",
+    "memo.convertError": "创建失败：{message}",
 
     // Banner
     "banner.editLabel": "编辑横幅",

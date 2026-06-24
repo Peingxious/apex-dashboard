@@ -6,6 +6,7 @@ import {
   WorkspaceLeaf,
   TFile,
   Events,
+  App,
 } from "obsidian";
 import type DashboardPlugin from "./main";
 import type {
@@ -25,6 +26,7 @@ import {
   renderSidebarWeekCalendar,
   renderSidebarPomodoro,
   renderSidebarReading,
+  ensureTodoPlusHeading,
 } from "./renderer";
 import { closeAllFileSuggests } from "./file-suggest";
 import { renderBanner, BannerEditModal } from "./banner";
@@ -296,12 +298,21 @@ export class DashboardView extends ItemView {
     const renderCallbacks = this.embeddedNotePath
       ? this.createEmbeddedCallbacks()
       : this.createCallbacks();
+    // v1.4.x R5 — pick the right "host file" for the dashboard so
+    // wikilink hover preview resolves against this file (not
+    // against whatever markdown the user has open in the main
+    // pane). Main view: the dashboard's own file. Embedded view:
+    // the embedded note (which stores the per-note columns).
+    const hostSourcePath = this.embeddedNotePath
+      ? this.embeddedNotePath
+      : this.sync.getFile()?.path;
     renderDashboard(
       kanban,
       activeData,
       renderCallbacks,
       this.app,
       this.plugin.settings,
+      hostSourcePath,
     );
     setupDragAndDrop(kanban, renderCallbacks, this.cleanupFns);
     // Library config event delegation
@@ -980,7 +991,22 @@ export class DashboardView extends ItemView {
           // and the card UI shows the "Set source" button
           // (handled in `renderTodoPlusBody` /
           // `promptTodoPlusSourceLink`).
+          //
+          // When a wikilink-form `options.title` is supplied we
+          // also auto-append the corresponding `## heading` block
+          // to the source note (idempotent — `ensureTodoPlusHeading`
+          // is a no-op when the heading is already there) so the
+          // mirror card has a real checklist to render on the
+          // very first refresh. The non-embedded flow gets this
+          // for free via `addTodoPlusCardFromNote`; embedded mode
+          // does *not* go through that helper, so we do it here.
           const initialTitle = options?.title?.trim() ?? "";
+          const sourceFile = initialTitle
+            ? resolveTodoPlusSourceFile(self.app, initialTitle, self.embeddedNotePath ?? undefined)
+            : null;
+          if (sourceFile) {
+            await ensureTodoPlusHeading(self.app, sourceFile, "To-do");
+          }
           col.cards.push({
             id: `${Date.now()}-todoplus`,
             title: initialTitle,
@@ -1182,6 +1208,35 @@ export class DashboardView extends ItemView {
         if (found) {
           found.card.coverImage = imagePath;
           await self.saveEmbeddedAndRefresh();
+        }
+      },
+      onMemoConvertToNote: async (card: DashboardCard) => {
+        // Same implementation as the main-dashboard variant — the
+        // embedded view still uses the same Obsidian app / vault.
+        try {
+          let baseName = card.title || "Untitled";
+          baseName = baseName.replace(/\[\[|\]\]/g, "").trim();
+          baseName = baseName.split("/").pop() ?? baseName;
+          baseName = baseName.split("\\").pop() ?? baseName;
+          baseName = baseName.replace(/[<>:"|?*\x00-\x1F]/g, "").trim();
+          if (!baseName) baseName = "Untitled";
+          let targetPath: string;
+          try {
+            targetPath =
+              await this.app.fileManager.getAvailablePathForAttachment(
+                `${baseName}.md`,
+                "md",
+              );
+          } catch {
+            targetPath = `${baseName}.md`;
+          }
+          const content = `[[${baseName}]]\n`;
+          await this.app.vault.create(targetPath, content);
+          new Notice(t("memo.converted", { path: targetPath }));
+        } catch (e) {
+          new Notice(
+            t("memo.convertError", { message: (e as Error).message }),
+          );
         }
       },
       onCardTitleEdit: async (cardId: string, newTitle: string) => {
@@ -2243,7 +2298,7 @@ export class DashboardView extends ItemView {
         this.sync.addDocToCard(card.id, docPath),
       onProjectDocsRemove: (card: DashboardCard, topIndex: number) =>
         this.sync.removeProjectDoc(card.id, topIndex),
-      onCardAdd: (colName: string, options?: { title?: string }) => {
+      onCardAdd: async (colName: string, options?: { title?: string }) => {
         const column = this.data?.columns.find((col) => col.name === colName);
         const effectiveType = column?.sectionType ?? colName.toLowerCase();
         if (effectiveType === "dashboard") {
@@ -2262,12 +2317,26 @@ export class DashboardView extends ItemView {
           // Note: there is no per-card `sourceLink` field anymore —
           // the source link lives in the card `title` (a wikilink
           // `[[note#heading]]`).
+          //
+          // The renderer-side `addTodoPlusCardFromNote` flow already
+          // calls `ensureTodoPlusHeading` BEFORE we get here, so this
+          // is a defensive idempotent re-run that catches the edge
+          // case where the card was added through a code path that
+          // didn't go through `addTodoPlusCardFromNote` (e.g. import
+          // or future flows). `ensureTodoPlusHeading` is a no-op
+          // when the heading is already present, so re-running it
+          // costs nothing.
+          const title = options?.title?.trim() ?? "";
+          if (title) {
+            const sourceFile = resolveTodoPlusSourceFile(this.app, title, this.sync.getFile()?.path);
+            if (sourceFile) {
+              await ensureTodoPlusHeading(this.app, sourceFile, "To-do");
+            }
+          }
           this.pendingScrollToLastCardOfColumn = colName;
           this.sync.addCard(colName, {
             type: "todoplus",
-            ...(options?.title && options.title.trim().length > 0
-              ? { title: options.title.trim() }
-              : {}),
+            ...(title.length > 0 ? { title } : {}),
           });
         } else {
           this.openProjectSearchModal(colName);
@@ -2298,6 +2367,39 @@ export class DashboardView extends ItemView {
         this.sync.updateMemoColor(card.id, color),
       onProjectCoverChange: (card: DashboardCard, imagePath: string) =>
         this.sync.updateProjectCover(card.id, imagePath),
+      onMemoConvertToNote: async (card: DashboardCard) => {
+        try {
+          // Sanitize title for filename
+          let baseName = card.title || "Untitled";
+          // Strip wikilink syntax
+          baseName = baseName.replace(/\[\[|\]\]/g, "").trim();
+          // Remove path separators
+          baseName = baseName.split("/").pop() ?? baseName;
+          baseName = baseName.split("\\").pop() ?? baseName;
+          // Remove invalid filename chars
+          baseName = baseName.replace(/[<>:"|?*\x00-\x1F]/g, "").trim();
+          if (!baseName) baseName = "Untitled";
+          // Use Obsidian's default new file location
+          let targetPath: string;
+          try {
+            targetPath =
+              await this.app.fileManager.getAvailablePathForAttachment(
+                `${baseName}.md`,
+                "md",
+              );
+          } catch {
+            targetPath = `${baseName}.md`;
+          }
+          // Build content: a single self-referencing wikilink
+          const content = `[[${baseName}]]\n`;
+          await this.app.vault.create(targetPath, content);
+          new Notice(t("memo.converted", { path: targetPath }));
+        } catch (e) {
+          new Notice(
+            t("memo.convertError", { message: (e as Error).message }),
+          );
+        }
+      },
       onCardTitleEdit: (cardId: string, newTitle: string) =>
         this.sync.updateCard(cardId, { title: newTitle }),
       onCardWidthChange: (cardId: string, width: number) =>
@@ -2965,4 +3067,44 @@ export class DashboardView extends ItemView {
     );
     modal.open();
   }
+}
+
+/**
+ * Resolves a TodoPlus source title (the wikilink form
+ * `[[note#heading]]` or the bare `note#heading` form) to a real
+ * `TFile` in the vault. Returns `null` when the title is empty,
+ * the link can't be parsed, or the file does not exist.
+ *
+ * Mirrors the parsing rules of `parseTodoPlusSourceLink` in
+ * `renderer.ts` (strip `[[ ]]`, strip `|alias`, split on first
+ * `#`); the heading portion is intentionally discarded here
+ * because the view only needs the file handle to pass to
+ * `ensureTodoPlusHeading`. We deliberately re-implement the
+ * minimal parse locally rather than export the renderer helper
+ * (keeping the renderer-private API surface unchanged).
+ */
+function resolveTodoPlusSourceFile(
+  app: App,
+  title: string,
+  sourcePath?: string,
+): TFile | null {
+  const text = title.trim();
+  if (!text) return null;
+  // Strip `[[ ]]` wrapper.
+  const inner = text.replace(/^\[\[/, "").replace(/]]$/, "").trim();
+  // Strip `|alias` tail.
+  const pipeIdx = inner.indexOf("|");
+  const linkPart = pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner;
+  // Split on first `#` — we only need the path.
+  const hashIdx = linkPart.indexOf("#");
+  const path = (hashIdx >= 0 ? linkPart.slice(0, hashIdx) : linkPart).trim();
+  if (!path) return null;
+  // Use Obsidian's standard wikilink resolver (handles basename-only
+  // links, same-basename disambiguation, etc.) instead of plain
+  // `vault.getFileByPath`, which requires a full vault-relative path.
+  const resolved = app.metadataCache.getFirstLinkpathDest(
+    path,
+    sourcePath ?? "",
+  );
+  return resolved instanceof TFile ? resolved : null;
 }

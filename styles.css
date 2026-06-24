@@ -5729,11 +5729,6 @@
 /* Same for the section row that contains the focused input, otherwise the
    dropdown can be clipped by section overflow rules in the embedded mode. */
 
-.dashboard-card:hover {
-  box-shadow: var(--db-shadow-card-hover);
-  background: var(--db-bg-card-hover);
-}
-
 .dashboard-card[draggable="true"]:active {
   cursor: grabbing;
 }
@@ -6115,14 +6110,28 @@
   transition: border-color 0.15s ease;
 }
 
-.dashboard-memo-view:hover {
-  border-color: var(--db-border-input);
-}
-
 .dashboard-memo-view--empty {
   color: var(--db-text-faint);
   opacity: 0.5;
 }
+
+/* ===== Inline markdown (renderInlineMarkdown) ===== */
+.dashboard-inline-code {
+  background: var(--background-secondary);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  color: var(--text-accent);
+}
+.dashboard-inline-bold { font-weight: 700; }
+.dashboard-inline-italic { font-style: italic; }
+.dashboard-inline-highlight {
+  background: var(--text-highlight-bg, rgba(255, 220, 0, 0.3));
+  color: var(--text-normal);
+  padding: 0 2px;
+}
+.dashboard-inline-strike { text-decoration: line-through; opacity: 0.7; }
 
 .theme-light .dashboard-memo-textarea {
   color: var(--db-text);
@@ -7426,12 +7435,6 @@
 }
 
 /* -- Aurora: glass glow, soft rounded -- */
-.peingxious-dashboard-root[data-theme="aurora"] .dashboard-card:hover {
-  box-shadow:
-    0 6px 24px rgba(139, 92, 246, 0.12),
-    0 0 16px rgba(168, 85, 247, 0.06);
-  border-color: rgba(139, 92, 246, 0.2);
-}
 
 .peingxious-dashboard-root[data-theme="aurora"] .dashboard-memo-textarea:focus {
   border-color: rgba(139, 92, 246, 0.4);
@@ -7460,12 +7463,6 @@
 }
 
 /* -- Prism: rose glass glow, soft rounded -- */
-.peingxious-dashboard-root[data-theme="prism"] .dashboard-card:hover {
-  box-shadow:
-    0 6px 24px rgba(244, 63, 94, 0.12),
-    0 0 16px rgba(168, 85, 247, 0.06);
-  border-color: rgba(244, 63, 94, 0.2);
-}
 
 .peingxious-dashboard-root[data-theme="prism"] .dashboard-memo-textarea:focus {
   border-color: rgba(244, 63, 94, 0.4);
@@ -7535,23 +7532,8 @@
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-card:hover {
-  box-shadow:
-    0 5px 0 0 #98b894,
-    0 8px 24px rgba(74, 103, 65, 0.15);
-  border-color: #82b87e;
-}
-
 .theme-dark .peingxious-dashboard-root[data-theme="island"] .dashboard-card {
   box-shadow: 0 4px 0 0 #2a4a2e;
-}
-
-.theme-dark
-  .peingxious-dashboard-root[data-theme="island"]
-  .dashboard-card:hover {
-  box-shadow:
-    0 5px 0 0 #2a4a2e,
-    0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .peingxious-dashboard-root[data-theme="island"] .dashboard-memo-textarea:focus {
@@ -7824,12 +7806,6 @@
 }
 
 /* -- Haze: sharp edges, neon glow (cloned from Neon) -- */
-.peingxious-dashboard-root[data-theme="haze"] .dashboard-card:hover {
-  border-color: rgba(0, 240, 255, 0.4);
-  box-shadow:
-    0 0 12px rgba(0, 240, 255, 0.12),
-    0 4px 16px rgba(0, 0, 0, 0.2);
-}
 
 .peingxious-dashboard-root[data-theme="haze"] .dashboard-memo-textarea:focus {
   border-color: rgba(0, 240, 255, 0.6);
@@ -7936,12 +7912,6 @@
 }
 
 /* -- Blossom: rose glass glow (cloned from Prism) -- */
-.peingxious-dashboard-root[data-theme="blossom"] .dashboard-card:hover {
-  box-shadow:
-    0 6px 24px rgba(244, 63, 94, 0.12),
-    0 0 16px rgba(168, 85, 247, 0.06);
-  border-color: rgba(244, 63, 94, 0.2);
-}
 
 .peingxious-dashboard-root[data-theme="blossom"]
   .dashboard-memo-textarea:focus {
@@ -8036,12 +8006,6 @@
 }
 
 /* -- Matcha: gentle green glow -- */
-.peingxious-dashboard-root[data-theme="matcha"] .dashboard-card:hover {
-  box-shadow:
-    0 6px 24px rgba(143, 170, 152, 0.12),
-    0 0 16px rgba(200, 184, 144, 0.06);
-  border-color: rgba(143, 170, 152, 0.2);
-}
 .peingxious-dashboard-root[data-theme="matcha"] .dashboard-memo-textarea:focus {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 16px rgba(143, 170, 152, 0.08);
@@ -8129,12 +8093,6 @@
 }
 
 /* -- Lilac: gentle purple glow -- */
-.peingxious-dashboard-root[data-theme="lilac"] .dashboard-card:hover {
-  box-shadow:
-    0 6px 24px rgba(184, 160, 200, 0.12),
-    0 0 16px rgba(208, 184, 184, 0.06);
-  border-color: rgba(184, 160, 200, 0.2);
-}
 .peingxious-dashboard-root[data-theme="lilac"] .dashboard-memo-textarea:focus {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 16px rgba(184, 160, 200, 0.08);
@@ -8859,10 +8817,6 @@
     padding: 12px;
   }
 
-  .dashboard-card:hover {
-    transform: none;
-  }
-
   /* Card actions: hidden by default on mobile, shown on tap */
   .dashboard-card-actions {
     opacity: 0;
@@ -8938,10 +8892,6 @@
   /* Hide memo color picker on mobile (color input doesn't work on mobile) */
   .dashboard-card-btn--color {
     display: none;
-  }
-
-  .dashboard-section-row[data-section-type="memo"] .dashboard-card:hover {
-    overflow: hidden;
   }
 }
 

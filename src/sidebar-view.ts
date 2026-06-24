@@ -8,6 +8,7 @@ import {
   renderDashboard,
   renderSidebarPomodoro,
   renderSidebarReading,
+  ensureTodoPlusHeading,
 } from "./renderer";
 import { loadHolidayData, renderSidebarLunarWidget } from "./lunar-widget";
 import { t } from "./i18n";
@@ -113,12 +114,19 @@ export class SidebarView extends ItemView {
     renderSidebarWeekCalendar(wrapper);
 
     if (this.data) {
+      // v1.4.x R5 — pass the dashboard's host file path so wikilink
+      // hover preview resolves against the same file (not against
+      // whatever markdown the user has open in the main pane). The
+      // sidebar's data mirrors the main dashboard view, so the host
+      // is `plugin.sync.getFile()` — same as in `DashboardView`.
+      const hostSourcePath = this.sync.getFile()?.path;
       renderDashboard(
         wrapper,
         this.data,
         this.createMainCallbacks(),
         this.app,
         this.plugin.settings,
+        hostSourcePath,
       );
     } else {
       wrapper.createEl("p", {
@@ -207,6 +215,10 @@ export class SidebarView extends ItemView {
         this.createOverlayCallbacks(),
         this.app,
         this.plugin.settings,
+        // v1.4.x R5 — in overlay mode the dashboard's data is
+        // embedded in the target note, so the host file is that
+        // note (not the main dashboard's own file).
+        this.overlayNotePath ?? undefined,
       );
     } else {
       kanban.createEl("p", { text: "No columns defined in this note" });
@@ -249,6 +261,7 @@ export class SidebarView extends ItemView {
       onProjectDocsRemove: () => {},
       onMemoColorChange: () => {},
       onProjectCoverChange: () => {},
+      onMemoConvertToNote: () => {},
       onCardTitleEdit: () => {},
       onCardWidthChange: () => {},
       onCardSizeChange: () => {},
@@ -386,16 +399,72 @@ export class SidebarView extends ItemView {
           await saveAndRefresh();
         }
       },
-      onCardAdd: async (columnName: string) => {
+      onCardAdd: async (columnName: string, options?: { title?: string }) => {
         const col = findColumn(columnName);
-        if (col && self.data) {
-          const newCard: DashboardCard = {
-            id: `${Date.now()}-new`,
-            title: t("default.todoTitle1") || "New Task",
-            type: "generic",
+        if (!col || !self.data) return;
+        const effectiveType = col.sectionType ?? columnName.toLowerCase();
+
+        if (effectiveType === "todoplus") {
+          const initialTitle = options?.title?.trim() ?? "";
+          // Resolve the source file from the wikilink title (same logic
+          // as in view.ts) so we can auto-append `## To-do` idempotently.
+          let sourceFile: TFile | null = null;
+          if (initialTitle) {
+            const text = initialTitle.trim();
+            const inner = text.replace(/^\[\[/, "").replace(/]]$/, "").trim();
+            const pipeIdx = inner.indexOf("|");
+            const linkPart = pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner;
+            const hashIdx = linkPart.indexOf("#");
+            const linkPath = (hashIdx >= 0 ? linkPart.slice(0, hashIdx) : linkPart).trim();
+            if (linkPath) {
+              // Use Obsidian's standard link resolver for wikilinks
+              // (handles basename-only links correctly, unlike plain
+              // getFileByPath which requires a full vault path).
+              const resolved = self.app.metadataCache.getFirstLinkpathDest(linkPath, self.overlayNotePath ?? "");
+              if (resolved instanceof TFile) {
+                sourceFile = resolved;
+              }
+            }
+          }
+          if (sourceFile) {
+            await ensureTodoPlusHeading(self.app, sourceFile, "To-do");
+          }
+          col.cards.push({
+            id: `${Date.now()}-todoplus`,
+            title: initialTitle,
+            type: "todoplus",
             column: columnName,
             body: "",
             tasks: [],
+            url: "",
+            wikiLink: "",
+            progress: -1,
+            streak: 0,
+            dueDate: "",
+            blockquote: "",
+            color: "",
+            coverImage: "",
+            width: 0,
+            size: "M",
+            gridCols: 0,
+            gridRows: 0,
+            gridCol: 0,
+            gridRow: 0,
+            hideCompleted: false,
+          });
+          await saveAndRefresh();
+        } else {
+          const newCard: DashboardCard = {
+            id: `${Date.now()}-new`,
+            title:
+              effectiveType === "memo"
+                ? t("default.memoTitle", { date: "" })
+                : t("default.todoTitle1"),
+            type: effectiveType === "memo" ? "generic" : "task",
+            column: columnName,
+            body: "",
+            tasks:
+              effectiveType === "todo" ? [{ text: "", checked: false }] : [],
             url: "",
             wikiLink: "",
             progress: -1,
@@ -479,6 +548,36 @@ export class SidebarView extends ItemView {
         if (found) {
           found.card.coverImage = imagePath;
           await saveAndRefresh();
+        }
+      },
+      onMemoConvertToNote: async (card: DashboardCard) => {
+        // Convert a Memo card to a standalone note in the vault's
+        // default new-file location. Mirrors the main/embedded
+        // view implementations; the original card stays put.
+        try {
+          let baseName = card.title || "Untitled";
+          baseName = baseName.replace(/\[\[|\]\]/g, "").trim();
+          baseName = baseName.split("/").pop() ?? baseName;
+          baseName = baseName.split("\\").pop() ?? baseName;
+          baseName = baseName.replace(/[<>:"|?*\x00-\x1F]/g, "").trim();
+          if (!baseName) baseName = "Untitled";
+          let targetPath: string;
+          try {
+            targetPath =
+              await this.app.fileManager.getAvailablePathForAttachment(
+                `${baseName}.md`,
+                "md",
+              );
+          } catch {
+            targetPath = `${baseName}.md`;
+          }
+          const content = `[[${baseName}]]\n`;
+          await this.app.vault.create(targetPath, content);
+          new Notice(t("memo.converted", { path: targetPath }));
+        } catch (e) {
+          new Notice(
+            t("memo.convertError", { message: (e as Error).message }),
+          );
         }
       },
       onCardTitleEdit: async (cardId: string, newTitle: string) => {

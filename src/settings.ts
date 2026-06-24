@@ -109,6 +109,37 @@ export class DashboardSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		new Setting(containerEl)
+			.setName("Open folder roots")
+			.setDesc("Comma-separated folder paths to scope the + Open picker (e.g. \"Notes, Projects\"). Empty = scan entire vault.")
+			.addText(text => text
+				.setPlaceholder('Notes, Projects/2026')
+				.setValue((this.plugin.settings.openFolders ?? []).join(', '))
+				.onChange(async (value) => {
+					const list = value
+						.split(',')
+						.map(s => s.trim())
+						.filter(Boolean);
+					this.plugin.settings = {
+						...this.plugin.settings,
+						openFolders: list,
+					};
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName("Include subfolders")
+			.setDesc("When folder roots are set, also include files in subfolders. Has no effect when no roots are set.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.openIncludeSubfolders ?? true)
+				.onChange(async (value) => {
+					this.plugin.settings = {
+						...this.plugin.settings,
+						openIncludeSubfolders: value,
+					};
+					await this.plugin.saveSettings();
+				}));
+
 		this.renderWidgetSettings(containerEl);
 
 		this.renderLunarSettings(containerEl);

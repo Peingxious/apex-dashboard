@@ -28,9 +28,27 @@ export async function showColumnFilePicker({
   const excluded = (plugin.settings.excludedNotePaths ?? [])
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
+  const folderRoots = (plugin.settings.openFolders ?? [])
+    .map((s) => s.trim().replace(/^\/+|\/+$/g, ""))
+    .filter(Boolean);
+  const includeSubfolders = plugin.settings.openIncludeSubfolders ?? true;
 
   for (const f of mdFiles) {
     const lower = f.path.toLowerCase();
+    if (folderRoots.length > 0) {
+      const inAnyRoot = folderRoots.some((root) => {
+        const rootLower = root.toLowerCase();
+        if (includeSubfolders) {
+          return (
+            lower === `${rootLower}.md` || lower.startsWith(`${rootLower}/`)
+          );
+        } else {
+          const parentDir = f.parent?.path?.toLowerCase() ?? "";
+          return parentDir === rootLower;
+        }
+      });
+      if (!inAnyRoot) continue;
+    }
     if (
       excluded.some(
         (x) => lower === x || lower === `${x}.md` || lower.endsWith(`/${x}.md`),
