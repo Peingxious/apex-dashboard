@@ -1,4 +1,4 @@
-import { App, TFile } from "obsidian";
+import { App, TFile, Notice } from "obsidian";
 import type {
   DashboardSettings,
   DashboardCard,
@@ -1510,14 +1510,26 @@ export class SyncEngine {
   }
 
   private async load(): Promise<void> {
-    if (!this.file) return;
+    if (!this.file) {
+      console.warn("[apex-dashboard] load called with no file");
+      return;
+    }
 
-    const content = await this.app.vault.read(this.file);
-    const hash = simpleHash(content);
-    if (hash === this.lastWrittenHash) return;
+    try {
+      const content = await this.app.vault.read(this.file);
+      const hash = simpleHash(content);
+      if (hash === this.lastWrittenHash) return;
 
-    this.data = this.applySessionOverrides(parse(content));
-    this.notifyCallbacks();
+      this.data = this.applySessionOverrides(parse(content));
+      this.notifyCallbacks();
+    } catch (err) {
+      console.error(
+        "[apex-dashboard] Failed to load dashboard file:",
+        this.file.path,
+        err,
+      );
+      new Notice(t("error.saveFailed") || "Failed to load dashboard data");
+    }
   }
 
   private applySessionOverrides(data: DashboardData): DashboardData {
@@ -1734,38 +1746,64 @@ export class SyncEngine {
   }
 
   private async writeToDisk(): Promise<void> {
-    if (!this.data || !this.file) return;
+    if (!this.data) {
+      console.warn(
+        "[apex-dashboard] writeToDisk called with no data, skipping save",
+      );
+      return;
+    }
+    if (!this.file) {
+      console.warn(
+        "[apex-dashboard] writeToDisk called with no file, skipping save",
+      );
+      new Notice(
+        t("error.saveFailed") || "Failed to save dashboard: file not found",
+      );
+      return;
+    }
 
     const fileRef = this.file;
+    const dataSnapshot = this.data;
+
     this.writeQueue = this.writeQueue.then(async () => {
       try {
         const current = await this.app.vault.read(fileRef);
-        const content = serializeInto(current, this.data!);
+        const content = serializeInto(current, dataSnapshot);
         const hash = simpleHash(content);
 
-        // Safety: skip write if the new content is drastically smaller
-        // than the current file. The previous blanket 30% threshold was
-        // too aggressive — it blocked legitimate user actions like
-        // "delete the last project item from a small dashboard file"
-        // (the markdown shrinks but is still a valid dashboard),
-        // which manifested as "the item comes back on reload".
-        //
-        // The real risk this guard was trying to prevent is the banner
-        // image being lost (banner image data lives inside the markdown
-        // file as a base64 dataURL and a content reset would wipe it
-        // silently). So instead of a global size ratio, we compare the
-        // banner section of the new content against the banner section
-        // of the current file. If the banner is preserved, the user-
-        // visible content is allowed to shrink freely.
+        // Skip if identical content (no actual change)
+        if (hash === this.lastWrittenHash) {
+          return;
+        }
+
         const newBannerLen = extractBannerSectionLength(content);
         const currentBannerLen = extractBannerSectionLength(current);
-        if (currentBannerLen > 0 && newBannerLen < currentBannerLen * 0.5) {
+
+        // Only block write if banner is drastically smaller AND user had a dataURL banner
+        // (base64 dataURLs are much longer than normal image URLs)
+        const currentHasDataUrlBanner =
+          current.includes("banner:") &&
+          (current.includes("data:image") || currentBannerLen > 500);
+        if (currentHasDataUrlBanner && newBannerLen < currentBannerLen * 0.3) {
+          console.warn(
+            "[apex-dashboard] Banner safety guard triggered: banner length would drop from",
+            currentBannerLen,
+            "to",
+            newBannerLen,
+          );
+          new Notice(
+            t("error.saveFailed") ||
+              "Save blocked: banner image data would be lost. If you want to remove the banner, please do so from banner settings.",
+          );
           return;
         }
 
         await this.app.vault.modify(fileRef, content);
         this.lastWrittenHash = hash;
-      } catch {}
+      } catch (err) {
+        console.error("[apex-dashboard] Failed to write dashboard file:", err);
+        new Notice(t("error.saveFailed") || "Failed to save dashboard changes");
+      }
     });
 
     this.notifyCallbacks();

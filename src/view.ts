@@ -233,7 +233,9 @@ export class DashboardView extends ItemView {
       "activeDataId=",
       (activeData as any).__diagId ?? "(no id)",
       "sectionTypes=",
-      activeData.columns.map((c) => `${c.name}:${c.sectionType ?? "?"}`).join(","),
+      activeData.columns
+        .map((c) => `${c.name}:${c.sectionType ?? "?"}`)
+        .join(","),
     );
 
     // Save scroll positions before re-render
@@ -863,10 +865,10 @@ export class DashboardView extends ItemView {
         const modal = new CardEditModal(
           this.app,
           card,
-          (updates) => {
+          async (updates) => {
             const c = self.findEmbeddedCard(card.id);
             if (c) Object.assign(c.card, updates);
-            self.saveEmbeddedAndRefresh();
+            await self.saveEmbeddedAndRefresh();
           },
           this.plugin.settings.stylePreset,
         );
@@ -1007,7 +1009,11 @@ export class DashboardView extends ItemView {
           // does *not* go through that helper, so we do it here.
           const initialTitle = options?.title?.trim() ?? "";
           const sourceFile = initialTitle
-            ? resolveTodoPlusSourceFile(self.app, initialTitle, self.embeddedNotePath ?? undefined)
+            ? resolveTodoPlusSourceFile(
+                self.app,
+                initialTitle,
+                self.embeddedNotePath ?? undefined,
+              )
             : null;
           if (sourceFile) {
             await ensureTodoPlusHeading(self.app, sourceFile, "To-do");
@@ -1240,9 +1246,7 @@ export class DashboardView extends ItemView {
           }
           new Notice(t("memo.converted", { path: targetPath }));
         } catch (e) {
-          new Notice(
-            t("memo.convertError", { message: (e as Error).message }),
-          );
+          new Notice(t("memo.convertError", { message: (e as Error).message }));
         }
       },
       onCardTitleEdit: async (cardId: string, newTitle: string) => {
@@ -1771,32 +1775,55 @@ export class DashboardView extends ItemView {
   }
 
   private async saveEmbeddedAndRefresh(): Promise<void> {
-    if (!this.embeddedData || !this.embeddedNotePath) return;
+    if (!this.embeddedData) {
+      console.warn(
+        "[apex-dashboard] saveEmbeddedAndRefresh called with no embeddedData, skipping save",
+      );
+      return;
+    }
+    if (!this.embeddedNotePath) {
+      console.warn(
+        "[apex-dashboard] saveEmbeddedAndRefresh called with no embeddedNotePath, skipping save",
+      );
+      return;
+    }
+
     const { serializeInto } = await import("./parser");
     this.embeddedDataCache.set(this.embeddedNotePath, this.embeddedData);
     const file = this.app.vault.getAbstractFileByPath(this.embeddedNotePath);
-    if (file instanceof TFile) {
-      try {
-        const current = await this.app.vault.read(file);
-        const newContent = serializeInto(current, this.embeddedData, this.app);
-        // Suppress the 'modify' event listener from re-parsing the
-        // file and re-rendering — we already hold the post-mutation
-        // embeddedData and are about to render from it directly.
-        this.isWritingEmbeddedFile = true;
-        await this.app.vault.modify(file, newContent);
-        // Keep the flag set through the next microtask so the
-        // 'modify' event (fired by vault.modify) sees it. Reset
-        // on the next macrotask so external edits (e.g. from the
-        // Obsidian editor) still trigger a normal reload.
-        setTimeout(() => {
-          this.isWritingEmbeddedFile = false;
-        }, 0);
-      } catch (e) {
-        this.isWritingEmbeddedFile = false;
-        new Notice(t("noteDash.saveError"));
-      }
+
+    if (!(file instanceof TFile)) {
+      console.error(
+        "[apex-dashboard] Embedded file not found:",
+        this.embeddedNotePath,
+      );
+      new Notice(
+        t("noteDash.saveError") || "Failed to save: note file not found",
+      );
+      return;
     }
-    // Re-render
+
+    try {
+      const current = await this.app.vault.read(file);
+      const newContent = serializeInto(current, this.embeddedData, this.app);
+
+      this.isWritingEmbeddedFile = true;
+      await this.app.vault.modify(file, newContent);
+
+      setTimeout(() => {
+        this.isWritingEmbeddedFile = false;
+      }, 0);
+    } catch (e) {
+      this.isWritingEmbeddedFile = false;
+      console.error(
+        "[apex-dashboard] Failed to save embedded note:",
+        this.embeddedNotePath,
+        e,
+      );
+      new Notice(t("noteDash.saveError") || "Failed to save note changes");
+      return;
+    }
+
     const currentData = this.sync.getData();
     if (currentData) this.render(currentData);
   }
@@ -1869,7 +1896,7 @@ export class DashboardView extends ItemView {
         gridRow: 0,
         hideCompleted: false,
       });
-      this.saveEmbeddedAndRefresh();
+      await this.saveEmbeddedAndRefresh();
     });
     modal.open();
   }
@@ -1905,7 +1932,7 @@ export class DashboardView extends ItemView {
           gridRow: 0,
           hideCompleted: false,
         });
-        this.saveEmbeddedAndRefresh();
+        await this.saveEmbeddedAndRefresh();
       },
       this.plugin.settings.stylePreset,
     );
@@ -1929,7 +1956,7 @@ export class DashboardView extends ItemView {
         const col = this.embeddedData?.columns.find((c) => c.name === colName);
         if (col) {
           col.libraryConfig = config;
-          this.saveEmbeddedAndRefresh();
+          await this.saveEmbeddedAndRefresh();
         }
       },
     );
@@ -2334,7 +2361,11 @@ export class DashboardView extends ItemView {
           // costs nothing.
           const title = options?.title?.trim() ?? "";
           if (title) {
-            const sourceFile = resolveTodoPlusSourceFile(this.app, title, this.sync.getFile()?.path);
+            const sourceFile = resolveTodoPlusSourceFile(
+              this.app,
+              title,
+              this.sync.getFile()?.path,
+            );
             if (sourceFile) {
               await ensureTodoPlusHeading(this.app, sourceFile, "To-do");
             }
@@ -2394,9 +2425,7 @@ export class DashboardView extends ItemView {
           });
           new Notice(t("memo.converted", { path: targetPath }));
         } catch (e) {
-          new Notice(
-            t("memo.convertError", { message: (e as Error).message }),
-          );
+          new Notice(t("memo.convertError", { message: (e as Error).message }));
         }
       },
       onCardTitleEdit: (cardId: string, newTitle: string) =>
