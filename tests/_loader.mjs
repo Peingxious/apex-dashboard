@@ -17,3 +17,8 @@ const jiti = require("jiti")(import.meta.url, {
 export const { findWikilinkContext, applyWikilinkReplacement } = jiti(
   "../src/wikilink-context.ts",
 );
+export const {
+  buildMemoNoteContent,
+  buildMemoNotePath,
+  buildMemoLinkedBody,
+} = jiti("../src/memo-convert.ts");

@@ -10,7 +10,7 @@
 
 ### 🗒️ Memo
 
-Capture thoughts instantly with a built-in memo pad. Each memo card has a writable textarea — jot down ideas, meeting notes, or daily reflections without leaving your dashboard. Supports `[[wikilinks]]` that render as clickable links.
+Capture thoughts instantly with a built-in memo pad. Each memo card has a writable textarea — jot down ideas, meeting notes, or daily reflections without leaving your dashboard. Supports `[[wikilinks]]` that render as clickable links, autosaves while you type, and can convert into a standalone note while keeping the memo card as a `[[wikilink]]` pointer.
 
 ### ✅ Todo
 
@@ -172,6 +172,11 @@ columns:
 > **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
+
+### 1.4.12 (2026-06-25)
+
+- **Memo cards autosave more reliably on the main dashboard** — memo edits now debounce-save while typing and save on blur with error reporting, so the main page no longer depends on a perfect focus change to write back to `dashboard.md`
+- **Memo "Convert to note" now migrates content instead of creating a blank link note** — the current memo body is copied into the new markdown note, and the original memo card is reduced to a single `[[new note]]` link so the dashboard stays as a pointer to the standalone note
 
 ### 1.4.11 (2026-06-23)
 

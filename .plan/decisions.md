@@ -1,168 +1,171 @@
-<!-- version: 1.4.9 -->
+﻿<!-- version: 1.4.12 -->
 
-# decisions.md — 决策与禁令
+# decisions.md 鈥?鍐崇瓥涓庣浠?
 
-> 记录项目已确定的技术决策、绝不能违反的约束。
-> 任何决策变更必须留痕：日期 + 决策 + 原因。
+> 璁板綍椤圭洰宸茬‘瀹氱殑鎶€鏈喅绛栥€佺粷涓嶈兘杩濆弽鐨勭害鏉熴€?
+> 浠讳綍鍐崇瓥鍙樻洿蹇呴』鐣欑棔锛氭棩鏈?+ 鍐崇瓥 + 鍘熷洜銆?
 >
-> **当前版本**：v1.4.9 · 详见末尾「版本历史」
+**褰撳墠鐗堟湰**：v1.4.12 路 璇﹁鏈熬銆岀増鏈巻鍙层€?
 
 ---
 
-## 决策日志
+## 鍐崇瓥鏃ュ織
 
-### v1.4.9 · 2026-06-15 — 切换分区同帧刷新 + banner 条件输出 + 列级 frontmatter 写入
+### v1.4.12 路 2026-06-25 鈥?Memo 鑷姩淇濆瓨 + 杞垚绗旇鎼撹繍
 
-#### D-2026-06-15-04 · 切换分区类型用 `processFrontMatter` 列级写入
+#### D-2026-06-25-07 路 Memo 鑷姩淇濆瓨鍏ュ満
 
-- **决策**：新增 `SyncEngine.updateFrontmatterField(file, mutate)` 与 `updateColumnsField(updater)`；`setColumnSectionType` / `setColumnArchiveCompleted` 改走新路径，不再 `writeToDisk`
-- **原因**：用户在 bug 反馈中明确"切换分区的时候工作台不刷新"和"默认只控制 columns，可以用 API 直接调整"——旧路径走 `writeToDisk` → `serializeInto` 全量重写，vault 'modify' 事件**不**会触发 view 全量 re-render（只刷新 library 段），导致用户切完类型需切走 tab 再切回；并且整文件重写会顺带改 banner / extra frontmatter / 注释顺序
-- **影响**：
-  - 用户体验：切换分区类型**同帧**反映新样式
-  - 文件 IO：banner / quickActions / extra frontmatter / 注释顺序**完全不变**（byte-identical）
-  - 错误处理：`processFrontMatter` 失败时 `console.error` + `new Notice("Failed to save dashboard changes")` 兜底
-  - 性能：少一次"读 → 全量解析 → 全量序列化 → 整文件写回 → vault 'modify' 事件"重型路径
-  - `writeToDisk` 保留，供卡片增删改、banner 编辑、quickActions 增删等场景使用
+- **鍐崇瓥**锛氬湪 `renderMemoBody()` 涓繖鍔犺嚜鍔ㄤ繚瀛樼鍏細杈撳叆鏃跺欢杩熶繚瀛橈紝blur 鏃跺悓姝ュ疄鏂姐€傚繩鍙樺け璐ャ€傛埅鏈熷鐞嗗拰鍙鎬ц渹鍏�
+- **鍘熷洜**锛氱敤鎴峰弽棣堬細涓婚〉 Memo 鎴愬姛缂栬緫鍚庢湁鏃跺垎鏋愭墦涓嶅埌 md 銆備笉鍙渚х敤 callback 锛岃繕瑕佹彁鍗囩晠鏄撳拰鏂扮殑鎺掑簭銆傜敤 blur + debounce 鎺у埗鍐呭鍙嶇涓ユ牸绾夸笂銆�
 
-#### D-2026-06-15-05 · banner 块条件输出
+#### D-2026-06-25-08 路 Memo 杞垚绗旇 = 鎼撹繍鍐呭 + 鍘熷崱鐗囨敼涓烘寚鍚戝彲
 
-- **决策**：`parser.ts:serialize` 删除硬编码 `lines.push("banner:")`，改为**仅当** `data.banner.image` 非空时才输出 banner 块
-- **原因**：用户在 bug 反馈中明确"不要每次都加 banner，banner 只有操作了才加"——旧路径每次保存都无脑写 `banner:` 行，哪怕用户从未编辑过 banner
-- **影响**：
-  - 新文件**不**含 `banner:` 字段
-  - 用户编辑过 banner → 文件保留 `banner:` 块
-  - 用户清空 banner（设 image 为 ""）→ 旧 `banner:` 块在下一次保存时**自动从文件移除**（`serializeInto` → `patchYamlBlock` 的 null block 路径）
-  - 读路径不变，`parseBanner` 行为不变，向后兼容已有 `banner:` 块的老文件
-  - 配合 BUG-002 的 `generateEmptyDashboardMarkdown`，新打开的工作台文件**完全**不含任何 plugin-specific frontmatter 块
+- **鍐崇瓥**锛氬皢 `onMemoConvertToNote` 鏀逛负锛氬厛鎷疯礉褰撳墠 Memo 鍐呭鍒版柊 `.md` 鐣岄潰锛屽啀灏嗗師 Memo 鍗＄墖鍐呭鏀逛负涓€涓?`[[new note]]` 鍒楄〃锛屽苟淇濇寔鍘熷崱鐗囨湰韬暀鍦� dashboard 涓婄殑鍙洖閾惧懡涓奖鍝嶃€
+- **鍘熷洜**锛氱敤鎴疯姹備笉鏄崟绾佃浆鎹㈡枃浠讹紝鑰屾槸瑕佹妸 Memo 浜嬩欢鏄剧ず涓哄彲杩涘叆鐨勬枃绔犵洰褰曪紱鍘熷鍐呭蹇呴』鍏ㄩ噺绉诲埌鏂扮瑪璁帮紝鍘熷崱鐗囧垯鍙樻垚鍗曚竴鐨勭洰褰曟寚鍚戝櫒銆€
 
-#### D-2026-06-15-06 · view 层防御性 requestRender
 
-- **决策**：`view.ts:onColumnSectionTypeChange` callback 在 `sync.setColumnSectionType` 之后**额外**调用一次 `this.requestRender(this.sync.getData()!)`
-- **原因**：即便 `updateColumnsField` 已 `notifyCallbacks`，RAF 合并（`renderCoalescer`）可能在某些时序下吞掉请求；防御性多调一次 requestRender 成本为零（同 RAF 帧内合并为一次实际 render），但保证切换类型一定能触发 view 重新渲染
-- **影响**：彻底修复"切换分区类型不刷新"的体验问题，覆盖所有时序边界
+### v1.4.9 路 2026-06-15 鈥?鍒囨崲鍒嗗尯鍚屽抚鍒锋柊 + banner 鏉′欢杈撳嚭 + 鍒楃骇 frontmatter 鍐欏叆
 
----
+#### D-2026-06-15-04 路 鍒囨崲鍒嗗尯绫诲瀷鐢?`processFrontMatter` 鍒楃骇鍐欏叆
 
-### v1.4.8 · 2026-06-15 — banner 简化为单图 + 首创建不注入默认分区
+- **鍐崇瓥**锛歚parser.ts:serialize` 鍒犻櫎纭紪鐮?`lines.push("banner:")`锛屾敼涓?*浠呭綋** `data.banner.image` 闈炵┖鏃舵墠杈撳嚭 banner 鍧?
+- **鍘熷洜**锛氱敤鎴峰湪 bug 鍙嶉涓槑纭?涓嶈姣忔閮藉姞 banner锛宐anner 鍙湁鎿嶄綔浜嗘墠鍔?鈥斺€旀棫璺緞姣忔淇濆瓨閮芥棤鑴戝啓 `banner:` 琛岋紝鍝€曠敤鎴蜂粠鏈紪杈戣繃 banner
+- **褰卞搷**锛?
+  - 鏂版枃浠?*涓?*鍚?`banner:` 瀛楁
+  - 鐢ㄦ埛缂栬緫杩?banner 鈫?鏂囦欢淇濈暀 `banner:` 鍧?
+  - 鐢ㄦ埛娓呯┖ banner锛堣 image 涓?""锛夆啋 鏃?`banner:` 鍧楀湪涓嬩竴娆′繚瀛樻椂**鑷姩浠庢枃浠剁Щ闄?*锛坄serializeInto` 鈫?`patchYamlBlock` 鐨?null block 璺緞锛?
+  - 璇昏矾寰勪笉鍙橈紝`parseBanner` 琛屼负涓嶅彉锛屽悜鍚庡吋瀹瑰凡鏈?`banner:` 鍧楃殑鑰佹枃浠?
+  - 閰嶅悎 BUG-002 鐨?`generateEmptyDashboardMarkdown`锛屾柊鎵撳紑鐨勫伐浣滃彴鏂囦欢**瀹屽叏**涓嶅惈浠讳綍 plugin-specific frontmatter 鍧?
 
-#### D-2026-06-15-01 · banner 不再支持轮播图
+#### D-2026-06-15-06 路 view 灞傞槻寰℃€?requestRender
 
-- **决策**：banner 整体下线轮播图能力——弹窗只保留一个图片地址输入框；`view.ts:setupBannerRotation` 删除；`parser.ts:serialize` 不再写 `banner.images:`
-- **原因**：用户在 bug 反馈中明确"banner 就是一张图，不是轮播图"。轮播图 UI 与 i18n key 缺失叠加，让用户填了主图却看不到效果；`images.length > 1` 还会**覆盖**主图，破坏"输入图片地址即可"的契约
-- **影响**：
-  - 用户体验：弹窗精简，填 URL 即显示
-  - 向后兼容：`banner.images` 字段在 read 时**忽略**，不破坏旧文件
-  - 代码：净删除约 80 行（setupBannerRotation 69 行 + 弹窗轮播 UI 11 行）
-
-#### D-2026-06-15-02 · 工作台首创建不注入默认 columns
-
-- **决策**：`findOrCreateFile` 新建文件时调用 `generateEmptyDashboardMarkdown()`（仅含最小 frontmatter + `columns: []`），不再调用 `generateDefaultMarkdown()`；`parseColumnDefs` 在 `columns:` 缺失时返回 `[]`
-- **原因**：用户在 bug 反馈中明确"直接改文件，其他的都会清除"——他手动清空 `dashboard.md` 里的 `## H2` 与 `columns:` 后，插件在下次保存又把它们**全部复活**（因为 `parseColumnDefs` fallback 到 `DEFAULT_COLUMNS`）。文件应当是 source of truth，插件不应猜测
-- **影响**：
-  - 用户体验：首次打开工作台是空画布，用户按需添加分区
-  - 向后兼容：旧用户文件里已有 `columns:`，parse 走正常路径，**不**受影响
-  - 代码：净增约 20 行（新函数 + 注释）
-
-#### D-2026-06-15-03 · DEFAULT_COLUMNS / generateDefaultMarkdown 保留为 deprecated
-
-- **决策**：两个函数保留，但**不**被首创建流程调用；JSDoc 标记 `@deprecated for default-creation since v1.4.8`
-- **原因**：未来可能加"插入示例数据"按钮或"重置工作台"操作复用这份 4 分区样板。删除会损失扩展点；保留但不再滥用，是最小代价的方案
-- **影响**：增加少量"看着像用着又没用"的代码，但保留了未来 UX 设计的灵活性
+- **鍐崇瓥**锛歚view.ts:onColumnSectionTypeChange` callback 鍦?`sync.setColumnSectionType` 涔嬪悗**棰濆**璋冪敤涓€娆?`this.requestRender(this.sync.getData()!)`
+- **鍘熷洜**锛氬嵆渚?`updateColumnsField` 宸?`notifyCallbacks`锛孯AF 鍚堝苟锛坄renderCoalescer`锛夊彲鑳藉湪鏌愪簺鏃跺簭涓嬪悶鎺夎姹傦紱闃插尽鎬у璋冧竴娆?requestRender 鎴愭湰涓洪浂锛堝悓 RAF 甯у唴鍚堝苟涓轰竴娆″疄闄?render锛夛紝浣嗕繚璇佸垏鎹㈢被鍨嬩竴瀹氳兘瑙﹀彂 view 閲嶆柊娓叉煋
+- **褰卞搷**锛氬交搴曚慨澶?鍒囨崲鍒嗗尯绫诲瀷涓嶅埛鏂?鐨勪綋楠岄棶棰橈紝瑕嗙洊鎵€鏈夋椂搴忚竟鐣?
 
 ---
 
-### v1.3.0 · 2026-06-15 — 引入 `.plan/PURPOSE.md`
+### v1.4.8 路 2026-06-15 鈥?banner 绠€鍖栦负鍗曞浘 + 棣栧垱寤轰笉娉ㄥ叆榛樿鍒嗗尯
 
-- **决策**：新增 `PURPOSE.md` 作为 AI 理解产品意图的入口文件
-- **原因**：现有记忆文件（Target / Plan / decisions）都是"项目层"的，缺少"产品层"的意图说明。AI 在做功能决策时需要先理解"为什么做这个插件"才能做出符合产品方向的选择
-- **影响**：
-  - `.plan/` 从 4 文件扩展为 5 文件
-  - `Agents.md` §0 / §10.1 启动流程加入"必读 PURPOSE.md"约束
-  - 未来 AI 加载后**先读 PURPOSE.md** 再读其他文件
-- **PURPOSE.md 包含**：
-  - 一句话定位、核心问题、目标用户
-  - 4 个核心差异化（含 1 个愿景：块状图规划项目面板）
-  - 明确边界（不替代任务/数据库插件、不与核心插件抢功能、可调用 Templater）
-  - 整体框架（入口/数据流/核心模块/插件关系）
-  - 8 个非目标 + 4 条成功标准
+#### D-2026-06-15-01 路 banner 涓嶅啀鏀寔杞挱鍥?
 
-### v1.2.0 · 2026-06-15 — 引入 Agents.md 自举规则
+- **鍐崇瓥**锛歜anner 鏁翠綋涓嬬嚎杞挱鍥捐兘鍔涒€斺€斿脊绐楀彧淇濈暀涓€涓浘鐗囧湴鍧€杈撳叆妗嗭紱`view.ts:setupBannerRotation` 鍒犻櫎锛沗parser.ts:serialize` 涓嶅啀鍐?`banner.images:`
+- **鍘熷洜**锛氱敤鎴峰湪 bug 鍙嶉涓槑纭?banner 灏辨槸涓€寮犲浘锛屼笉鏄疆鎾浘"銆傝疆鎾浘 UI 涓?i18n key 缂哄け鍙犲姞锛岃鐢ㄦ埛濉簡涓诲浘鍗寸湅涓嶅埌鏁堟灉锛沗images.length > 1` 杩樹細**瑕嗙洊**涓诲浘锛岀牬鍧?杈撳叆鍥剧墖鍦板潃鍗冲彲"鐨勫绾?
+- **褰卞搷**锛?
+  - 鐢ㄦ埛浣撻獙锛氬脊绐楃簿绠€锛屽～ URL 鍗虫樉绀?
+  - 鍚戝悗鍏煎锛歚banner.images` 瀛楁鍦?read 鏃?*蹇界暐**锛屼笉鐮村潖鏃ф枃浠?
+  - 浠ｇ爜锛氬噣鍒犻櫎绾?80 琛岋紙setupBannerRotation 69 琛?+ 寮圭獥杞挱 UI 11 琛岋級
 
-- **决策**：`Agents.md` 加载时，AI 必须自动检查并补齐 `.plan/` 记忆模块
-- **原因**：用户希望"只引用 `Agents.md` 一个文件即可启动整个开发体系"，避免每次手动维护 `.plan/`
-- **影响**：`Agents.md` 新增 §10 自举规则章节；版本升至 v1.2.0
-- **新约束**：
-  - 单一入口：用户对话中只需提供 `Agents.md` 路径
-  - 路径推导：AI 自行取同目录下的 `.plan/`
-  - Bootstrap 自检：生成 4 个文件后逐项确认
-  - 跨项目复用：任何新项目放 `Agents.md` 即可启动
+#### D-2026-06-15-02 路 宸ヤ綔鍙伴鍒涘缓涓嶆敞鍏ラ粯璁?columns
 
-### v1.1.0 · 2026-06-15 — 引入 `.plan/` 记忆模块
+- **鍐崇瓥**锛歚findOrCreateFile` 鏂板缓鏂囦欢鏃惰皟鐢?`generateEmptyDashboardMarkdown()`锛堜粎鍚渶灏?frontmatter + `columns: []`锛夛紝涓嶅啀璋冪敤 `generateDefaultMarkdown()`锛沗parseColumnDefs` 鍦?`columns:` 缂哄け鏃惰繑鍥?`[]`
+- **鍘熷洜**锛氱敤鎴峰湪 bug 鍙嶉涓槑纭?鐩存帴鏀规枃浠讹紝鍏朵粬鐨勯兘浼氭竻闄?鈥斺€斾粬鎵嬪姩娓呯┖ `dashboard.md` 閲岀殑 `## H2` 涓?`columns:` 鍚庯紝鎻掍欢鍦ㄤ笅娆′繚瀛樺張鎶婂畠浠?*鍏ㄩ儴澶嶆椿**锛堝洜涓?`parseColumnDefs` fallback 鍒?`DEFAULT_COLUMNS`锛夈€傛枃浠跺簲褰撴槸 source of truth锛屾彃浠朵笉搴旂寽娴?
+- **褰卞搷**锛?
+  - 鐢ㄦ埛浣撻獙锛氶娆℃墦寮€宸ヤ綔鍙版槸绌虹敾甯冿紝鐢ㄦ埛鎸夐渶娣诲姞鍒嗗尯
+  - 鍚戝悗鍏煎锛氭棫鐢ㄦ埛鏂囦欢閲屽凡鏈?`columns:`锛宲arse 璧版甯歌矾寰勶紝**涓?*鍙楀奖鍝?
+  - 浠ｇ爜锛氬噣澧炵害 20 琛岋紙鏂板嚱鏁?+ 娉ㄩ噴锛?
 
-- **决策**：所有 `Plan.md` / `Target.md` 等开发记忆文件统一存放在 `.plan/` 目录
-- **原因**：与运行时文件（`manifest.json` / `main.js` / `src/`）分离，便于版本管理与 AI 上下文加载
-- **影响**：`Agents.md` 中的所有引用路径已从 `Plan.md` 改为 `.plan/Plan.md`
-- **版本**：随 `Agents.md` 同步升至 v1.1.0
+#### D-2026-06-15-03 路 DEFAULT_COLUMNS / generateDefaultMarkdown 淇濈暀涓?deprecated
 
-### v1.1.0 · 2026-06-15 — 优化 Agents.md 角色设定
-
-- **决策**：移除内嵌的英文 Obsidian 官方规范（280+ 行），精简为 400-500 行的角色卡 + 速查手册
-- **原因**：原版内容是 `obsidianmd/sample-plugin` 模板的复制，不是角色设定本身
-- **影响**：若需要查阅官方规范，需通过 Obsidian 官方文档（https://docs.obsidian.md）自行获取
+- **鍐崇瓥**锛氫袱涓嚱鏁颁繚鐣欙紝浣?*涓?*琚鍒涘缓娴佺▼璋冪敤锛汮SDoc 鏍囪 `@deprecated for default-creation since v1.4.8`
+- **鍘熷洜**锛氭湭鏉ュ彲鑳藉姞"鎻掑叆绀轰緥鏁版嵁"鎸夐挳鎴?閲嶇疆宸ヤ綔鍙?鎿嶄綔澶嶇敤杩欎唤 4 鍒嗗尯鏍锋澘銆傚垹闄や細鎹熷け鎵╁睍鐐癸紱淇濈暀浣嗕笉鍐嶆互鐢紝鏄渶灏忎唬浠风殑鏂规
+- **褰卞搷**锛氬鍔犲皯閲?鐪嬬潃鍍忕敤鐫€鍙堟病鐢?鐨勪唬鐮侊紝浣嗕繚鐣欎簡鏈潵 UX 璁捐鐨勭伒娲绘€?
 
 ---
 
-## 技术栈
+### v1.3.0 路 2026-06-15 鈥?寮曞叆 `.plan/PURPOSE.md`
 
-- **语言**：TypeScript（`"strict": true`）
-- **包管理**：npm
-- **构建**：esbuild（`esbuild.config.mjs`）
-- **入口**：`src/main.ts` → `main.js`
-- **Node**：LTS 18+
-- **Lint**：ESLint + `eslint-plugin-obsidianmd`
+- **鍐崇瓥**锛氭柊澧?`PURPOSE.md` 浣滀负 AI 鐞嗚В浜у搧鎰忓浘鐨勫叆鍙ｆ枃浠?
+- **鍘熷洜**锛氱幇鏈夎蹇嗘枃浠讹紙Target / Plan / decisions锛夐兘鏄?椤圭洰灞?鐨勶紝缂哄皯"浜у搧灞?鐨勬剰鍥捐鏄庛€侫I 鍦ㄥ仛鍔熻兘鍐崇瓥鏃堕渶瑕佸厛鐞嗚В"涓轰粈涔堝仛杩欎釜鎻掍欢"鎵嶈兘鍋氬嚭绗﹀悎浜у搧鏂瑰悜鐨勯€夋嫨
+- **褰卞搷**锛?
+  - `.plan/` 浠?4 鏂囦欢鎵╁睍涓?5 鏂囦欢
+  - `Agents.md` 搂0 / 搂10.1 鍚姩娴佺▼鍔犲叆"蹇呰 PURPOSE.md"绾︽潫
+  - 鏈潵 AI 鍔犺浇鍚?*鍏堣 PURPOSE.md** 鍐嶈鍏朵粬鏂囦欢
+- **PURPOSE.md 鍖呭惈**锛?
+  - 涓€鍙ヨ瘽瀹氫綅銆佹牳蹇冮棶棰樸€佺洰鏍囩敤鎴?
+  - 4 涓牳蹇冨樊寮傚寲锛堝惈 1 涓効鏅細鍧楃姸鍥捐鍒掗」鐩潰鏉匡級
+  - 鏄庣‘杈圭晫锛堜笉鏇夸唬浠诲姟/鏁版嵁搴撴彃浠躲€佷笉涓庢牳蹇冩彃浠舵姠鍔熻兘銆佸彲璋冪敤 Templater锛?
+  - 鏁翠綋妗嗘灦锛堝叆鍙?鏁版嵁娴?鏍稿績妯″潡/鎻掍欢鍏崇郴锛?
+  - 8 涓潪鐩爣 + 4 鏉℃垚鍔熸爣鍑?
 
-## 项目结构
+### v1.2.0 路 2026-06-15 鈥?寮曞叆 Agents.md 鑷妇瑙勫垯
+
+- **鍐崇瓥**锛歚Agents.md` 鍔犺浇鏃讹紝AI 蹇呴』鑷姩妫€鏌ュ苟琛ラ綈 `.plan/` 璁板繂妯″潡
+- **鍘熷洜**锛氱敤鎴峰笇鏈?鍙紩鐢?`Agents.md` 涓€涓枃浠跺嵆鍙惎鍔ㄦ暣涓紑鍙戜綋绯?锛岄伩鍏嶆瘡娆℃墜鍔ㄧ淮鎶?`.plan/`
+- **褰卞搷**锛歚Agents.md` 鏂板 搂10 鑷妇瑙勫垯绔犺妭锛涚増鏈崌鑷?v1.2.0
+- **鏂扮害鏉?*锛?
+  - 鍗曚竴鍏ュ彛锛氱敤鎴峰璇濅腑鍙渶鎻愪緵 `Agents.md` 璺緞
+  - 璺緞鎺ㄥ锛欰I 鑷鍙栧悓鐩綍涓嬬殑 `.plan/`
+  - Bootstrap 鑷锛氱敓鎴?4 涓枃浠跺悗閫愰」纭
+  - 璺ㄩ」鐩鐢細浠讳綍鏂伴」鐩斁 `Agents.md` 鍗冲彲鍚姩
+
+### v1.1.0 路 2026-06-15 鈥?寮曞叆 `.plan/` 璁板繂妯″潡
+
+- **鍐崇瓥**锛氭墍鏈?`Plan.md` / `Target.md` 绛夊紑鍙戣蹇嗘枃浠剁粺涓€瀛樻斁鍦?`.plan/` 鐩綍
+- **鍘熷洜**锛氫笌杩愯鏃舵枃浠讹紙`manifest.json` / `main.js` / `src/`锛夊垎绂伙紝渚夸簬鐗堟湰绠＄悊涓?AI 涓婁笅鏂囧姞杞?
+- **褰卞搷**锛歚Agents.md` 涓殑鎵€鏈夊紩鐢ㄨ矾寰勫凡浠?`Plan.md` 鏀逛负 `.plan/Plan.md`
+- **鐗堟湰**锛氶殢 `Agents.md` 鍚屾鍗囪嚦 v1.1.0
+
+### v1.1.0 路 2026-06-15 鈥?浼樺寲 Agents.md 瑙掕壊璁惧畾
+
+- **鍐崇瓥**锛氱Щ闄ゅ唴宓岀殑鑻辨枃 Obsidian 瀹樻柟瑙勮寖锛?80+ 琛岋級锛岀簿绠€涓?400-500 琛岀殑瑙掕壊鍗?+ 閫熸煡鎵嬪唽
+- **鍘熷洜**锛氬師鐗堝唴瀹规槸 `obsidianmd/sample-plugin` 妯℃澘鐨勫鍒讹紝涓嶆槸瑙掕壊璁惧畾鏈韩
+- **褰卞搷**锛氳嫢闇€瑕佹煡闃呭畼鏂硅鑼冿紝闇€閫氳繃 Obsidian 瀹樻柟鏂囨。锛坔ttps://docs.obsidian.md锛夎嚜琛岃幏鍙?
+
+---
+
+## 鎶€鏈爤
+
+- **璇█**锛歍ypeScript锛坄"strict": true`锛?
+- **鍖呯鐞?*锛歯pm
+- **鏋勫缓**锛歟sbuild锛坄esbuild.config.mjs`锛?
+- **鍏ュ彛**锛歚src/main.ts` 鈫?`main.js`
+- **Node**锛歀TS 18+
+- **Lint**锛欵SLint + `eslint-plugin-obsidianmd`
+
+## 椤圭洰缁撴瀯
 
 ```
 apex-dashboard/
-├── Agents.md              # 角色设定（本仓库专属）
-├── .plan/                 # 记忆模块
-│   ├── README.md
-│   ├── Target.md
-│   ├── Plan.md
-│   └── decisions.md
-├── manifest.json
-├── package.json
-├── tsconfig.json
-├── esbuild.config.mjs
-├── .eslintrc.js
-├── src/                   # 源码（按功能拆模块）
-├── styles.css
-├── README.md              # 英文
-├── README_ZH.md           # 中文
-├── CHANGELOG.md
-└── versions.json
+鈹溾攢鈹€ Agents.md              # 瑙掕壊璁惧畾锛堟湰浠撳簱涓撳睘锛?
+鈹溾攢鈹€ .plan/                 # 璁板繂妯″潡
+鈹?  鈹溾攢鈹€ README.md
+鈹?  鈹溾攢鈹€ Target.md
+鈹?  鈹溾攢鈹€ Plan.md
+鈹?  鈹斺攢鈹€ decisions.md
+鈹溾攢鈹€ manifest.json
+鈹溾攢鈹€ package.json
+鈹溾攢鈹€ tsconfig.json
+鈹溾攢鈹€ esbuild.config.mjs
+鈹溾攢鈹€ .eslintrc.js
+鈹溾攢鈹€ src/                   # 婧愮爜锛堟寜鍔熻兘鎷嗘ā鍧楋級
+鈹溾攢鈹€ styles.css
+鈹溾攢鈹€ README.md              # 鑻辨枃
+鈹溾攢鈹€ README_ZH.md           # 涓枃
+鈹溾攢鈹€ CHANGELOG.md
+鈹斺攢鈹€ versions.json
 ```
 
-## 绝不能做（红线）
+## 缁濅笉鑳藉仛锛堢孩绾匡級
 
-- 手动创建、读取、修改、覆盖 `main.js`（编译产物）
-- 使用 `any` 类型
-- 裸写 `.then()` 链（必须 `async/await`）
-- 直接 `app.xxx.on(...)` 而不用 `this.registerEvent(...)` 包装
-- 用 `fs` / `localStorage` / `document.createElement` 替代 Obsidian API
-- 跳过 `.plan/Target.md` 或 `.plan/Plan.md` 存档
-- 单文件超过 500 行不拆分
-- 修改插件 `id`（一旦发布即为稳定 API）
-- 引入网络请求 / 云服务而不明示用户并提供 opt-in
+- 鎵嬪姩鍒涘缓銆佽鍙栥€佷慨鏀广€佽鐩?`main.js`锛堢紪璇戜骇鐗╋級
+- 浣跨敤 `any` 绫诲瀷
+- 瑁稿啓 `.then()` 閾撅紙蹇呴』 `async/await`锛?
+- 鐩存帴 `app.xxx.on(...)` 鑰屼笉鐢?`this.registerEvent(...)` 鍖呰
+- 鐢?`fs` / `localStorage` / `document.createElement` 鏇夸唬 Obsidian API
+- 璺宠繃 `.plan/Target.md` 鎴?`.plan/Plan.md` 瀛樻。
+- 鍗曟枃浠惰秴杩?500 琛屼笉鎷嗗垎
+- 淇敼鎻掍欢 `id`锛堜竴鏃﹀彂甯冨嵆涓虹ǔ瀹?API锛?
+- 寮曞叆缃戠粶璇锋眰 / 浜戞湇鍔¤€屼笉鏄庣ず鐢ㄦ埛骞舵彁渚?opt-in
 
 ---
 
-## 版本历史
+## 鐗堟湰鍘嗗彶
 
-| 版本       | 日期       | 变更摘要                                                                      |
+| 鐗堟湰       | 鏃ユ湡       | 鍙樻洿鎽樿                                                                      |
 | ---------- | ---------- | ----------------------------------------------------------------------------- |
-| **v1.3.0** | 2026-06-15 | 新增 `.plan/PURPOSE.md` 作为产品意图入口文件；`.plan/` 从 4 文件扩展为 5 文件 |
-| **v1.2.0** | 2026-06-15 | 新增 Agents.md 自举规则：加载时 AI 自动检查/生成 `.plan/`                     |
-| **v1.1.0** | 2026-06-15 | 新增版本字段；与 `Agents.md` 同步升至 v1.1.0；决策日志条目全部携带版本号      |
-| v1.0.0     | —          | 初版（含技术栈 / 项目结构 / 红线）                                            |
+| **v1.3.0** | 2026-06-15 | 鏂板 `.plan/PURPOSE.md` 浣滀负浜у搧鎰忓浘鍏ュ彛鏂囦欢锛沗.plan/` 浠?4 鏂囦欢鎵╁睍涓?5 鏂囦欢 |
+| **v1.2.0** | 2026-06-15 | 鏂板 Agents.md 鑷妇瑙勫垯锛氬姞杞芥椂 AI 鑷姩妫€鏌?鐢熸垚 `.plan/`                     |
+| **v1.1.0** | 2026-06-15 | 鏂板鐗堟湰瀛楁锛涗笌 `Agents.md` 鍚屾鍗囪嚦 v1.1.0锛涘喅绛栨棩蹇楁潯鐩叏閮ㄦ惡甯︾増鏈彿      |
+| v1.0.0     | 鈥?         | 鍒濈増锛堝惈鎶€鏈爤 / 椤圭洰缁撴瀯 / 绾㈢嚎锛?                                           |
+

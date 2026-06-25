@@ -20,6 +20,11 @@ import {
   serializeInto,
   migrateCardsForSectionType,
 } from "./parser";
+import {
+  buildMemoLinkedBody,
+  buildMemoNoteContent,
+  buildMemoNotePath,
+} from "./memo-convert";
 
 export const SIDEBAR_VIEW_TYPE = "peingxious-dashboard-sidebar";
 
@@ -555,12 +560,7 @@ export class SidebarView extends ItemView {
         // default new-file location. Mirrors the main/embedded
         // view implementations; the original card stays put.
         try {
-          let baseName = card.title || "Untitled";
-          baseName = baseName.replace(/\[\[|\]\]/g, "").trim();
-          baseName = baseName.split("/").pop() ?? baseName;
-          baseName = baseName.split("\\").pop() ?? baseName;
-          baseName = baseName.replace(/[<>:"|?*\x00-\x1F]/g, "").trim();
-          if (!baseName) baseName = "Untitled";
+          const baseName = buildMemoNotePath(card.title || "Untitled");
           let targetPath: string;
           try {
             targetPath =
@@ -571,8 +571,14 @@ export class SidebarView extends ItemView {
           } catch {
             targetPath = `${baseName}.md`;
           }
-          const content = `[[${baseName}]]\n`;
+          const content = buildMemoNoteContent(card);
           await this.app.vault.create(targetPath, content);
+          const found = findCard(card.id);
+          if (found) {
+            found.card.body = buildMemoLinkedBody(targetPath);
+            found.card.blockquote = "";
+            await saveAndRefresh();
+          }
           new Notice(t("memo.converted", { path: targetPath }));
         } catch (e) {
           new Notice(

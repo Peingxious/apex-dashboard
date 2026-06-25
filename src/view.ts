@@ -52,6 +52,11 @@ import { ReadingService } from "./reading-service";
 import { ReminderNoticeModal } from "./reminder-notice";
 import { t } from "./i18n";
 import { parse, pathToWikiLink, migrateCardsForSectionType } from "./parser";
+import {
+  buildMemoLinkedBody,
+  buildMemoNoteContent,
+  buildMemoNotePath,
+} from "./memo-convert";
 import { RafCoalescer } from "./utils/raf-coalescer";
 import { MOBILE_BREAKPOINT_PX, NAV_DBLCLICK_THRESHOLD_MS } from "./constants";
 import { reportError } from "./utils/report";
@@ -1214,12 +1219,7 @@ export class DashboardView extends ItemView {
         // Same implementation as the main-dashboard variant — the
         // embedded view still uses the same Obsidian app / vault.
         try {
-          let baseName = card.title || "Untitled";
-          baseName = baseName.replace(/\[\[|\]\]/g, "").trim();
-          baseName = baseName.split("/").pop() ?? baseName;
-          baseName = baseName.split("\\").pop() ?? baseName;
-          baseName = baseName.replace(/[<>:"|?*\x00-\x1F]/g, "").trim();
-          if (!baseName) baseName = "Untitled";
+          const baseName = buildMemoNotePath(card.title || "Untitled");
           let targetPath: string;
           try {
             targetPath =
@@ -1230,8 +1230,14 @@ export class DashboardView extends ItemView {
           } catch {
             targetPath = `${baseName}.md`;
           }
-          const content = `[[${baseName}]]\n`;
+          const content = buildMemoNoteContent(card);
           await this.app.vault.create(targetPath, content);
+          const found = self.findEmbeddedCard(card.id);
+          if (found) {
+            found.card.body = buildMemoLinkedBody(targetPath);
+            found.card.blockquote = "";
+            await self.saveEmbeddedAndRefresh();
+          }
           new Notice(t("memo.converted", { path: targetPath }));
         } catch (e) {
           new Notice(
@@ -2369,17 +2375,7 @@ export class DashboardView extends ItemView {
         this.sync.updateProjectCover(card.id, imagePath),
       onMemoConvertToNote: async (card: DashboardCard) => {
         try {
-          // Sanitize title for filename
-          let baseName = card.title || "Untitled";
-          // Strip wikilink syntax
-          baseName = baseName.replace(/\[\[|\]\]/g, "").trim();
-          // Remove path separators
-          baseName = baseName.split("/").pop() ?? baseName;
-          baseName = baseName.split("\\").pop() ?? baseName;
-          // Remove invalid filename chars
-          baseName = baseName.replace(/[<>:"|?*\x00-\x1F]/g, "").trim();
-          if (!baseName) baseName = "Untitled";
-          // Use Obsidian's default new file location
+          const baseName = buildMemoNotePath(card.title || "Untitled");
           let targetPath: string;
           try {
             targetPath =
@@ -2390,9 +2386,12 @@ export class DashboardView extends ItemView {
           } catch {
             targetPath = `${baseName}.md`;
           }
-          // Build content: a single self-referencing wikilink
-          const content = `[[${baseName}]]\n`;
+          const content = buildMemoNoteContent(card);
           await this.app.vault.create(targetPath, content);
+          await this.sync.updateMemoCard(card.id, {
+            body: buildMemoLinkedBody(targetPath),
+            blockquote: "",
+          });
           new Notice(t("memo.converted", { path: targetPath }));
         } catch (e) {
           new Notice(

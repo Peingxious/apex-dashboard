@@ -1,222 +1,222 @@
-# Target.md — 需求存档
+﻿# Target.md 鈥?闇€姹傚瓨妗?
 
-> 本文件由 Agent 在「阶段 0：需求问询」结束后写入。
-> 任何需求变更必须同步更新本文件，并在 `.plan/decisions.md` 留痕。
+> 鏈枃浠剁敱 Agent 鍦ㄣ€岄樁娈?0锛氶渶姹傞棶璇€嶇粨鏉熷悗鍐欏叆銆?
+> 浠讳綍闇€姹傚彉鏇村繀椤诲悓姝ユ洿鏂版湰鏂囦欢锛屽苟鍦?`.plan/decisions.md` 鐣欑棔銆?
 
-## 当前需求
+## 褰撳墠闇€姹?
 
-**插件名称**：apex-dashboard
-**当前阶段**：已上线维护期（v1.4.7）
-**核心功能**：Obsidian 仪表盘与侧边栏聚合视图
+**鎻掍欢鍚嶇О**锛歛pex-dashboard
+**褰撳墠闃舵**锛氬凡涓婄嚎缁存姢鏈燂紙v1.4.12锛?
+**鏍稿績鍔熻兘**锛歄bsidian 浠〃鐩樹笌渚ц竟鏍忚仛鍚堣鍥?
 
-## 标准格式
+## 鏍囧噯鏍煎紡
 
-每次新增/调整功能时，按以下格式记录：
+姣忔鏂板/璋冩暣鍔熻兘鏃讹紝鎸変互涓嬫牸寮忚褰曪細
 
 ```
-【触发方式】命令面板 / 功能区按钮 / 事件监听
-【核心流程】步骤1 → 步骤2 → 步骤3
-【数据存储】是/否，存储内容：...
-【UI 组件】Settings Tab / Modal / Leaf View / 无
+銆愯Е鍙戞柟寮忋€戝懡浠ら潰鏉?/ 鍔熻兘鍖烘寜閽?/ 浜嬩欢鐩戝惉
+銆愭牳蹇冩祦绋嬨€戞楠? 鈫?姝ラ2 鈫?姝ラ3
+銆愭暟鎹瓨鍌ㄣ€戞槸/鍚︼紝瀛樺偍鍐呭锛?..
+銆怳I 缁勪欢銆慡ettings Tab / Modal / Leaf View / 鏃?
 ```
 
-## 功能列表
+## 鍔熻兘鍒楄〃
 
-| ID    | 标题                                                | 类别 | 状态             |
+| ID    | 鏍囬                                                | 绫诲埆 | 鐘舵€?            |
 | ----- | --------------------------------------------------- | ---- | ---------------- |
-| F-001 | 玻璃拟态仪表盘（6 种分区）                          | 核心 | 稳定             |
-| F-002 | 笔记 → 仪表盘一键转换                               | 核心 | 稳定             |
-| F-003 | TodoPlus 镜像分区                                   | 核心 | 1.4.0~1.4.6 完成 |
-| F-004 | 12 种内置风格预设                                   | 视觉 | 稳定             |
-| F-005 | 侧边栏小组件（天气/番茄钟/热力图/阅读/倒计时/农历） | 扩展 | 稳定             |
-| F-006 | Ctrl+Z 撤销                                         | 体验 | 稳定             |
-| F-007 | 任务提醒                                            | 扩展 | 稳定             |
+| F-001 | 鐜荤拑鎷熸€佷华琛ㄧ洏锛? 绉嶅垎鍖猴級                          | 鏍稿績 | 绋冲畾             |
+| F-002 | 绗旇 鈫?浠〃鐩樹竴閿浆鎹?                              | 鏍稿績 | 绋冲畾             |
+| F-003 | TodoPlus 闀滃儚鍒嗗尯                                   | 鏍稿績 | 1.4.0~1.4.6 瀹屾垚 |
+| F-004 | 12 绉嶅唴缃鏍奸璁?                                  | 瑙嗚 | 绋冲畾             |
+| F-005 | 渚ц竟鏍忓皬缁勪欢锛堝ぉ姘?鐣寗閽?鐑姏鍥?闃呰/鍊掕鏃?鍐滃巻锛?| 鎵╁睍 | 绋冲畾             |
+| F-006 | Ctrl+Z 鎾ら攢                                         | 浣撻獙 | 绋冲畾             |
+| F-007 | 浠诲姟鎻愰啋                                            | 鎵╁睍 | 绋冲畾             |
 
-## 当前问题（v1.4.7 → v1.4.8 修复）
+## 褰撳墠闂锛坴1.4.7 鈫?v1.4.8 淇锛?
 
-### BUG-003a · 切换分区类型时工作台不刷新
+### BUG-003a 路 鍒囨崲鍒嗗尯绫诲瀷鏃跺伐浣滃彴涓嶅埛鏂?
 
-**复现**：
+**澶嶇幇**锛?
 
-1. 打开工作台 → 任意分区点"切换类型"按钮（📋/📊/🌤/📚 之类的下拉）
-2. 选一个新类型（比如从 `memo` 切到 `todo`）→ 工作台视图**没有**立即按新类型渲染
+1. 鎵撳紑宸ヤ綔鍙?鈫?浠绘剰鍒嗗尯鐐?鍒囨崲绫诲瀷"鎸夐挳锛堭煋?馃搳/馃尋/馃摎 涔嬬被鐨勪笅鎷夛級
+2. 閫変竴涓柊绫诲瀷锛堟瘮濡備粠 `memo` 鍒囧埌 `todo`锛夆啋 宸ヤ綔鍙拌鍥?*娌℃湁**绔嬪嵆鎸夋柊绫诲瀷娓叉煋
 
-**预期**：
+**棰勬湡**锛?
 
-- 选完新类型后**立即**（同帧内）按新类型重新渲染卡片样式
-- frontmatter 里 `columns[i].type` 同步更新为新值
-- 不需要手动关掉工作台重开
+- 閫夊畬鏂扮被鍨嬪悗**绔嬪嵆**锛堝悓甯у唴锛夋寜鏂扮被鍨嬮噸鏂版覆鏌撳崱鐗囨牱寮?
+- frontmatter 閲?`columns[i].type` 鍚屾鏇存柊涓烘柊鍊?
+- 涓嶉渶瑕佹墜鍔ㄥ叧鎺夊伐浣滃彴閲嶅紑
 
-**实际**：
+**瀹為檯**锛?
 
-- 数据写到了磁盘（`columns[i].type` 已变）
-- 但视图没刷新——需要切到别的 tab 再切回来，或者重启 Obsidian
+- 鏁版嵁鍐欏埌浜嗙鐩橈紙`columns[i].type` 宸插彉锛?
+- 浣嗚鍥炬病鍒锋柊鈥斺€旈渶瑕佸垏鍒板埆鐨?tab 鍐嶅垏鍥炴潵锛屾垨鑰呴噸鍚?Obsidian
 
-**根因**（**待 5.4 手动验证后补全**）：
+**鏍瑰洜**锛?*寰?5.4 鎵嬪姩楠岃瘉鍚庤ˉ鍏?*锛夛細
 
-- 当前 `sync.setColumnSectionType` 走 `writeToDisk` → `serializeInto` 全量重写路径
-- 整文件重写后 vault 触发 'modify' 事件 → `registerVaultListeners` 的 modify 监听器只刷新了 library 段，**没有**触发 view 全量 re-render
-- `notifyCallbacks` 虽然同步触发 `view.requestRender(newData)`，但可能与 `renderCoalescer` 之前的 RAF 调度合并/被覆盖
+- 褰撳墠 `sync.setColumnSectionType` 璧?`writeToDisk` 鈫?`serializeInto` 鍏ㄩ噺閲嶅啓璺緞
+- 鏁存枃浠堕噸鍐欏悗 vault 瑙﹀彂 'modify' 浜嬩欢 鈫?`registerVaultListeners` 鐨?modify 鐩戝惉鍣ㄥ彧鍒锋柊浜?library 娈碉紝**娌℃湁**瑙﹀彂 view 鍏ㄩ噺 re-render
+- `notifyCallbacks` 铏界劧鍚屾瑙﹀彂 `view.requestRender(newData)`锛屼絾鍙兘涓?`renderCoalescer` 涔嬪墠鐨?RAF 璋冨害鍚堝苟/琚鐩?
 
-**验收标准**：
+**楠屾敹鏍囧噯**锛?
 
-- 切换分区类型后**同帧**按新类型渲染（无需手动重开）
-- frontmatter 中 `columns[i].type` 同步更新
-- `writeToDisk` 的 banner size 保护逻辑不被 columns-only 路径触发
-
----
-
-### BUG-003b · 每次保存都强制写 banner 块（哪怕用户从未编辑 banner）
-
-**复现**：
-
-1. 删除 `dashboard.md` → 打开工作台 → 自动创建一个**最小骨架**（v1.4.8 修过的样子）
-2. 在 settings 里切换任意开关、添加一个分区、添加一张卡片
-3. 打开 `dashboard.md` → 发现文件**总是**带一个 `banner:` 行
-
-**预期**：
-
-- 用户**从未**编辑 banner → 文件里**不**应有 `banner:` 块
-- 用户**编辑过** banner（填了图片地址）→ 文件里**才**有 `banner:` 块
-- banner 块按"用户是否操作过"为写入条件
-
-**实际**：
-
-- `parser.ts:296` 写死 `lines.push("banner:")`，**无条件**输出 banner 行
-- 哪怕 `data.banner.image === ""`，文件也会出现 `banner:\n` 这一行
-
-**根因**：
-
-- `serialize()` 是"全量重写"，**所有**已知 frontmatter 字段都被无脑输出
-- 没有"用户是否操作过 banner"的状态位
-
-**验收标准**：
-
-- `parser.ts:serialize` **仅当** `data.banner.image` 非空时才输出 `banner:` 块
-- `data.banner.image === ""` 时 → 序列化结果中**不**含 `banner:` 字符串
-- 老用户已有 banner 块的 `dashboard.md` 仍能正常解析与显示（`parseBanner` 行为不变）
+- 鍒囨崲鍒嗗尯绫诲瀷鍚?*鍚屽抚**鎸夋柊绫诲瀷娓叉煋锛堟棤闇€鎵嬪姩閲嶅紑锛?
+- frontmatter 涓?`columns[i].type` 鍚屾鏇存柊
+- `writeToDisk` 鐨?banner size 淇濇姢閫昏緫涓嶈 columns-only 璺緞瑙﹀彂
 
 ---
 
-### BUG-003c · 默认应该只控制 columns，可以用 API 直接调整
+### BUG-003b 路 姣忔淇濆瓨閮藉己鍒跺啓 banner 鍧楋紙鍝€曠敤鎴蜂粠鏈紪杈?banner锛?
 
-**复现**：
+**澶嶇幇**锛?
 
-1. 切分区类型（BUG-003a 同一动作）
-2. 顺带把 `dashboard.md` 里用户手写的 `cssclass: my-dashboard` 注释行 / `tags: [x]` 字段**顺序重排**或**重写**了
+1. 鍒犻櫎 `dashboard.md` 鈫?鎵撳紑宸ヤ綔鍙?鈫?鑷姩鍒涘缓涓€涓?*鏈€灏忛鏋?*锛坴1.4.8 淇繃鐨勬牱瀛愶級
+2. 鍦?settings 閲屽垏鎹换鎰忓紑鍏炽€佹坊鍔犱竴涓垎鍖恒€佹坊鍔犱竴寮犲崱鐗?
+3. 鎵撳紑 `dashboard.md` 鈫?鍙戠幇鏂囦欢**鎬绘槸**甯︿竴涓?`banner:` 琛?
 
-**预期**：
+**棰勬湡**锛?
 
-- 默认（即不动 banner、不动 quickActions 等其他字段） → 插件**只**触碰 `columns:` 字段
-- 用 `app.fileManager.processFrontMatter(file, fm => { fm.columns = newCols })` 直接 mutate frontmatter
-- banner / quickActions / extra frontmatter / 注释 / 空行**完全不动**
+- 鐢ㄦ埛**浠庢湭**缂栬緫 banner 鈫?鏂囦欢閲?*涓?*搴旀湁 `banner:` 鍧?
+- 鐢ㄦ埛**缂栬緫杩?* banner锛堝～浜嗗浘鐗囧湴鍧€锛夆啋 鏂囦欢閲?*鎵?*鏈?`banner:` 鍧?
+- banner 鍧楁寜"鐢ㄦ埛鏄惁鎿嶄綔杩?涓哄啓鍏ユ潯浠?
 
-**实际**：
+**瀹為檯**锛?
 
-- 当前 `writeToDisk` → `serializeInto` → `serialize` 是**全量重写**整文件
-- 即使用户只切换了分区类型，banner / extra frontmatter / 注释顺序都可能被改
+- `parser.ts:296` 鍐欐 `lines.push("banner:")`锛?*鏃犳潯浠?*杈撳嚭 banner 琛?
+- 鍝€?`data.banner.image === ""`锛屾枃浠朵篃浼氬嚭鐜?`banner:\n` 杩欎竴琛?
 
-**根因**：
+**鏍瑰洜**锛?
 
-- `sync.setColumnSectionType` 复用了通用 `writeToDisk` 路径
-- 没有"按字段粒度写入"的精细化路径
+- `serialize()` 鏄?鍏ㄩ噺閲嶅啓"锛?*鎵€鏈?*宸茬煡 frontmatter 瀛楁閮借鏃犺剳杈撳嚭
+- 娌℃湁"鐢ㄦ埛鏄惁鎿嶄綔杩?banner"鐨勭姸鎬佷綅
 
-**验收标准**：
+**楠屾敹鏍囧噯**锛?
 
-- 新增 `SyncEngine.updateFrontmatterField(key, mutate)` 方法，内部走 `app.fileManager.processFrontMatter` API
-- `setColumnSectionType` / `setColumnArchiveCompleted` 改走**新路径**（只动 `columns:`）
-- 切完类型后 `dashboard.md` 中 banner 块、extra frontmatter、注释顺序**完全不变**（byte-identical，除 `columns:` 字段外）
-- 其他字段（卡片增删改、banner 编辑、quickActions 增删等）保留**原**全量路径
-- 移动端兼容：`processFrontMatter` 在 mobile 端正常（依赖 Obsidian 0.15+ API）
-
----
-
-## 非功能需求
-
-- 最低 Obsidian 版本：`0.15.0`
-- 是否提交社区市场：未计划
-- 是否支持移动端：跟随 Obsidian 移动端能力
-
-### BUG-001 · banner 弹窗要"普通图片地址"就行，不要轮播图
-
-**复现**：
-
-1. 打开工作台 → 点击 Banner 上的"编辑"按钮
-2. 弹窗里出现**两个区**：① "Background image path (vault relative)" ② "Background Images" 轮播图列表
-3. 在主图字段填一个 URL（`https://i.pravatar.cc/600`）保存 → banner 没按预期显示
-
-**预期**：
-
-- 弹窗**只**有一个图片地址输入框，**没有**轮播图列表
-- 填 URL 即可，banner 立即按主图样式显示
-- banner **始终是单图**模式，无轮播逻辑
-
-**实际**：
-
-- 弹窗里仍然有"Background Images"轮播图列表
-- i18n key 缺失，弹窗里多处显示成字面量 `"banner.image"`、`"banner.imageDesc"`、`"banner.imagePlaceholder"`、`"banner.rotationImages"`、`"banner.addImage"`、`"banner.save"`、`"banner.edit"` 等
-- 用户填写了主图但因 UI 干扰和 i18n 显示异常，感觉"被改成其他的"
-- 后端 `view.ts:setupBannerRotation` 还在跑——`images.length > 1` 时会**覆盖**主图，破坏"输入图片地址即可"的契约
-
-**根因**：
-
-1. `src/banner.ts:BannerEditModal` 渲染了轮播图列表 UI（`renderImagesList` / `addImageBtn`），与用户"banner 就一张图"的预期冲突
-2. `src/banner.ts` 引用了**未在 `i18n.ts` 注册**的 7 个 i18n key
-3. `src/view.ts:setupBannerRotation` 整套轮播机制对单图 banner 是冗余的，且会"覆盖主图"——应整体下线
-4. `src/parser.ts:serialize` 仍然写 `banner.images` 块，应同步下线
-
-**验收标准**：
-
-- Banner 编辑弹窗**只**含一个图片地址输入框（label/placeholder 正确显示，不再是字面量 key）
-- `banner.images` 字段停止写入磁盘；`banner.images` 数据保留为"读时忽略"，避免破坏现有用户已写入的文件
-- `view.ts:setupBannerRotation` 整段删除；`images.length > 1` 不再覆盖主图
-- `parser.ts:serialize` 不再输出 `images:` 块
-- 单图 URL（vault 相对路径或 https URL）填进去就正常显示，与现状一致
+- `parser.ts:serialize` **浠呭綋** `data.banner.image` 闈炵┖鏃舵墠杈撳嚭 `banner:` 鍧?
+- `data.banner.image === ""` 鏃?鈫?搴忓垪鍖栫粨鏋滀腑**涓?*鍚?`banner:` 瀛楃涓?
+- 鑰佺敤鎴峰凡鏈?banner 鍧楃殑 `dashboard.md` 浠嶈兘姝ｅ父瑙ｆ瀽涓庢樉绀猴紙`parseBanner` 琛屼负涓嶅彉锛?
 
 ---
 
-### BUG-002 · 工作台首次打开时强制写入 4 个默认分区，且二次保存会"重置"用户清空
+### BUG-003c 路 榛樿搴旇鍙帶鍒?columns锛屽彲浠ョ敤 API 鐩存帴璋冩暣
 
-**复现**：
+**澶嶇幇**锛?
 
-1. 删除 vault 中 `dashboard.md`（或首次安装时）
-2. 打开工作台 → 自动创建一个 `dashboard.md`
-3. 文件里被自动写入 **Memo / Todo / Projects / Library 4 个默认分区**，每分区还有示例卡片
-4. 用户手动编辑 `dashboard.md`，删掉所有 `## H2`、删掉 `columns:` 块
-5. 重新打开工作台 → 4 个默认分区**又回来了**（因为 `parseColumnDefs` 看到 `columns:` 不存在就 fallback 到 `DEFAULT_COLUMNS`）
+1. 鍒囧垎鍖虹被鍨嬶紙BUG-003a 鍚屼竴鍔ㄤ綔锛?
+2. 椤哄甫鎶?`dashboard.md` 閲岀敤鎴锋墜鍐欑殑 `cssclass: my-dashboard` 娉ㄩ噴琛?/ `tags: [x]` 瀛楁**椤哄簭閲嶆帓**鎴?*閲嶅啓**浜?
 
-**预期**：
+**棰勬湡**锛?
 
-- 首次打开工作台 → 文件是**最小骨架**（仅 frontmatter，**无**任何默认分区）
-- 删光文件里所有内容后再打开 → 工作台是**空**的（不是默认分区又出现）
-- 用户在 settings 设了默认 columns 才用设定的，否则按文件里写的内容渲染
+- 榛樿锛堝嵆涓嶅姩 banner銆佷笉鍔?quickActions 绛夊叾浠栧瓧娈碉級 鈫?鎻掍欢**鍙?*瑙︾ `columns:` 瀛楁
+- 鐢?`app.fileManager.processFrontMatter(file, fm => { fm.columns = newCols })` 鐩存帴 mutate frontmatter
+- banner / quickActions / extra frontmatter / 娉ㄩ噴 / 绌鸿**瀹屽叏涓嶅姩**
 
-**根因**：
+**瀹為檯**锛?
 
-1. `parser.ts:30-35` 硬编码 4 个 `DEFAULT_COLUMNS`
-2. `parser.ts:941` `parseColumnDefs` 在 `columns:` 缺失时**返回 `DEFAULT_COLUMNS` 而不是 `[]`**
-3. `parser.ts:583+` `generateDefaultMarkdown()` 强制填了 4 个默认分区 + 示例卡片
-4. `sync.ts:1413-1416` `findOrCreateFile` 新建文件时调用 `generateDefaultMarkdown()`
+- 褰撳墠 `writeToDisk` 鈫?`serializeInto` 鈫?`serialize` 鏄?*鍏ㄩ噺閲嶅啓**鏁存枃浠?
+- 鍗充娇鐢ㄦ埛鍙垏鎹簡鍒嗗尯绫诲瀷锛宐anner / extra frontmatter / 娉ㄩ噴椤哄簭閮藉彲鑳借鏀?
 
-**验收标准**：
+**鏍瑰洜**锛?
 
-- 首次安装 / 删掉 dashboard.md 后打开工作台 → 写入的 `dashboard.md` **只**含 `banner:` 空块 + `columns: []` 空块，**无**任何默认分区与示例卡片
-- 用户手动清空 `dashboard.md` 的所有 `## H2` 与 `columns:` 块后再打开 → 工作台显示**空**状态，文件**不会被插件改回默认**
-- 现有用户的 dashboard 文件不受影响（`columns:` 已有的，parse 走正常路径，不 fallback）
+- `sync.setColumnSectionType` 澶嶇敤浜嗛€氱敤 `writeToDisk` 璺緞
+- 娌℃湁"鎸夊瓧娈电矑搴﹀啓鍏?鐨勭簿缁嗗寲璺緞
+
+**楠屾敹鏍囧噯**锛?
+
+- 鏂板 `SyncEngine.updateFrontmatterField(key, mutate)` 鏂规硶锛屽唴閮ㄨ蛋 `app.fileManager.processFrontMatter` API
+- `setColumnSectionType` / `setColumnArchiveCompleted` 鏀硅蛋**鏂拌矾寰?*锛堝彧鍔?`columns:`锛?
+- 鍒囧畬绫诲瀷鍚?`dashboard.md` 涓?banner 鍧椼€乪xtra frontmatter銆佹敞閲婇『搴?*瀹屽叏涓嶅彉**锛坆yte-identical锛岄櫎 `columns:` 瀛楁澶栵級
+- 鍏朵粬瀛楁锛堝崱鐗囧鍒犳敼銆乥anner 缂栬緫銆乹uickActions 澧炲垹绛夛級淇濈暀**鍘?*鍏ㄩ噺璺緞
+- 绉诲姩绔吋瀹癸細`processFrontMatter` 鍦?mobile 绔甯革紙渚濊禆 Obsidian 0.15+ API锛?
 
 ---
 
-## 非功能需求
+## 闈炲姛鑳介渶姹?
 
-- 最低 Obsidian 版本：`0.15.0`
-- 是否提交社区市场：未计划
-- 是否支持移动端：跟随 Obsidian 移动端能力
+- 鏈€浣?Obsidian 鐗堟湰锛歚0.15.0`
+- 鏄惁鎻愪氦绀惧尯甯傚満锛氭湭璁″垝
+- 鏄惁鏀寔绉诲姩绔細璺熼殢 Obsidian 绉诲姩绔兘鍔?
 
-## 触发场景映射
+### BUG-001 路 banner 寮圭獥瑕?鏅€氬浘鐗囧湴鍧€"灏辫锛屼笉瑕佽疆鎾浘
 
-| 用户说                    | 流程                                                          |
+**澶嶇幇**锛?
+
+1. 鎵撳紑宸ヤ綔鍙?鈫?鐐瑰嚮 Banner 涓婄殑"缂栬緫"鎸夐挳
+2. 寮圭獥閲屽嚭鐜?*涓や釜鍖?*锛氣憼 "Background image path (vault relative)" 鈶?"Background Images" 杞挱鍥惧垪琛?
+3. 鍦ㄤ富鍥惧瓧娈靛～涓€涓?URL锛坄https://i.pravatar.cc/600`锛変繚瀛?鈫?banner 娌℃寜棰勬湡鏄剧ず
+
+**棰勬湡**锛?
+
+- 寮圭獥**鍙?*鏈変竴涓浘鐗囧湴鍧€杈撳叆妗嗭紝**娌℃湁**杞挱鍥惧垪琛?
+- 濉?URL 鍗冲彲锛宐anner 绔嬪嵆鎸変富鍥炬牱寮忔樉绀?
+- banner **濮嬬粓鏄崟鍥?*妯″紡锛屾棤杞挱閫昏緫
+
+**瀹為檯**锛?
+
+- 寮圭獥閲屼粛鐒舵湁"Background Images"杞挱鍥惧垪琛?
+- i18n key 缂哄け锛屽脊绐楅噷澶氬鏄剧ず鎴愬瓧闈㈤噺 `"banner.image"`銆乣"banner.imageDesc"`銆乣"banner.imagePlaceholder"`銆乣"banner.rotationImages"`銆乣"banner.addImage"`銆乣"banner.save"`銆乣"banner.edit"` 绛?
+- 鐢ㄦ埛濉啓浜嗕富鍥句絾鍥?UI 骞叉壈鍜?i18n 鏄剧ず寮傚父锛屾劅瑙?琚敼鎴愬叾浠栫殑"
+- 鍚庣 `view.ts:setupBannerRotation` 杩樺湪璺戔€斺€擿images.length > 1` 鏃朵細**瑕嗙洊**涓诲浘锛岀牬鍧?杈撳叆鍥剧墖鍦板潃鍗冲彲"鐨勫绾?
+
+**鏍瑰洜**锛?
+
+1. `src/banner.ts:BannerEditModal` 娓叉煋浜嗚疆鎾浘鍒楄〃 UI锛坄renderImagesList` / `addImageBtn`锛夛紝涓庣敤鎴?banner 灏变竴寮犲浘"鐨勯鏈熷啿绐?
+2. `src/banner.ts` 寮曠敤浜?*鏈湪 `i18n.ts` 娉ㄥ唽**鐨?7 涓?i18n key
+3. `src/view.ts:setupBannerRotation` 鏁村杞挱鏈哄埗瀵瑰崟鍥?banner 鏄啑浣欑殑锛屼笖浼?瑕嗙洊涓诲浘"鈥斺€斿簲鏁翠綋涓嬬嚎
+4. `src/parser.ts:serialize` 浠嶇劧鍐?`banner.images` 鍧楋紝搴斿悓姝ヤ笅绾?
+
+**楠屾敹鏍囧噯**锛?
+
+- Banner 缂栬緫寮圭獥**鍙?*鍚竴涓浘鐗囧湴鍧€杈撳叆妗嗭紙label/placeholder 姝ｇ‘鏄剧ず锛屼笉鍐嶆槸瀛楅潰閲?key锛?
+- `banner.images` 瀛楁鍋滄鍐欏叆纾佺洏锛沗banner.images` 鏁版嵁淇濈暀涓?璇绘椂蹇界暐"锛岄伩鍏嶇牬鍧忕幇鏈夌敤鎴峰凡鍐欏叆鐨勬枃浠?
+- `view.ts:setupBannerRotation` 鏁存鍒犻櫎锛沗images.length > 1` 涓嶅啀瑕嗙洊涓诲浘
+- `parser.ts:serialize` 涓嶅啀杈撳嚭 `images:` 鍧?
+- 鍗曞浘 URL锛坴ault 鐩稿璺緞鎴?https URL锛夊～杩涘幓灏辨甯告樉绀猴紝涓庣幇鐘朵竴鑷?
+
+---
+
+### BUG-002 路 宸ヤ綔鍙伴娆℃墦寮€鏃跺己鍒跺啓鍏?4 涓粯璁ゅ垎鍖猴紝涓斾簩娆′繚瀛樹細"閲嶇疆"鐢ㄦ埛娓呯┖
+
+**澶嶇幇**锛?
+
+1. 鍒犻櫎 vault 涓?`dashboard.md`锛堟垨棣栨瀹夎鏃讹級
+2. 鎵撳紑宸ヤ綔鍙?鈫?鑷姩鍒涘缓涓€涓?`dashboard.md`
+3. 鏂囦欢閲岃鑷姩鍐欏叆 **Memo / Todo / Projects / Library 4 涓粯璁ゅ垎鍖?*锛屾瘡鍒嗗尯杩樻湁绀轰緥鍗＄墖
+4. 鐢ㄦ埛鎵嬪姩缂栬緫 `dashboard.md`锛屽垹鎺夋墍鏈?`## H2`銆佸垹鎺?`columns:` 鍧?
+5. 閲嶆柊鎵撳紑宸ヤ綔鍙?鈫?4 涓粯璁ゅ垎鍖?*鍙堝洖鏉ヤ簡**锛堝洜涓?`parseColumnDefs` 鐪嬪埌 `columns:` 涓嶅瓨鍦ㄥ氨 fallback 鍒?`DEFAULT_COLUMNS`锛?
+
+**棰勬湡**锛?
+
+- 棣栨鎵撳紑宸ヤ綔鍙?鈫?鏂囦欢鏄?*鏈€灏忛鏋?*锛堜粎 frontmatter锛?*鏃?*浠讳綍榛樿鍒嗗尯锛?
+- 鍒犲厜鏂囦欢閲屾墍鏈夊唴瀹瑰悗鍐嶆墦寮€ 鈫?宸ヤ綔鍙版槸**绌?*鐨勶紙涓嶆槸榛樿鍒嗗尯鍙堝嚭鐜帮級
+- 鐢ㄦ埛鍦?settings 璁句簡榛樿 columns 鎵嶇敤璁惧畾鐨勶紝鍚﹀垯鎸夋枃浠堕噷鍐欑殑鍐呭娓叉煋
+
+**鏍瑰洜**锛?
+
+1. `parser.ts:30-35` 纭紪鐮?4 涓?`DEFAULT_COLUMNS`
+2. `parser.ts:941` `parseColumnDefs` 鍦?`columns:` 缂哄け鏃?*杩斿洖 `DEFAULT_COLUMNS` 鑰屼笉鏄?`[]`**
+3. `parser.ts:583+` `generateDefaultMarkdown()` 寮哄埗濉簡 4 涓粯璁ゅ垎鍖?+ 绀轰緥鍗＄墖
+4. `sync.ts:1413-1416` `findOrCreateFile` 鏂板缓鏂囦欢鏃惰皟鐢?`generateDefaultMarkdown()`
+
+**楠屾敹鏍囧噯**锛?
+
+- 棣栨瀹夎 / 鍒犳帀 dashboard.md 鍚庢墦寮€宸ヤ綔鍙?鈫?鍐欏叆鐨?`dashboard.md` **鍙?*鍚?`banner:` 绌哄潡 + `columns: []` 绌哄潡锛?*鏃?*浠讳綍榛樿鍒嗗尯涓庣ず渚嬪崱鐗?
+- 鐢ㄦ埛鎵嬪姩娓呯┖ `dashboard.md` 鐨勬墍鏈?`## H2` 涓?`columns:` 鍧楀悗鍐嶆墦寮€ 鈫?宸ヤ綔鍙版樉绀?*绌?*鐘舵€侊紝鏂囦欢**涓嶄細琚彃浠舵敼鍥為粯璁?*
+- 鐜版湁鐢ㄦ埛鐨?dashboard 鏂囦欢涓嶅彈褰卞搷锛坄columns:` 宸叉湁鐨勶紝parse 璧版甯歌矾寰勶紝涓?fallback锛?
+
+---
+
+## 闈炲姛鑳介渶姹?
+
+- 鏈€浣?Obsidian 鐗堟湰锛歚0.15.0`
+- 鏄惁鎻愪氦绀惧尯甯傚満锛氭湭璁″垝
+- 鏄惁鏀寔绉诲姩绔細璺熼殢 Obsidian 绉诲姩绔兘鍔?
+
+## 瑙﹀彂鍦烘櫙鏄犲皠
+
+| 鐢ㄦ埛璇?                   | 娴佺▼                                                          |
 | ------------------------- | ------------------------------------------------------------- |
-| 写一个插件                | 阶段 0 → 1 → 2 → 3                                            |
-| 继续 / 当前进度           | 读 .plan/，简报后等确认                                       |
-| 新增 / 添加 / 修复 / 重构 | 读 .plan/ → 在 Plan.md 加任务 → 确认后执行 → 同步文档与版本号 |
-| 检查 / 审查               | 按 Agents.md §6 检查清单逐项扫描                              |
+| 鍐欎竴涓彃浠?               | 闃舵 0 鈫?1 鈫?2 鈫?3                                            |
+| 缁х画 / 褰撳墠杩涘害           | 璇?.plan/锛岀畝鎶ュ悗绛夌‘璁?                                      |
+| 鏂板 / 娣诲姞 / 淇 / 閲嶆瀯 | 璇?.plan/ 鈫?鍦?Plan.md 鍔犱换鍔?鈫?纭鍚庢墽琛?鈫?鍚屾鏂囨。涓庣増鏈彿 |
+| 妫€鏌?/ 瀹℃煡               | 鎸?Agents.md 搂6 妫€鏌ユ竻鍗曢€愰」鎵弿                              |

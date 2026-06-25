@@ -4034,11 +4034,16 @@ function renderMemoBody(
   const rawText = [card.blockquote, card.body].filter(Boolean).join("\n");
   const text = stripBulletPrefix(rawText);
   let dirty = false;
+  let autosaveTimer: number | null = null;
 
   // View mode: rendered text with clickable links
   const view = container.createDiv({ cls: "dashboard-memo-view" });
   renderMemoViewContent(view, text, app, sourcePath);
   view.addEventListener("click", () => {
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
     view.style.display = "none";
     textarea.style.display = "";
     textarea.focus();
@@ -4054,12 +4059,15 @@ function renderMemoBody(
 
   attachFileSuggest(textarea, app);
 
-  textarea.addEventListener("input", () => {
-    dirty = true;
-  });
+  const clearAutosaveTimer = (): void => {
+    if (autosaveTimer) {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = null;
+    }
+  };
 
-  const save = () => {
-    if (!dirty) return;
+  const save = async (): Promise<boolean> => {
+    if (!dirty) return true;
     dirty = false;
     const value = addBulletPrefix(textarea.value);
     const lines = value.split("\n");
@@ -4074,20 +4082,37 @@ function renderMemoBody(
       }
     }
 
-    callbacks.onMemoUpdate(card, {
-      body: bodyLines.join("\n").trim(),
-      blockquote: quoteLines.join("\n"),
-    });
+    try {
+      await callbacks.onMemoUpdate(card, {
+        body: bodyLines.join("\n").trim(),
+        blockquote: quoteLines.join("\n"),
+      });
+      return true;
+    } catch {
+      dirty = true;
+      new Notice(t("noteDash.saveError"));
+      return false;
+    }
   };
 
+  textarea.addEventListener("input", () => {
+    dirty = true;
+    clearAutosaveTimer();
+    autosaveTimer = window.setTimeout(() => {
+      void save();
+    }, 400);
+  });
+
   textarea.addEventListener("blur", () => {
-    save();
-    // If re-render didn't happen (not dirty), switch to view manually
-    if (document.body.contains(view)) {
-      renderMemoViewContent(view, textarea.value, app, sourcePath);
-      view.style.display = "";
-      textarea.style.display = "none";
-    }
+    clearAutosaveTimer();
+    void (async () => {
+      const saved = await save();
+      if (saved && document.body.contains(view)) {
+        renderMemoViewContent(view, textarea.value, app, sourcePath);
+        view.style.display = "";
+        textarea.style.display = "none";
+      }
+    })();
   });
 }
 
