@@ -105,7 +105,8 @@ function renderColumnTitle(
   sourcePath?: string,
 ): void {
   titleEl.empty();
-  const resolvedSource = sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
+  const resolvedSource =
+    sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
   if (name.includes("[[")) {
     renderInlineMarkdown(titleEl, name, app, resolvedSource);
   } else {
@@ -2691,7 +2692,14 @@ export async function renderDashboard(
   // DOM mutations are interleaved and a long TodoPlus chain can't
   // stall the visible UI for a noticeable beat.
   for (const column of data.columns) {
-    const section = await renderSection(column, callbacks, app, data, settings, sourcePath);
+    const section = await renderSection(
+      column,
+      callbacks,
+      app,
+      data,
+      settings,
+      sourcePath,
+    );
     container.appendChild(section);
   }
 
@@ -3417,12 +3425,7 @@ function renderCard(
 
   const titleEl = header.createEl("h4", { cls: "dashboard-card-title" });
   try {
-    renderInlineMarkdown(
-      titleEl,
-      card.title,
-      app,
-      sourcePath,
-    );
+    renderInlineMarkdown(titleEl, card.title, app, sourcePath);
     if (
       titleEl.querySelector(".dashboard-wikilink, .dashboard-external-link")
     ) {
@@ -3453,12 +3456,7 @@ function renderCard(
       } else {
         titleEl.empty();
         try {
-          renderInlineMarkdown(
-            titleEl,
-            originalTitle,
-            app,
-            sourcePath,
-          );
+          renderInlineMarkdown(titleEl, originalTitle, app, sourcePath);
         } catch {
           titleEl.setText(originalTitle);
         }
@@ -3780,7 +3778,14 @@ function renderCardBody(
   // lives in another note under a specific `## heading` — see
   // `renderTodoPlusBody` for the full read/sync pipeline.
   if (card.type === "todoplus") {
-    void renderTodoPlusBody(container, card, callbacks, app, settings, sourcePath);
+    void renderTodoPlusBody(
+      container,
+      card,
+      callbacks,
+      app,
+      settings,
+      sourcePath,
+    );
     return;
   }
 
@@ -3795,11 +3800,17 @@ function renderCardBody(
   // card's stale type here caused the "switch todo→projects keeps the
   // checkboxes" bug. Trust the column's sectionType; the switch
   // callback in view.ts migrates `card.type` to match.
-  const isTaskCard =
-    sectionType === "todo" || sectionType === "todoplus";
+  const isTaskCard = sectionType === "todo" || sectionType === "todoplus";
 
   if (isTaskCard) {
-    renderTaskBody(container, card, callbacks, app, hideCompletedResolved, sourcePath);
+    renderTaskBody(
+      container,
+      card,
+      callbacks,
+      app,
+      hideCompletedResolved,
+      sourcePath,
+    );
     return;
   }
 
@@ -3822,7 +3833,8 @@ function renderTaskBody(
 ): void {
   taskItemCallbacks = callbacks;
   ensureItemDocListeners();
-  const resolvedSource = sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
+  const resolvedSource =
+    sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
 
   const list = container.createDiv({ cls: "dashboard-task-list" });
   list.dataset.cardId = card.id;
@@ -4130,14 +4142,15 @@ function renderMemoViewContent(
   }
   container.removeClass("dashboard-memo-view--empty");
 
-  const resolvedSource = sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
+  const resolvedSource =
+    sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
   const lines = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (i > 0) container.createEl("br");
     const line = lines[i]!;
     if (line.startsWith("> ")) {
       const quote = container.createDiv({ cls: "dashboard-note-quote" });
-      quote.setText(line.slice(2));
+      renderInlineMarkdown(quote, line.slice(2), app, resolvedSource);
     } else {
       renderInlineMarkdown(container, line, app, resolvedSource);
     }
@@ -4174,7 +4187,8 @@ function renderProjectBody(
 ): void {
   taskItemCallbacks = callbacks;
   ensureItemDocListeners();
-  const resolvedSource = sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
+  const resolvedSource =
+    sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
 
   // Draggable project items (todo-style):
   //   Each depth-0 line is a draggable item showing title + child count
@@ -4527,8 +4541,7 @@ async function renderTodoPlusBody(
   if (!slice) {
     const parsedLink = parseTodoPlusSourceLink(sourceLink);
     const sourceFile =
-      parsedLink &&
-      app.metadataCache.getFirstLinkpathDest(parsedLink.path, "");
+      parsedLink && app.metadataCache.getFirstLinkpathDest(parsedLink.path, "");
     if (parsedLink && sourceFile instanceof TFile) {
       const preparing = container.createDiv({
         cls: "dashboard-todoplus-preparing",
@@ -4690,7 +4703,8 @@ function renderTodoPlusItem(
   app: App,
   sourcePath?: string,
 ): void {
-  const resolvedSource = sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
+  const resolvedSource =
+    sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
   const li = list.createDiv({ cls: "dashboard-task-item" });
   // Intentionally NOT `draggable="true"` — reordering would mean
   // rewriting the source file mid-drag, and the user did not ask
@@ -4931,7 +4945,14 @@ function scheduleTodoPlusRefresh(
     ) as HTMLElement | null;
     if (bodyRoot) {
       bodyRoot.empty();
-      void renderTodoPlusBody(bodyRoot, card, callbacks, app, settings, sourcePath);
+      void renderTodoPlusBody(
+        bodyRoot,
+        card,
+        callbacks,
+        app,
+        settings,
+        sourcePath,
+      );
     }
   };
   const ref = app.metadataCache.on("changed", onChange);
@@ -5304,9 +5325,7 @@ export async function ensureTodoPlusHeading(
     return false;
   }
   const headings = scanMarkdownHeadings(content);
-  const exists = headings.some(
-    (h) => h.level === 2 && h.heading === heading,
-  );
+  const exists = headings.some((h) => h.level === 2 && h.heading === heading);
   if (exists) return true;
   try {
     await app.vault.process(file, (current) => {
@@ -5535,8 +5554,9 @@ function renderTextWithLinks(
 //
 // Order matters: `**` (bold) must come before `*` (italic) so the engine
 // doesn't greedily eat one `*` of a bold marker as an italic.
+// Supports both ASCII [[...]] and full-width 【【...】】 wikilinks (common in Chinese input)
 const INLINE_TOKEN_PATTERN =
-  /(\[\[[^\]]+\]\]|\[[^\]]+\]\([^)]+\)|\*\*[^*\n]+\*\*|\*[^*\n]+\*|_[^_\n]+_|`[^`\n]+`|==[^=\n]+==|~~[^~\n]+~~)/g;
+  /(\[\[[^\]]+\]\]|【【[^】]+】】|\[[^\]]+\]\([^)]+\)|\*\*[^*\n]+\*\*|\*[^*\n]+\*|_[^_\n]+_|`[^`\n]+`|==[^=\n]+==|~~[^~\n]+~~)/g;
 
 function renderInlineMarkdown(
   container: HTMLElement,
@@ -5586,6 +5606,13 @@ function renderInlineToken(
     return;
   }
 
+  // Full-width wikilink: 【【...】】 (common in Chinese input)
+  if (token.startsWith("【【") && token.endsWith("】】") && token.length >= 5) {
+    const inner = token.slice(2, -2);
+    renderWikilink(container, inner, app, sourcePath);
+    return;
+  }
+
   // External markdown link: [text](url)
   if (token.startsWith("[") && token.endsWith(")")) {
     const extMatch = token.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
@@ -5615,22 +5642,14 @@ function renderInlineToken(
   }
 
   // Inline code: `text`  (length >= 3, content is literal)
-  if (
-    token.startsWith("`") &&
-    token.endsWith("`") &&
-    token.length >= 3
-  ) {
+  if (token.startsWith("`") && token.endsWith("`") && token.length >= 3) {
     const el = container.createEl("code", { cls: "dashboard-inline-code" });
     el.textContent = token.slice(1, -1);
     return;
   }
 
   // Highlight: ==text==  (length >= 5)
-  if (
-    token.startsWith("==") &&
-    token.endsWith("==") &&
-    token.length >= 5
-  ) {
+  if (token.startsWith("==") && token.endsWith("==") && token.length >= 5) {
     const el = container.createEl("mark", {
       cls: "dashboard-inline-highlight",
     });
@@ -5639,11 +5658,7 @@ function renderInlineToken(
   }
 
   // Strikethrough: ~~text~~  (length >= 5)
-  if (
-    token.startsWith("~~") &&
-    token.endsWith("~~") &&
-    token.length >= 5
-  ) {
+  if (token.startsWith("~~") && token.endsWith("~~") && token.length >= 5) {
     const el = container.createEl("del", { cls: "dashboard-inline-strike" });
     renderInlineMarkdown(el, token.slice(2, -2), app, sourcePath);
     return;
@@ -5671,11 +5686,24 @@ function renderWikilink(
 
   let path = linkPart;
   let fragment: string | undefined;
+  let fragmentSep: "#" | "^" | undefined;
 
+  // Support both # heading anchors and ^ block references
   const hashIdx = linkPart.indexOf("#");
-  if (hashIdx !== -1) {
-    path = linkPart.slice(0, hashIdx);
-    fragment = linkPart.slice(hashIdx + 1);
+  const caretIdx = linkPart.indexOf("^");
+  let sepIdx = -1;
+  if (hashIdx !== -1 && caretIdx !== -1) {
+    sepIdx = Math.min(hashIdx, caretIdx);
+  } else if (hashIdx !== -1) {
+    sepIdx = hashIdx;
+  } else if (caretIdx !== -1) {
+    sepIdx = caretIdx;
+  }
+
+  if (sepIdx !== -1) {
+    path = linkPart.slice(0, sepIdx);
+    fragment = linkPart.slice(sepIdx + 1);
+    fragmentSep = linkPart[sepIdx] as "#" | "^";
   }
 
   const noteName = path.split("/").pop()?.replace(/\.md$/, "") ?? path;
@@ -5706,16 +5734,22 @@ function renderWikilink(
     }
   }
 
+  const fullLink =
+    fragment && fragmentSep ? `${path}${fragmentSep}${fragment}` : path;
+
   const link = container.createEl("a", {
-    cls: "dashboard-wikilink internal-link data-link-icon data-link-icon-after data-link-text",
+    cls: "dashboard-wikilink internal-link",
     text: displayName,
     attr: {
-      "data-href": fragment ? `${path}#${fragment}` : path,
-      href: fragment ? `${path}#${fragment}` : path,
+      "data-href": fullLink,
+      href: fullLink,
+      "data-link-icon": "",
+      "data-link-icon-after": "",
+      "data-link-text": "",
     },
   });
 
-  const linkText = fragment ? `${path}#${fragment}` : path;
+  const linkText = fullLink;
 
   // v1.4.x R5 — use the explicit sourcePath passed from the view
   // layer (which is the dashboard's host file) for link resolution,
@@ -5728,7 +5762,9 @@ function renderWikilink(
     e.stopPropagation();
     e.preventDefault();
     // Use native Obsidian link resolution for proper fragment/heading navigation
-    app.workspace.openLinkText(linkText, resolvedSourceForHelpers, false, { active: true });
+    app.workspace.openLinkText(linkText, resolvedSourceForHelpers, false, {
+      active: true,
+    });
   });
 
   try {
@@ -5771,12 +5807,7 @@ function renderWikilink(
     );
     if (file) {
       const menu = new Menu();
-      app.workspace.trigger(
-        "file-menu",
-        menu,
-        file,
-        resolvedSourceForHelpers,
-      );
+      app.workspace.trigger("file-menu", menu, file, resolvedSourceForHelpers);
       menu.showAtMouseEvent(e);
       return;
     }
@@ -5788,7 +5819,11 @@ function renderWikilink(
         .setTitle(t("renderer.openLink") || "Open link")
         .setIcon("file-text")
         .onClick(() => {
-          void app.workspace.openLinkText(linkText, resolvedSourceForHelpers, false);
+          void app.workspace.openLinkText(
+            linkText,
+            resolvedSourceForHelpers,
+            false,
+          );
         }),
     );
     fallback.addItem((item) =>
@@ -5796,9 +5831,14 @@ function renderWikilink(
         .setTitle(t("renderer.openLinkNewTab") || "Open link in new pane")
         .setIcon("external-link")
         .onClick(() => {
-          void app.workspace.openLinkText(linkText, resolvedSourceForHelpers, false, {
-            newLeaf: true,
-          } as Parameters<typeof app.workspace.openLinkText>[3]);
+          void app.workspace.openLinkText(
+            linkText,
+            resolvedSourceForHelpers,
+            false,
+            {
+              newLeaf: true,
+            } as Parameters<typeof app.workspace.openLinkText>[3],
+          );
         }),
     );
     fallback.addSeparator();
@@ -5807,9 +5847,7 @@ function renderWikilink(
         .setTitle(t("renderer.copyLink") || "Copy link")
         .setIcon("copy")
         .onClick(() => {
-          const linkMd = alias
-            ? `[[${linkPart}${fragment ? `#${fragment}` : ""}|${alias}]]`
-            : `[[${linkText}]]`;
+          const linkMd = alias ? `[[${linkPart}|${alias}]]` : `[[${linkText}]]`;
           void navigator.clipboard.writeText(linkMd);
           new Notice(t("renderer.linkCopied") || "Link copied");
         }),
@@ -5832,43 +5870,48 @@ function renderWikilink(
   // ourselves on plain mouseover, exactly the same way the markdown
   // post-processor does in the editor. Page Preview then takes over
   // and shows the same native popover (fragment navigation, embeds,
-  // "Open" / "Open to the right" all work as expected).
-  if (!fragment || !fragment.startsWith("^")) {
-    let hoverTimer: number | null = null;
-    const clearHoverTimer = (): void => {
-      if (hoverTimer !== null) {
-        window.clearTimeout(hoverTimer);
-        hoverTimer = null;
-      }
-    };
-    link.addEventListener("mouseover", (event) => {
-      if (hoverTimer !== null) return;
+  // block references ^..., "Open" / "Open to the right" all work as expected).
+  let hoverTimer: number | null = null;
+  const clearHoverTimer = (): void => {
+    if (hoverTimer !== null) {
+      window.clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  };
+  link.addEventListener("mouseover", (event) => {
+    if (hoverTimer !== null) return;
+    if (!link.isConnected) return;
+    hoverTimer = window.setTimeout(() => {
+      hoverTimer = null;
       if (!link.isConnected) return;
-      hoverTimer = window.setTimeout(() => {
-        hoverTimer = null;
-        if (!link.isConnected) return;
-        // Resolve the source path so Obsidian's native Page Preview can
-        // find the link in the vault. Falls back to the currently
-        // active file (typically the dashboard file when the dashboard
-        // view is focused, or the host markdown when embedded) so the
-        // preview popup works the same as in the editor.
-        const resolvedSource = sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
-        (
-          app.workspace as unknown as {
-            trigger: (
-              type: string,
-              evt: MouseEvent,
-              target: HTMLElement,
-              linkText: string,
-              source: string,
-            ) => void;
-          }
-        ).trigger("link-hover", event, link, linkText, resolvedSource);
-      }, 200);
-    });
-    link.addEventListener("mouseout", clearHoverTimer);
-    link.addEventListener("keydown", clearHoverTimer);
-  }
+      // Resolve the source path so Obsidian's native Page Preview can
+      // find the link in the vault. Falls back to the currently
+      // active file (typically the dashboard file when the dashboard
+      // view is focused, or the host markdown when embedded) so the
+      // preview popup works the same as in the editor.
+      const resolvedSource =
+        sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
+      (
+        app.workspace as unknown as {
+          trigger: (
+            type: string,
+            parentEl: HTMLElement,
+            target: HTMLElement,
+            linkText: string,
+            source: string,
+          ) => void;
+        }
+      ).trigger(
+        "link-hover",
+        app.workspace.containerEl,
+        link,
+        linkText,
+        resolvedSource,
+      );
+    }, 200);
+  });
+  link.addEventListener("mouseout", clearHoverTimer);
+  link.addEventListener("keydown", clearHoverTimer);
 }
 
 function renderExternalLink(
