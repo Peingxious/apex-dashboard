@@ -69,6 +69,7 @@ export class DashboardView extends ItemView {
   private sync: SyncEngine;
   private data: DashboardData | null = null;
   private cleanupFns: Array<() => void> = [];
+  private bannerHandles: Array<{ dispose: () => void }> = [];
   private vaultEventRefs: Array<{ evt: Events; ref: unknown }> = [];
   private recentDocsTimer: ReturnType<typeof setTimeout> | null = null;
   private libraryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
@@ -269,18 +270,23 @@ export class DashboardView extends ItemView {
     container.empty();
     container.addClass("peingxious-dashboard-root");
 
-    const bannerEl = renderBanner(
+    const bannerHandle = renderBanner(
       container,
       activeData.banner,
       () => this.openBannerEditModal(activeData),
       this.app,
+      this.embeddedNotePath ?? "default",
     );
+    const bannerEl = bannerHandle.bannerEl;
+    this.bannerHandles.push(bannerHandle);
 
     this.renderMobileActions(bannerEl);
 
-    if (this.bannerCollapsed && window.innerWidth > MOBILE_BREAKPOINT_PX) {
-      bannerEl.addClass("dashboard-banner--collapsed");
-    }
+    // Banner manages its own collapsed state (see banner.ts). We do
+    // not force-add `dashboard-banner--collapsed` here because that
+    // would race with the user's own click on the pin button —
+    // every re-render would silently re-collapse a banner the user
+    // just expanded. Banner reads/writes its own localStorage key.
     this.setupBannerBehavior(bannerEl);
 
     this.renderMobileWidgetBar(container);
@@ -2068,32 +2074,12 @@ export class DashboardView extends ItemView {
   }
 
   private setupBannerBehavior(bannerEl: HTMLElement): void {
-    const pinBtn = bannerEl.createEl("button", {
-      cls: "dashboard-banner-pin-btn",
-      attr: {},
-    });
-    setIcon(pinBtn, "bookmark");
-
-    pinBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      if (window.innerWidth <= MOBILE_BREAKPOINT_PX) return;
-      this.bannerCollapsed = !this.bannerCollapsed;
-      bannerEl.toggleClass("dashboard-banner--collapsed", this.bannerCollapsed);
-      localStorage.setItem(
-        "peingxious-dashboard-banner-collapsed",
-        String(this.bannerCollapsed),
-      );
-    });
-
-    const onResize = () => {
-      if (window.innerWidth <= MOBILE_BREAKPOINT_PX && this.bannerCollapsed) {
-        bannerEl.removeClass("dashboard-banner--collapsed");
-      } else if (this.bannerCollapsed) {
-        bannerEl.addClass("dashboard-banner--collapsed");
-      }
-    };
-    window.addEventListener("resize", onResize);
-    this.cleanupFns.push(() => window.removeEventListener("resize", onResize));
+    // The banner now creates its own pin/collapse button, edit
+    // button, double-click handler and resize-aware collapsed
+    // state inside renderBanner(). This method is kept for API
+    // compatibility but no longer adds any listeners — leaving
+    // the duplication in place would create two pin buttons and
+    // two localStorage keys fighting each other.
   }
 
   private openMobileDrawer(type: "quickActions" | "recent"): void {
@@ -2967,6 +2953,11 @@ export class DashboardView extends ItemView {
     }
     for (const fn of this.cleanupFns) fn();
     this.cleanupFns = [];
+    // Banner handles own their own setInterval timers; dispose
+    // them so a re-render doesn't leak two more timers on top of
+    // the old ones.
+    for (const handle of this.bannerHandles) handle.dispose();
+    this.bannerHandles = [];
   }
 
   private startReminderChecker(): void {

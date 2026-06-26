@@ -1922,12 +1922,11 @@
   background: none !important;
   border: none !important;
   box-shadow: none !important;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.65);
   padding: 4px;
   cursor: pointer;
-  opacity: 0;
+  opacity: 1;
   transition:
-    opacity 0.2s ease,
     color 0.2s ease,
     transform 0.2s ease;
   display: flex;
@@ -1936,17 +1935,39 @@
   outline: none;
 }
 
-.dashboard-banner:hover-disabled .dashboard-banner-pin-btn {
-  opacity: 1;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.dashboard-banner-pin-btn:hover-disabled,
 .dashboard-banner-pin-btn:active {
   background: none !important;
   border: none !important;
   box-shadow: none !important;
-  color: #ffffff !important;
+  transform: scale(1.15);
+}
+
+.dashboard-banner-edit-btn {
+  position: absolute;
+  top: 8px;
+  right: 40px;
+  left: auto;
+  z-index: 10;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.65);
+  padding: 4px;
+  cursor: pointer;
+  opacity: 1;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+}
+
+.dashboard-banner-edit-btn:active {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
   transform: scale(1.15);
 }
 
@@ -1993,6 +2014,73 @@
     background: var(--db-bg-hover) !important;
     transform: scaleY(1.06);
   }
+}
+
+/* ===== Banner Edit Modal ===== */
+.dashboard-banner-edit-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 480px;
+  max-width: 560px;
+}
+
+.dashboard-banner-edit-modal h2 {
+  margin: 0 0 4px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.dashboard-banner-edit-section {
+  margin-top: 8px;
+}
+
+.dashboard-banner-edit-section h3 {
+  margin: 0 0 6px 0;
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--db-text-muted, #a0a0a0);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dashboard-banner-edit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.dashboard-banner-edit-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.dashboard-banner-edit-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dashboard-banner-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.dashboard-banner-save-btn {
+  background: var(--interactive-accent, var(--db-accent, #6366f1)) !important;
+  color: var(--text-on-accent, #ffffff) !important;
+  border: none !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.dashboard-banner-save-btn:hover-disabled {
+  opacity: 0.9;
 }
 
 /* ===== View Navigation Bar (toggle between main/note dashboard) ===== */
