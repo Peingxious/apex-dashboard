@@ -1,6 +1,7 @@
 import { App, TFile, setIcon, Menu, Notice } from "obsidian";
 import type { LibraryConfig, PropertyFilter, LibraryViewMode } from "./types";
 import { t, getLanguage } from "./i18n";
+import { DATE_PRESETS, startOfDay, toISODate } from "./date-presets";
 
 export interface LibraryFileResult {
   file: TFile;
@@ -51,7 +52,8 @@ function attachLibraryHoverPreview(
     hoverTimer = window.setTimeout(() => {
       hoverTimer = null;
       if (!el.isConnected) return;
-      const resolvedSource = sourcePath || app.workspace.getActiveFile()?.path || file.path;
+      const resolvedSource =
+        sourcePath || app.workspace.getActiveFile()?.path || file.path;
       (
         app.workspace as unknown as {
           trigger: (type: string, payload: unknown) => void;
@@ -664,6 +666,40 @@ export function renderLibrarySection(
     filterPopup.style.top = `${rect.bottom + 4}px`;
     filterPopup.style.left = `${rect.left}px`;
     filterPopup.style.zIndex = "10000";
+
+    // Preset chips: one-tap shortcuts for the most common date
+    // windows. Picking a preset overwrites quickStart / quickEnd
+    // and re-applies the filter immediately.
+    const presetRow = filterPopup.createDiv({
+      cls: "dashboard-library-quickfilter-row dashboard-library-quickfilter-presets",
+    });
+    presetRow.createDiv({
+      cls: "dashboard-library-quickfilter-label",
+      text: t("library.preset"),
+    });
+    const presetWrap = presetRow.createDiv({
+      cls: "dashboard-library-quickfilter-preset-chips",
+    });
+    for (const preset of DATE_PRESETS) {
+      const chip = presetWrap.createEl("button", {
+        cls: "dashboard-library-quickfilter-preset",
+        text: t(preset.labelKey),
+        attr: { type: "button" },
+      });
+      chip.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        const today = startOfDay(new Date());
+        const { start, end } = preset.range(today);
+        quickStart = start;
+        quickEnd = end;
+        applyQuickFilter();
+        // Re-render the popup so the start/end date buttons reflect
+        // the new values immediately, then close it — the user got
+        // what they came for.
+        if (document.body.contains(filterBtn)) openPopup();
+        closePopup();
+      });
+    }
 
     // Property selector
     const propRow = filterPopup.createDiv({

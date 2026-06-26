@@ -10305,6 +10305,59 @@
   min-width: 56px;
 }
 
+/* Preset chips: small pill buttons that one-tap common date
+   windows (today / yesterday / this week / …). They live at the
+   top of the date-filter popup and rewrite quickStart/quickEnd
+   immediately. */
+.dashboard-library-quickfilter-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+
+/* In the configuration modal the preset row sits on its own line
+   below the manual date inputs, with a label on the left. */
+.dashboard-library-config-preset-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px 0;
+  flex-wrap: wrap;
+}
+
+.dashboard-library-config-preset-label {
+  font-size: 12px;
+  color: var(--text-muted, var(--db-text-muted, #a0a0a0));
+  min-width: 56px;
+}
+
+.dashboard-library-quickfilter-preset {
+  cursor: pointer;
+  padding: 3px 8px;
+  border: 1px solid
+    var(
+      --background-modifier-border,
+      var(--db-border-input, rgba(255, 255, 255, 0.15))
+    );
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted, var(--db-text-muted, #a0a0a0));
+  font-size: 11px;
+  font-family: var(--db-font, var(--font-interface));
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dashboard-library-quickfilter-preset:hover-disabled {
+  border-color: var(--interactive-accent, var(--db-accent, #6366f1));
+  color: var(--text-normal, var(--db-text, #e6e6e6));
+  background: var(
+    --background-modifier-hover,
+    var(--db-bg-hover, rgba(255, 255, 255, 0.06))
+  );
+}
+
 .dashboard-library-filter-popup-clear {
   cursor: pointer;
   margin-top: 8px;

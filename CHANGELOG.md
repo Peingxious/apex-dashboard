@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.4.13 (2026-06-26)
+
+### Changed
+
+- **All hover effects removed from `dashboard-card` / `dashboard-card--project` / library cards / wikilinks** — every `:hover` CSS rule under those classes (background tint, border, shadow, transform, tooltip `div`, the in-house popover, etc.) is gone. The cards and wikilinks are now visually static, matching the user's "no fancy hover, just the data" requirement. The previous in-house popover implementation (the `div.tooltip` injected by `attachHoverPopover`) was deleted outright — no more leftover `position: fixed; top: …; left: …; width: …; height: …` ghost elements on hover
+- **Library quick-date filter and configuration modal now share 8 one-tap date presets** — Today, Yesterday, This week, Last week, This month, Last month, Last 7 days, Last 30 days. In the toolbar filter popup the chips apply immediately and close the popup; in the configuration modal the chips fill the start / end date inputs and sync `quickDateFilter` so the saved value is still editable by hand. ISO week (Monday-anchored) and month-end arithmetic are computed in local time, so "Today" is the user's wall-clock today across timezones. The preset logic was extracted to a dedicated `date-presets.ts` module so the two surfaces can never drift
+- **Wikilink preview in the dashboard is now Obsidian's native Page Preview** — every `[[wikilink]]` rendered in a dashboard card and every card in a library view triggers the same hover popover you get in the editor. The preview only fires while the user holds **Ctrl** (Windows / Linux) or **Cmd** (macOS) — a 200 ms debounce prevents a popover from being mounted on every mouse pass when navigating with the keyboard / trackpad. Implementation dispatches `app.workspace.trigger("hover-link", …)` with the same payload shape Obsidian's own editor uses, so the popover's behaviour (markdown render, link resolution, theme inheritance) is identical to a `[[wikilink]]` in a regular note
+
+### Fixed
+
+- **Library config round-trip: every field is now reliably persisted to `dashboard.md` frontmatter** — `SyncEngine.columnToFrontmatter()` used to write `filters`, `visibleProperties`, `pageSize`, `kanbanGroupBy` only when their values were non-default. That meant a user who cleared all filters saw the `filters:` field disappear from `dashboard.md`, and a hand-written `filters: [{ property: "Type", values: ["A","B"] }]` was silently dropped on the next save. All five fields are now always emitted (defaulting to `[]` / `20` / `""` as appropriate); only the `quickDateFilter` object is still conditional, since an empty `{ start: "", end: "" }` object has no meaningful representation in YAML. Round-trip verified end-to-end: parse → serialise → parse is byte-stable
+- **Project / library cards no longer flicker or layout-shift on hover** — by removing all `transform` / `box-shadow` / `background-color` `:hover` rules, the cards stay pixel-stable the entire time the cursor passes over them. Side effect: the dashboard looks calmer in screenshots and screen recordings, and there's no longer a "the dashboard is doing something" suspicion when the user is just moving the mouse
+
 ## 1.4.12 (2026-06-25)
 
 ### Fixed

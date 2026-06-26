@@ -88,14 +88,14 @@ The dashboard automatically inherits your Obsidian theme colors, seamlessly adap
 
 ## Commands
 
-| Command ID                       | Name                              | Default Hotkey      |
-| -------------------------------- | --------------------------------- | ------------------- |
-| `open-dashboard`                 | Open dashboard                    | —                   |
-| `toggle-dashboard-sidebar`       | Toggle dashboard sidebar          | —                   |
-| `convert-note-to-dashboard`      | Convert note to dashboard         | —                   |
-| `restore-note-from-dashboard`    | Restore note from dashboard       | —                   |
-| `embed-note-in-dashboard`        | Embed note in dashboard           | `Ctrl+Alt+D`        |
-| (built-in)                       | Undo last delete                  | `Ctrl+Z` / `Cmd+Z`  |
+| Command ID                    | Name                        | Default Hotkey     |
+| ----------------------------- | --------------------------- | ------------------ |
+| `open-dashboard`              | Open dashboard              | —                  |
+| `toggle-dashboard-sidebar`    | Toggle dashboard sidebar    | —                  |
+| `convert-note-to-dashboard`   | Convert note to dashboard   | —                  |
+| `restore-note-from-dashboard` | Restore note from dashboard | —                  |
+| `embed-note-in-dashboard`     | Embed note in dashboard     | `Ctrl+Alt+D`       |
+| (built-in)                    | Undo last delete            | `Ctrl+Z` / `Cmd+Z` |
 
 ## Settings
 
@@ -172,6 +172,13 @@ columns:
 > **Tip:** Each section header has a trash button to delete sections directly from the dashboard UI.
 
 ## What's New
+
+### 1.4.13 (2026-06-26)
+
+- **All hover effects removed from `dashboard-card` / `dashboard-card--project` / library cards / wikilinks** — every `:hover` rule under those classes (background tint, border, shadow, transform, the in-house tooltip `div` and popover) is gone. Cards and wikilinks are now visually static, matching the "no fancy hover, just the data" requirement. No more `position: fixed; top: …; left: …` ghost elements on hover
+- **Wikilink preview in the dashboard is Obsidian's native Page Preview** — every `[[wikilink]]` in a dashboard card and every card in a library view triggers the same hover popover you get in the editor. The preview only fires while the user holds **Ctrl** (Windows / Linux) or **Cmd** (macOS) — a 200 ms debounce prevents a popover from being mounted on every mouse pass when navigating with the keyboard / trackpad. Implementation dispatches `app.workspace.trigger("hover-link", …)` with the same payload shape Obsidian's own editor uses, so the popover's behaviour (markdown render, link resolution, theme inheritance) is identical to a `[[wikilink]]` in a regular note
+- **Library quick-date filter and configuration modal now share 8 one-tap date presets** — Today, Yesterday, This week, Last week, This month, Last month, Last 7 days, Last 30 days. In the toolbar filter popup the chips apply immediately and close the popup; in the configuration modal the chips fill the start / end date inputs and sync `quickDateFilter` so the saved value is still editable by hand. ISO week (Monday-anchored) and month-end arithmetic are computed in local time, so "Today" is the user's wall-clock today across timezones. The preset logic lives in a dedicated `date-presets.ts` module so the two surfaces can never drift
+- **Library config round-trip: every field is now reliably persisted to `dashboard.md` frontmatter** — `filters`, `visibleProperties`, `pageSize`, `kanbanGroupBy` are now always emitted, so a hand-written `filters: [{ property: "Type", values: ["A","B"] }]` survives the next save instead of being silently dropped. Round-trip verified end-to-end: parse → serialise → parse is byte-stable
 
 ### 1.4.12 (2026-06-25)
 

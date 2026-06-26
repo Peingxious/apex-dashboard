@@ -2,6 +2,7 @@ import { Modal, App, Setting, setIcon } from "obsidian";
 import type { LibraryConfig, PropertyFilter, LibraryViewMode } from "./types";
 import { extractFrontmatterProperties } from "./library-section";
 import { t } from "./i18n";
+import { DATE_PRESETS, startOfDay } from "./date-presets";
 
 // Map internal property keys to user-facing display names (using Obsidian base property naming)
 const BUILTIN_PROPERTY_NAMES: Record<string, string> = {
@@ -198,6 +199,36 @@ export class LibraryConfigModal extends Modal {
     datePropSelect.addEventListener("change", syncQuickDateFilter);
     startDateInput.addEventListener("change", syncQuickDateFilter);
     endDateInput.addEventListener("change", syncQuickDateFilter);
+
+    // --- Preset chips (mirror of the toolbar filter popup) ---
+    // Picking a preset overwrites the start/end date inputs and
+    // syncs into this.config.quickDateFilter. The chips live in
+    // their own row so the manual date inputs stay reachable.
+    const presetRow = filtersContainer.createDiv({
+      cls: "dashboard-library-config-preset-row",
+    });
+    presetRow.createDiv({
+      cls: "dashboard-library-config-preset-label",
+      text: t("library.preset"),
+    });
+    const presetWrap = presetRow.createDiv({
+      cls: "dashboard-library-quickfilter-preset-chips",
+    });
+    for (const preset of DATE_PRESETS) {
+      const chip = presetWrap.createEl("button", {
+        cls: "dashboard-library-quickfilter-preset",
+        text: t(preset.labelKey),
+        attr: { type: "button" },
+      });
+      chip.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        const today = startOfDay(new Date());
+        const { start, end } = preset.range(today);
+        startDateInput.value = start;
+        endDateInput.value = end;
+        syncQuickDateFilter();
+      });
+    }
 
     // --- View Mode ---
     const viewSection = contentEl.createDiv({
