@@ -52,7 +52,7 @@ export function renderBanner(
   // Edit button
   const editBtn = overlay.createEl("button", {
     cls: "dashboard-banner-edit-btn",
-    attr: { "aria-label": t("banner.edit") },
+    attr: {},
   });
   editBtn.setText(t("banner.edit"));
   editBtn.addEventListener("click", (e) => {

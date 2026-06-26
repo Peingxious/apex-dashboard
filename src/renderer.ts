@@ -1206,7 +1206,7 @@ export function renderSidebarCountdown(
   // Settings button (absolute positioned)
   const settingsBtn = widget.createEl("button", {
     cls: "dashboard-sidebar-countdown-settings-btn",
-    attr: { "aria-label": t("countdown.settingsTitle") },
+    attr: {},
   });
   setIcon(settingsBtn, "settings");
 
@@ -2752,7 +2752,7 @@ export async function renderDashboard(
 
     const confirmBtn = row.createEl("button", {
       cls: "dashboard-section-confirm-btn",
-      attr: { "aria-label": t("common.save") },
+      attr: {},
     });
     setIcon(confirmBtn, "check");
     confirmBtn.addEventListener("click", (e) => {
@@ -2902,7 +2902,6 @@ async function renderSection(
   const titleWrap = header.createDiv({ cls: "dashboard-section-title-wrap" });
   const toggle = titleWrap.createDiv({ cls: "dashboard-section-toggle" });
   toggle.setAttribute("role", "button");
-  toggle.setAttribute("aria-label", "Toggle section");
   // Section name is rendered as a regular user-facing string — the
   // same way every other section name is displayed. We do NOT extract
   // a trailing number into a separate badge: a column called "library"
@@ -2984,7 +2983,7 @@ async function renderSection(
   if (sectionType === "todo") {
     const templateBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn",
-      attr: { "aria-label": t("template.addFromTemplate") },
+      attr: {},
     });
     setIcon(templateBtn, "layout-template");
     templateBtn.addEventListener("click", () =>
@@ -3009,15 +3008,7 @@ async function renderSection(
     const columnArchive = column.archiveCompleted ?? true;
     const archiveBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn dashboard-section-archive-completed-btn",
-      attr: {
-        "aria-label": columnArchive
-          ? t("renderer.showArchivedCards")
-          : t("renderer.hideArchivedCards"),
-        "aria-pressed": columnArchive ? "true" : "false",
-        title: columnArchive
-          ? t("renderer.showArchivedCards")
-          : t("renderer.hideArchivedCards"),
-      },
+      attr: { "aria-pressed": columnArchive ? "true" : "false" },
     });
     setIcon(archiveBtn, columnArchive ? "archive-restore" : "archive");
     if (columnArchive) {
@@ -3033,7 +3024,7 @@ async function renderSection(
   if (sectionType === "library") {
     const configBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn",
-      attr: { "aria-label": t("library.configure") },
+      attr: {},
     });
     setIcon(configBtn, "settings");
     configBtn.addEventListener("click", () => {
@@ -3048,9 +3039,7 @@ async function renderSection(
     if (!isColumnProtected(column.name, data)) {
       const deleteSectionBtn = headerActions.createEl("button", {
         cls: "dashboard-section-add-btn dashboard-section-delete-btn",
-        attr: {
-          "aria-label": t("renderer.deleteSection", { column: column.name }),
-        },
+        attr: {},
       });
       setIcon(deleteSectionBtn, "trash-2");
       deleteSectionBtn.addEventListener("click", async (e) => {
@@ -3100,7 +3089,7 @@ async function renderSection(
   });
   const typeToggleBtn = typeBtnWrapper.createEl("button", {
     cls: "dashboard-section-add-btn dashboard-section-type-btn",
-    attr: { "aria-label": t("renderer.switchSectionType") },
+    attr: {},
   });
   setIcon(typeToggleBtn, currentTypeObj.icon as any);
 
@@ -3165,7 +3154,7 @@ async function renderSection(
     // want. The picked `TFile` is the mirror target.
     const addCardBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn",
-      attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) },
+      attr: {},
     });
     setIcon(addCardBtn, "plus");
     addCardBtn.addEventListener("click", (e) => {
@@ -3178,7 +3167,7 @@ async function renderSection(
 
     const addCardBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn",
-      attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) },
+      attr: {},
     });
     setIcon(addCardBtn, "plus");
     addCardBtn.addEventListener("click", (e) => {
@@ -3234,7 +3223,7 @@ async function renderSection(
   } else {
     const addCardBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn",
-      attr: { "aria-label": t("renderer.addCardTo", { column: column.name }) },
+      attr: {},
     });
     setIcon(addCardBtn, "plus");
     addCardBtn.addEventListener("click", () =>
@@ -3246,9 +3235,7 @@ async function renderSection(
   if (!isColumnProtected(column.name, data)) {
     const deleteSectionBtn = headerActions.createEl("button", {
       cls: "dashboard-section-add-btn dashboard-section-delete-btn",
-      attr: {
-        "aria-label": t("renderer.deleteSection", { column: column.name }),
-      },
+      attr: {},
     });
     setIcon(deleteSectionBtn, "trash-2");
     deleteSectionBtn.addEventListener("click", async (e) => {
@@ -3351,7 +3338,6 @@ function renderCard(
   el.dataset.cardId = card.id;
   el.dataset.cardType = card.type;
   el.setAttribute("role", "article");
-  el.setAttribute("aria-label", card.title);
   el.setAttribute("draggable", "true");
 
   if (card.color) {
@@ -3496,7 +3482,7 @@ function renderCard(
     // Size selector button for dashboard widgets only
     const sizeBtn = actions.createEl("button", {
       cls: "dashboard-card-btn dashboard-card-btn--size",
-      attr: { "aria-label": "Card size" },
+      attr: {},
     });
     sizeBtn.setText(t("widget.size" + currentSize));
     sizeBtn.addEventListener("click", (e) => {
@@ -3513,7 +3499,7 @@ function renderCard(
   if (isWidget) {
     const colorBtn = actions.createEl("button", {
       cls: "dashboard-card-btn dashboard-card-btn--color",
-      attr: { "aria-label": t("renderer.setMemoColor") },
+      attr: {},
     });
     setIcon(colorBtn, "palette");
     if (card.color) {
@@ -3548,7 +3534,7 @@ function renderCard(
   if (!skipEditBtn) {
     const editBtn = actions.createEl("button", {
       cls: "dashboard-card-btn",
-      attr: { "aria-label": t("renderer.editCard") },
+      attr: {},
     });
     setIcon(editBtn, "pencil");
     editBtn.addEventListener("click", (e) => {
@@ -3568,15 +3554,7 @@ function renderCard(
     const hideCompleted = hideCompletedResolved;
     const hideBtn = actions.createEl("button", {
       cls: "dashboard-card-btn",
-      attr: {
-        "aria-label": hideCompleted
-          ? t("renderer.showCompletedTasks")
-          : t("renderer.hideCompletedTasks"),
-        "aria-pressed": hideCompleted ? "true" : "false",
-        title: hideCompleted
-          ? t("renderer.showCompletedTasks")
-          : t("renderer.hideCompletedTasks"),
-      },
+      attr: { "aria-pressed": hideCompleted ? "true" : "false" },
     });
     setIcon(hideBtn, hideCompleted ? "eye-off" : "eye");
     if (hideCompleted) {
@@ -3590,7 +3568,7 @@ function renderCard(
 
   const deleteBtn = actions.createEl("button", {
     cls: "dashboard-card-btn dashboard-card-btn--danger",
-    attr: { "aria-label": t("renderer.deleteCard") },
+    attr: {},
   });
   setIcon(deleteBtn, "trash-2");
   deleteBtn.addEventListener("click", (e) => {
@@ -3951,7 +3929,7 @@ function renderTaskBody(
 
     const delBtn = item.createEl("button", {
       cls: "dashboard-task-delete",
-      attr: { "aria-label": t("renderer.deleteTask") },
+      attr: {},
     });
     setIcon(delBtn, "x");
     delBtn.addEventListener("click", (e) => {
@@ -4350,7 +4328,7 @@ function renderProjectBody(
       // Delete button (visible on hover, same UX as todo tasks)
       const delBtn = item.createEl("button", {
         cls: "dashboard-project-item-delete",
-        attr: { "aria-label": t("renderer.deleteTask") },
+        attr: {},
       });
       setIcon(delBtn, "x");
       delBtn.addEventListener("click", (e) => {
@@ -4789,7 +4767,7 @@ function renderTodoPlusItem(
 
   const delBtn = li.createEl("button", {
     cls: "dashboard-task-delete",
-    attr: { "aria-label": t("renderer.deleteTask") },
+    attr: {},
   });
   setIcon(delBtn, "x");
   delBtn.addEventListener("click", (e) => {
@@ -5855,60 +5833,69 @@ function renderWikilink(
     fallback.showAtMouseEvent(e);
   });
 
-  // Hover-driven native Page Preview (Obsidian internal-link style).
+  // Native Obsidian Page Preview.
   //
-  // Obsidian's Page Preview core plugin is driven by a workspace-level
-  // "link-hover" event. The markdown post-processor fires this event
-  // when the user hovers an internal-link element; Page Preview then
-  // reads the user's setting (Settings → Page Preview → "Reader mode"
-  // / "Hover" vs "Ctrl/Cmd + hover") and decides whether to pop the
-  // preview panel.
+  // The dashboard's wikilinks are custom DOM (not markdown-rendered),
+  // so the markdown post-processor never sees them and Obsidian's
+  // built-in Page Preview never activates. We bridge that gap by
+  // dispatching the same "hover-link" workspace event the editor's
+  // post-processor fires — Page Preview then takes over and shows
+  // the exact same popover it shows in the editor, honouring the
+  // user's "hover" vs "Ctrl/Cmd + hover" setting and the
+  // "Reader mode" / "Default editor" setting.
   //
-  // Our dashboard wikilinks are custom DOM (not markdown-rendered),
-  // so the post-processor never sees them and Page Preview never
-  // activates. We bridge that gap by dispatching "link-hover"
-  // ourselves on plain mouseover, exactly the same way the markdown
-  // post-processor does in the editor. Page Preview then takes over
-  // and shows the same native popover (fragment navigation, embeds,
-  // block references ^..., "Open" / "Open to the right" all work as expected).
+  // The event signature is a *single object* with the following keys:
+  //   event        — the originating mouseover MouseEvent
+  //   source       — string identifying the caller; Page Preview
+  //                  accepts "preview" to mean "renderer wants the
+  //                  native popover"
+  //   hoverParent  — { hoverPopover: null } scaffold that Page
+  //                  Preview populates with the live HoverPopover
+  //                  instance once the popover is built
+  //   targetEl     — the link DOM element being hovered
+  //   linktext     — the wikilink target text
+  //   sourcePath   — the file the wikilink is being resolved from
   let hoverTimer: number | null = null;
+  const HOVER_DELAY_MS = 200;
   const clearHoverTimer = (): void => {
     if (hoverTimer !== null) {
       window.clearTimeout(hoverTimer);
       hoverTimer = null;
     }
   };
+
   link.addEventListener("mouseover", (event) => {
     if (hoverTimer !== null) return;
     if (!link.isConnected) return;
+    // Hold Ctrl/Cmd to preview — the rest of the time the event is
+    // intentionally ignored to avoid spinning up the markdown
+    // renderer (and the live popover) on every mouse pass, which is
+    // expensive on large libraries.
+    const mouseEvent = event as MouseEvent;
+    if (!mouseEvent.ctrlKey && !mouseEvent.metaKey) return;
     hoverTimer = window.setTimeout(() => {
       hoverTimer = null;
       if (!link.isConnected) return;
-      // Resolve the source path so Obsidian's native Page Preview can
-      // find the link in the vault. Falls back to the currently
-      // active file (typically the dashboard file when the dashboard
-      // view is focused, or the host markdown when embedded) so the
-      // preview popup works the same as in the editor.
+      // Resolve the source path so Page Preview can find the link
+      // in the vault. Falls back to the currently active file
+      // (typically the dashboard file when the dashboard view is
+      // focused, or the host markdown when embedded) so the preview
+      // works the same as in the editor.
       const resolvedSource =
         sourcePath ?? app.workspace.getActiveFile()?.path ?? "";
       (
         app.workspace as unknown as {
-          trigger: (
-            type: string,
-            parentEl: HTMLElement,
-            target: HTMLElement,
-            linkText: string,
-            source: string,
-          ) => void;
+          trigger: (type: string, payload: unknown) => void;
         }
-      ).trigger(
-        "link-hover",
-        app.workspace.containerEl,
-        link,
-        linkText,
-        resolvedSource,
-      );
-    }, 200);
+      ).trigger("hover-link", {
+        event: mouseEvent,
+        source: "preview",
+        hoverParent: { hoverPopover: null },
+        targetEl: link,
+        linktext: linkText,
+        sourcePath: resolvedSource,
+      });
+    }, HOVER_DELAY_MS);
   });
   link.addEventListener("mouseout", clearHoverTimer);
   link.addEventListener("keydown", clearHoverTimer);
@@ -5956,13 +5943,11 @@ function createReminderButton(
   if (task.reminder) {
     btn.addClass("dashboard-task-reminder-btn--active");
     setIcon(btn, "bell-ring");
-    btn.setAttribute("aria-label", t("reminder.editReminder"));
     if (!task.checked && isReminderOverdue(task.reminder)) {
       btn.addClass("dashboard-task-reminder-btn--overdue");
     }
   } else {
     setIcon(btn, "bell");
-    btn.setAttribute("aria-label", t("reminder.setReminder"));
   }
 
   btn.addEventListener("click", (e) => {

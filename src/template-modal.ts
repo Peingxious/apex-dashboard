@@ -177,7 +177,7 @@ export class TemplatePickerModal extends Modal {
 
 					const editBtn = row.createEl('button', {
 						cls: 'template-modal-manage-edit',
-						attr: { 'aria-label': t('template.edit') },
+						attr: {},
 					});
 					setIcon(editBtn, 'pencil');
 					editBtn.addEventListener('click', () => {
@@ -187,7 +187,7 @@ export class TemplatePickerModal extends Modal {
 
 					const deleteBtn = row.createEl('button', {
 						cls: 'template-modal-manage-delete',
-						attr: { 'aria-label': t('template.delete') },
+						attr: {},
 					});
 					setIcon(deleteBtn, 'trash-2');
 					const tmplId = tmpl.id;
@@ -266,7 +266,7 @@ export class TemplatePickerModal extends Modal {
 
 				const removeBtn = taskRow.createEl('button', {
 					cls: 'template-modal-task-remove',
-					attr: { 'aria-label': t('template.delete') },
+					attr: {},
 				});
 				setIcon(removeBtn, 'x');
 				removeBtn.addEventListener('click', () => {

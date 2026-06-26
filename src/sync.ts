@@ -1688,25 +1688,24 @@ export class SyncEngine {
     }
     if (col.libraryConfig) {
       const lc = col.libraryConfig;
+      // Every library config field is serialised *unconditionally* so
+      // the user can hand-edit the file and see all available keys.
+      // Length-zero arrays are still written — the parser treats
+      // "field absent" and "field = []" the same way, so round-trip
+      // is safe in both directions, and the user gets a stable
+      // surface area in the frontmatter.
       const libOut: Record<string, unknown> = {
         viewMode: lc.viewMode,
         sortBy: lc.sortBy,
         sortDesc: lc.sortDesc,
-      };
-      if (lc.kanbanGroupBy) libOut.kanbanGroupBy = lc.kanbanGroupBy;
-      if (lc.pageSize) libOut.pageSize = lc.pageSize;
-      if (lc.visibleProperties && lc.visibleProperties.length > 0) {
-        libOut.visibleProperties = lc.visibleProperties;
-      }
-      if (lc.quickDateFilter) {
-        libOut.quickDateFilter = {
-          property: lc.quickDateFilter.property,
-          start: lc.quickDateFilter.start,
-          end: lc.quickDateFilter.end,
-        };
-      }
-      if (lc.filters.length > 0) {
-        libOut.filters = lc.filters.map((f) => {
+        // Always serialise the filters array. When the user clears
+        // every filter, we still write `filters: []` so a hand-edit
+        // can replace it with `filters: [{ property: "Type",
+        // values: ["A", "B"] }]` and the value is honoured on the
+        // next reload. Without this, the field would be silently
+        // dropped on save and the user would see "all files" even
+        // though their filter looked like it was still in the file.
+        filters: lc.filters.map((f) => {
           const fo: Record<string, unknown> = {
             property: f.property,
             values: f.values,
@@ -1716,7 +1715,30 @@ export class SyncEngine {
             if (f.dateRange.end) fo.dateEnd = f.dateRange.end;
           }
           return fo;
-        });
+        }),
+        // Always serialise visibleProperties. Same rationale as
+        // filters: the field is meaningful in YAML and the user
+        // should be able to add/remove keys by hand.
+        visibleProperties: lc.visibleProperties ?? [],
+        // Page size and sort/group options are also kept stable.
+        pageSize: lc.pageSize ?? 20,
+        kanbanGroupBy: lc.kanbanGroupBy ?? "",
+      };
+      // quickDateFilter is treated as "active" when the user has
+      // actually typed a start or end date — when both are empty we
+      // drop the field entirely so the frontmatter only shows
+      // config the user explicitly engaged with. The parser still
+      // accepts a hand-written quickDateFilter block on reload, so
+      // round-trip is preserved when the user actually sets it.
+      if (
+        lc.quickDateFilter &&
+        (lc.quickDateFilter.start || lc.quickDateFilter.end)
+      ) {
+        libOut.quickDateFilter = {
+          property: lc.quickDateFilter.property,
+          start: lc.quickDateFilter.start,
+          end: lc.quickDateFilter.end,
+        };
       }
       out.library = libOut;
     }

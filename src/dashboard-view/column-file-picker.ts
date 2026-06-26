@@ -106,7 +106,7 @@ export async function showColumnFilePicker({
     const item = list.createEl("button", {
       cls: "dashboard-nav-dropdown-item",
       text: f.basename,
-      attr: { title: f.path },
+      attr: {},
     });
 
     if (f.path === embeddedNotePath) {

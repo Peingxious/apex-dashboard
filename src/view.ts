@@ -391,7 +391,7 @@ export class DashboardView extends ItemView {
 
     const linksBtn = actions.createEl("button", {
       cls: "dashboard-mobile-action-btn",
-      attr: { "aria-label": t("mobile.quickActions") },
+      attr: {},
     });
     setIcon(linksBtn, "zap");
     linksBtn.addEventListener("click", (e) => {
@@ -401,7 +401,7 @@ export class DashboardView extends ItemView {
 
     const recentBtn = actions.createEl("button", {
       cls: "dashboard-mobile-action-btn",
-      attr: { "aria-label": t("mobile.recent") },
+      attr: {},
     });
     setIcon(recentBtn, "clock");
     recentBtn.addEventListener("click", (e) => {
@@ -634,7 +634,7 @@ export class DashboardView extends ItemView {
         cls:
           "dashboard-view-nav-tab-wrap" +
           (isActive ? " dashboard-view-nav-tab--active" : ""),
-        attr: { title: notePath },
+        attr: {},
       });
 
       // Track for live highlight updates
@@ -1999,7 +1999,7 @@ export class DashboardView extends ItemView {
     for (const w of widgets) {
       const btn = tabs.createEl("button", {
         cls: "dashboard-mobile-widget-btn",
-        attr: { "aria-label": w.label },
+        attr: {},
       });
       setIcon(btn, w.icon);
 
@@ -2070,7 +2070,7 @@ export class DashboardView extends ItemView {
   private setupBannerBehavior(bannerEl: HTMLElement): void {
     const pinBtn = bannerEl.createEl("button", {
       cls: "dashboard-banner-pin-btn",
-      attr: { "aria-label": "Toggle banner" },
+      attr: {},
     });
     setIcon(pinBtn, "bookmark");
 

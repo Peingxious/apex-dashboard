@@ -281,7 +281,6 @@ export function attachFileSuggest(
       name.style.fontSize = "14px";
       name.style.lineHeight = "20px";
       name.style.color = "inherit";
-      name.setAttribute("title", f.path);
       row.addEventListener("mousedown", (e) => {
         e.preventDefault();
       });

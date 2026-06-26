@@ -14,6 +14,62 @@ export interface LibraryFileResult {
 const DEFAULT_PAGE_SIZE = 20;
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
+/**
+ * Bridge a non-markdown DOM element to Obsidian's built-in Page
+ * Preview core plugin. Page Preview listens for the workspace-level
+ * "hover-link" event and shows the same popover the editor uses for
+ * internal links; this helper just dispatches that event with the
+ * shape Page Preview expects.
+ *
+ * `sourcePath` is the file the link is being resolved from (used
+ * for relative-path resolution); the caller can fall back to the
+ * active file when the dashboard view is the source.
+ */
+function attachLibraryHoverPreview(
+  el: HTMLElement,
+  app: App,
+  file: TFile,
+  sourcePath: string,
+): void {
+  let hoverTimer: number | null = null;
+  const HOVER_DELAY_MS = 200;
+  const clearHoverTimer = (): void => {
+    if (hoverTimer !== null) {
+      window.clearTimeout(hoverTimer);
+      hoverTimer = null;
+    }
+  };
+  el.addEventListener("mouseover", (event) => {
+    if (hoverTimer !== null) return;
+    if (!el.isConnected) return;
+    // Hold Ctrl/Cmd to preview. The dashboard can render dozens of
+    // library cards at once; previewing on plain hover would mount
+    // the markdown renderer and live popover for every card the
+    // cursor passes over, which is wasteful.
+    const mouseEvent = event as MouseEvent;
+    if (!mouseEvent.ctrlKey && !mouseEvent.metaKey) return;
+    hoverTimer = window.setTimeout(() => {
+      hoverTimer = null;
+      if (!el.isConnected) return;
+      const resolvedSource = sourcePath || app.workspace.getActiveFile()?.path || file.path;
+      (
+        app.workspace as unknown as {
+          trigger: (type: string, payload: unknown) => void;
+        }
+      ).trigger("hover-link", {
+        event: mouseEvent,
+        source: "preview",
+        hoverParent: { hoverPopover: null },
+        targetEl: el,
+        linktext: file.path,
+        sourcePath: resolvedSource,
+      });
+    }, HOVER_DELAY_MS);
+  });
+  el.addEventListener("mouseout", clearHoverTimer);
+  el.addEventListener("keydown", clearHoverTimer);
+}
+
 export function extractFrontmatterProperties(
   app: App,
 ): Map<string, Set<string>> {
@@ -230,7 +286,9 @@ let activeCalendarPopup: HTMLElement | null = null;
 
 function closeCalendarPopup(): void {
   if (activeCalendarPopup) {
-    (activeCalendarPopup as HTMLElement & { __cleanup?: () => void }).__cleanup?.();
+    (
+      activeCalendarPopup as HTMLElement & { __cleanup?: () => void }
+    ).__cleanup?.();
     activeCalendarPopup.remove();
     activeCalendarPopup = null;
   }
@@ -426,7 +484,8 @@ function showCalendarPopup(
     }
     document.removeEventListener("mousedown", outsideClick);
   };
-  (popup as HTMLElement & { __cleanup?: () => void }).__cleanup = cleanupOutsideClick;
+  (popup as HTMLElement & { __cleanup?: () => void }).__cleanup =
+    cleanupOutsideClick;
   outsideClickTimer = setTimeout(() => {
     document.addEventListener("mousedown", outsideClick);
   }, 0);
@@ -1209,10 +1268,20 @@ function renderGridView(
       showFileContextMenu(e, result.file, app, result.basename);
     });
 
-    card.createDiv({
-      cls: "dashboard-library-card-title",
+    // Title is a real <a class="internal-link"> so Obsidian's
+    // built-in Page Preview (triggered via the "hover-link"
+    // workspace event) works exactly like in the editor —
+    // fragment links, "Open" / "Open to the right", and the
+    // user's Page Preview setting are all honoured.
+    const titleEl = card.createEl("a", {
+      cls: "internal-link dashboard-library-card-title",
       text: result.basename,
     });
+    titleEl.setAttribute("data-href", result.file.path);
+    titleEl.setAttribute("href", result.file.path);
+    titleEl.setAttribute("target", "_blank");
+    titleEl.setAttribute("rel", "noopener");
+    attachLibraryHoverPreview(titleEl, app, result.file, "");
 
     // Path + creation time on same row
     const metaRow = card.createDiv({ cls: "dashboard-library-card-meta" });
@@ -1288,10 +1357,17 @@ function renderListView(
     });
 
     const main = item.createDiv({ cls: "dashboard-library-list-main" });
-    main.createDiv({
-      cls: "dashboard-library-list-name",
+    // Same as grid: real internal-link anchor so Page Preview works
+    // on hover, matching editor behaviour.
+    const nameEl = main.createEl("a", {
+      cls: "internal-link dashboard-library-list-name",
       text: result.basename,
     });
+    nameEl.setAttribute("data-href", result.file.path);
+    nameEl.setAttribute("href", result.file.path);
+    nameEl.setAttribute("target", "_blank");
+    nameEl.setAttribute("rel", "noopener");
+    attachLibraryHoverPreview(nameEl, app, result.file, "");
 
     // Right-side meta row: property values (no labels) + time (always last)
     // - visibleProperties is set & non-empty → render each key's value as plain text
@@ -1489,9 +1565,20 @@ function renderTableView(
     for (const col of columns) {
       const td = tr.createEl("td");
       if (col === "name") {
-        td.textContent = result.basename;
-        td.addClass("dashboard-library-table-name");
-        td.addEventListener("click", (e) => {
+        // Real internal-link anchor in a <td> so the cell still
+        // looks like a table row but the title is hover-previewable
+        // via the standard Page Preview popover.
+        td.empty();
+        const nameAnchor = td.createEl("a", {
+          cls: "internal-link dashboard-library-table-name",
+          text: result.basename,
+        });
+        nameAnchor.setAttribute("data-href", result.file.path);
+        nameAnchor.setAttribute("href", result.file.path);
+        nameAnchor.setAttribute("target", "_blank");
+        nameAnchor.setAttribute("rel", "noopener");
+        attachLibraryHoverPreview(nameAnchor, app, result.file, "");
+        nameAnchor.addEventListener("click", (e) => {
           e.stopPropagation();
           openFile(app, result.file);
         });
@@ -1574,10 +1661,17 @@ function renderKanbanView(
         e.stopPropagation();
         showFileContextMenu(e, result.file, app, result.basename);
       });
-      card.createDiv({
-        cls: "dashboard-library-kanban-card-title",
+      // Real internal-link anchor → Page Preview works on hover
+      // (matches grid/list and the editor's behaviour).
+      const cardTitleEl = card.createEl("a", {
+        cls: "internal-link dashboard-library-kanban-card-title",
         text: result.basename,
       });
+      cardTitleEl.setAttribute("data-href", result.file.path);
+      cardTitleEl.setAttribute("href", result.file.path);
+      cardTitleEl.setAttribute("target", "_blank");
+      cardTitleEl.setAttribute("rel", "noopener");
+      attachLibraryHoverPreview(cardTitleEl, app, result.file, "");
       card.createDiv({
         cls: "dashboard-library-kanban-card-date",
         text: formatDate(result.mtime),
@@ -1600,10 +1694,15 @@ function renderKanbanView(
         e.stopPropagation();
         showFileContextMenu(e, result.file, app, result.basename);
       });
-      card.createDiv({
-        cls: "dashboard-library-kanban-card-title",
+      const cardTitleEl = card.createEl("a", {
+        cls: "internal-link dashboard-library-kanban-card-title",
         text: result.basename,
       });
+      cardTitleEl.setAttribute("data-href", result.file.path);
+      cardTitleEl.setAttribute("href", result.file.path);
+      cardTitleEl.setAttribute("target", "_blank");
+      cardTitleEl.setAttribute("rel", "noopener");
+      attachLibraryHoverPreview(cardTitleEl, app, result.file, "");
     }
   }
 }

@@ -59,7 +59,7 @@ export function renderQuickActions(
 		let pinned = initialPinned ?? false;
 		const pinBtn = btnGroup.createEl('button', {
 			cls: 'dashboard-qa-pin-btn',
-			attr: { 'aria-label': 'Toggle pin' },
+			attr: {},
 		});
 		const updatePinIcon = () => {
 			setIcon(pinBtn, pinned ? 'pin' : 'pin-off');
@@ -76,7 +76,7 @@ export function renderQuickActions(
 
 	const addBtn = btnGroup.createEl('button', {
 		cls: 'dashboard-qa-add-btn',
-		attr: { 'aria-label': t('quickActions.addAction') },
+		attr: {},
 	});
 	setIcon(addBtn, 'plus');
 	addBtn.addEventListener('click', onAdd);
@@ -156,7 +156,6 @@ export function renderQuickActions(
 		const iconEl = item.createSpan({ cls: 'dashboard-qa-icon' });
 		setIcon(iconEl, action.icon);
 		item.createSpan({ text: action.name, cls: 'dashboard-qa-name' });
-		item.setAttribute('title', action.name);
 
 		// Remove button (on all items)
 		const removeHandler = onRemoveByKey ?? ((k: string) => {
@@ -167,7 +166,7 @@ export function renderQuickActions(
 		});
 		const removeBtn = item.createEl('button', {
 			cls: 'dashboard-qa-remove',
-			attr: { 'aria-label': t('common.remove', { name: action.name }) },
+			attr: {},
 		});
 		setIcon(removeBtn, 'x');
 		removeBtn.addEventListener('click', (e) => {
