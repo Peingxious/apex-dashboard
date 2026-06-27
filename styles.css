@@ -4973,7 +4973,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 1;
   transition:
     opacity 0.2s ease,
     color 0.15s ease;
@@ -5186,7 +5186,7 @@
     opacity 0.2s ease,
     color 0.15s ease;
   line-height: 1;
-  opacity: 0;
+  opacity: 1;
   outline: none;
 }
 
@@ -5231,8 +5231,8 @@
 }
 
 .dashboard-qa-icon svg {
-  width: 12px;
-  height: 12px;
+  width: 18px;
+  height: 18px;
 }
 
 .dashboard-qa-item--preset {
@@ -5441,7 +5441,7 @@
     opacity 0.2s ease,
     color 0.15s ease;
   line-height: 1;
-  opacity: 0;
+  opacity: 1;
   outline: none;
 }
 

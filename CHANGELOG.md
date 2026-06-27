@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.1 (2026-06-27)
+
+### Fixed
+
+- **Section header buttons (type dropdown, add, delete) now always visible** — `.dashboard-section-add-btn` opacity changed from `0` to `1` so the buttons are no longer hidden by default; they were previously only visible on hover
+- **Quick Actions buttons (pin, add) now always visible** — `.dashboard-qa-pin-btn` and `.dashboard-qa-add-btn` opacity changed from `0` to `1` so the buttons are no longer hidden by default
+- **Quick Actions icon size increased** — `.dashboard-qa-icon svg` size increased from `12px` to `18px` for better visibility
+
 ## 1.5.0 (2026-06-27)
 
 ### Changed
