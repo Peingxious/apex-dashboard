@@ -28,6 +28,7 @@ import {
   renderSidebarReading,
   ensureTodoPlusHeading,
 } from "./renderer";
+import { disposeAllRenderers } from "./render/lifecycle";
 import { closeAllFileSuggests } from "./file-suggest";
 import { renderBanner, BannerEditModal } from "./banner";
 import { getRecentDocs, renderRecentDocs } from "./recent";
@@ -179,6 +180,12 @@ export class DashboardView extends ItemView {
     this.unregisterVaultListeners();
     this.stopReminderChecker();
     this.stopWeatherRefresh();
+    // Step 8.3 (v1.5.0) — fix LEAK-001 by tearing down every
+    // document-level event listener that the render layer
+    // installed via `RenderDisposer` during this view's lifetime.
+    // Without this call, listeners from previous view open
+    // sessions would accumulate on `document`.
+    disposeAllRenderers();
     this.pomodoroService?.destroy();
     this.pomodoroService = null;
     this.readingService?.destroy();

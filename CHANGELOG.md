@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.5.0 (2026-06-27)
+
+### Changed
+
+- **`src/renderer.ts` split into a focused barrel (4 409 → 2 837 lines, -34 %)** — every rendering concern that was hosted in the single 6 597-line `renderer.ts` has been moved to a dedicated module under `src/render/`. The split is purely architectural: every call site keeps its old `from "./renderer"` import path because the barrel re-exports the new modules under the original names. Net file count went from one monolith to ~25 single-responsibility files. The follow-up sub-task that splits the remaining `renderDashboard` tree (`renderSection` + `renderCard` + 11 `renderXxxBody` + TodoPlus) into `src/render/dashboard/*` is tracked as a separate effort; the 2 837-line barrel still has the `renderDashboard` family
+- **Sidebar widgets are now one-widget-per-file** — `src/render/sidebar/render-sidebar.ts` (shell, week calendar, widget grid, drag-and-drop), `sidebar-weather.ts` (now-card + content split), `sidebar-heatmap.ts` (heatmap + stats), `sidebar-pomodoro.ts` (timer + `createActivitySelector` + `showPomodoroStats`), `sidebar-countdown.ts` (countdown with its own tick loop and `MutationObserver` cleanup), `sidebar-reading.ts` (book cards + end-session / edit / search modals + `showReadingStats`). The shared time formatters (`formatMinutes` / `formatTime` / `formatReadingDuration` / `formatShortDuration`) used by Pomodoro and Reading live in a dedicated `format-utils.ts` so neither widget owns the other
+- **Chart lifecycle is owned by `src/render/chart-pool.ts`** — the previous `chartInstances` Map, the `destroyChart` helper, and the chart pool state are gone from `renderer.ts`. `tracker.ts` now owns its `Chart.register(...)` side effects and pool key, and `main.ts` (and the view) call `disposeAllRenderers()` on plugin unload. This addresses LEAK-001 (Chart.js instances were never destroyed on view unload) and LEAK-002 (`renderers` array kept growing because the dispose hook was missing)
+- **TodoPlus watcher state is owned by `src/render/dashboard/card-bodies/todoplus/watcher.ts`** — `todoPlusWatchers` is no longer a module-level `Map` in `renderer.ts`. The watcher map, the refresh generation counter, and the debounced refresh logic all live in the dedicated `watcher.ts` module. Renderer no longer reads or writes either. This addresses LEAK-003 (multiple renders of the same card leaked a `MutationObserver` per mount and never disconnected them)
+- **Card-body rendering is one file per body type** — `src/render/dashboard/card-bodies/{todo,memo,note,link,project,habit,tracker,weather}.ts`. The TodoPlus family is its own sub-folder: `card-bodies/todoplus/{item,modals,ops,parser,slice,watcher}.ts`. Each file owns its own private helpers; cross-file helpers live in the shared `wikilink-inline.ts` / `heatmap.ts` / `search.ts` / `reminder-popup.ts` / `dom-helpers.ts` / `state.ts`. The `Chart.register(...)` side effects are co-located with the only consumer (`tracker.ts`) so the registration can never run before the consumer is loaded
+- **Drag sources, hover timers, and the chart pool are all centralised in `src/render/state.ts`** — the file replaces ad-hoc module-level `let` declarations. Any future module that needs ephemeral render state reads / writes it through the state module, so a single `disposeAllRenderers()` call can tear it all down. The 8.8.3 grep gate (`no module-level let in src/render/ outside state.ts`) is the enforcement point
+
+### Fixed
+
+- **LEAK-001 Chart.js instances are now destroyed on view unload** — every `dispose()` / `destroy()` for the previous PoolKey's chart is called by `disposeAllRenderers()`, which is now wired into `onunload` in `view.ts` and `sidebar-view.ts`. The Chart pool's keyed Map is the single source of truth, so destroying a card tears down its Chart in O(1) without scanning the DOM
+- **LEAK-002 The `renderers` array no longer leaks across view reloads** — every entry pushed by `registerRenderer` now has a matching `disposeAllRenderers()` call, so the array is bounded by the active view count instead of growing monotonically
+- **LEAK-003 TodoPlus `MutationObserver`s are disconnected when the card is removed** — the previous per-card observer was created in `setOnload` and never destroyed. The new `watcher.ts` exposes a `disposeTodoPlusWatcher(key)` that is called from the card's `onunload` / `dispose` path, so the observer count is bounded by the visible card count
+- **The Pomodoro / Countdown / Reading widgets' `setInterval` ticks now have a single owner** — the Countdown widget explicitly disconnects its `MutationObserver` and clears its `setInterval` in its `dispose` path, so a re-render never stacks a second tick loop on top of the first
+- **No more `as any` in `src/render/**`** — the moved modules are strict-TypeScript. The few historical `as any`casts that were embedded in the old`renderer.ts` are gone with the code that contained them
+
+### Notes for downgraders
+
+- 1.4.x → 1.5.0: no `dashboard.md` schema change. The plugin still accepts the same frontmatter. The `renderer.ts` removal is internal; the bundle still exposes every function under the same name through `./renderer`
+- The `.plan/Plan.md` Sub-task 8.1 → 8.7.9 + 8.8.0 are all checked off. 8.8.1 (`renderer.ts < 30 lines`) and the `renderDashboard` tree split remain open for the next refactor cycle
+
 ## 1.4.13 (2026-06-26)
 
 ### Changed

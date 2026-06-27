@@ -1,4 +1,4 @@
-﻿# Target.md 鈥?闇€姹傚瓨妗?
+# Target.md 鈥?闇€姹傚瓨妗?
 
 > 鏈枃浠剁敱 Agent 鍦ㄣ€岄樁娈?0锛氶渶姹傞棶璇€嶇粨鏉熷悗鍐欏叆銆?
 > 浠讳綍闇€姹傚彉鏇村繀椤诲悓姝ユ洿鏂版湰鏂囦欢锛屽苟鍦?`.plan/decisions.md` 鐣欑棔銆?
@@ -220,3 +220,155 @@
 | 缁х画 / 褰撳墠杩涘害           | 璇?.plan/锛岀畝鎶ュ悗绛夌‘璁?                                      |
 | 鏂板 / 娣诲姞 / 淇 / 閲嶆瀯 | 璇?.plan/ 鈫?鍦?Plan.md 鍔犱换鍔?鈫?纭鍚庢墽琛?鈫?鍚屾鏂囨。涓庣増鏈彿 |
 | 妫€鏌?/ 瀹℃煡               | 鎸?Agents.md 搂6 妫€鏌ユ竻鍗曢€愰」鎵弿                              |
+
+---
+
+# v1.5.0 — renderer.ts architectural refactor
+
+> **Triggered**: 2026-06-27
+> **Author**: Peingxious (user request)
+> **Target version**: v1.5.0
+> **Refactor type**: **architectural refactor (user-invisible)** — per Agents.md §4.1, no change to Target.md feature list, no change to README/README_ZH (Changelog only), version bump to vx.0.0.
+
+## Trigger
+
+None (architectural refactor); touches `renderer.ts` internal structure and lifecycle only.
+
+## Core flow
+
+**Constraint: 100% preserve all existing functions and interactions**. Re-arrange code location only, introduce central state / lifecycle management, fix known memory leaks.
+
+1. Split 6597-line `src/renderer.ts` into `src/render/` directory (~25 sub-files, each < 500 lines).
+2. Hoist module-level mutable state into `src/render/state.ts` (charts / todoplus watchers / drag source / hover timers).
+3. Introduce `src/render/lifecycle.ts` that unifies registration of `addEventListener` / `setTimeout` / `MutationObserver` / Chart instances; add `disposeAllRenderers()` called by `view.ts` in `onClose`.
+4. Fix 3 P0 memory leaks (see "Current problems" below).
+5. Convert `renderer.ts` to a barrel re-export so 30+ other files need **0 import-path changes**.
+
+## Data storage
+
+No change. `dashboard.md` frontmatter schema unchanged; `localStorage` keys unchanged; i18n keys unchanged; settings unchanged.
+
+## UI components
+
+No new, no removed, no visual / interaction change.
+
+## Current problems (P0, must-fix)
+
+### LEAK-001 — `document.addEventListener` never removed
+
+- **Location**: `src/renderer.ts:138` `ensureItemDocListeners()`
+- **Symptom**: module-level one-shot `document.addEventListener('dragstart'/'dragend'/'dragover'/'drop', …)`; closing view / reloading plugin does NOT call `removeEventListener`; old callback still holds `taskDragSource` closure.
+- **Acceptance**: add `RenderDisposer.dispose()` invoked in `view.ts:onClose`; after reload / reopen dashboard N times, listener count == current instance count.
+
+### LEAK-002 — Chart.js orphan instances
+
+- **Location**: `src/renderer.ts:65` `chartInstances: Map<cardId, Chart>`
+- **Symptom**: card deletion does NOT call `destroyChart(cardId)`; map grows forever; `destroyAllCharts()` already exported but **has no caller** (grep verified).
+- **Acceptance**: delete / rename a card → its old Chart instance `.destroy()` is called; memory snapshot stable.
+
+### LEAK-003 — TodoPlus `MutationObserver` leak
+
+- **Location**: `src/renderer.ts` `todoPlusWatchers` Map
+- **Symptom**: source-link note deleted / card deleted → watcher still subscribed, `disconnect()` never called.
+- **Acceptance**: delete source note → matching observer triggers `disconnect()`; observer map size matches active todoplus card count.
+
+## Current problems (P1, performance / maintainability)
+
+### PERF-001 — Drag hover 200ms closure leak
+
+- `src/renderer.ts:5820` wikilink hover bridge: `hoverTimer` scattered across function body, no cleanup.
+- **Acceptance**: after dashboard open/close many times, listener count stable.
+
+### MAINT-001 — Magic numbers / magic strings
+
+- Scattered `200` (HOVER_DELAY_MS) / `15/26/52` (heatmap max weeks) / `dashboard-task-item--drag-over` and similar class names.
+- **Acceptance**: new `src/render/constants.ts` constant table.
+
+### MAINT-002 — `as any` / module-level `let`
+
+- `grep "as any"` / `let .* = null` shows many hits in renderer.ts.
+- **Acceptance**: new code blocks have no `any`; module-level state is consolidated into `state.ts`.
+
+## Full file structure
+
+```
+src/
+├── renderer.ts                        # ← converted to barrel (only `export * from './render'`)
+└── render/
+    ├── index.ts                       # internal barrel
+    ├── constants.ts                   # CSS class prefix / HOVER_DELAY / size→weeks table
+    ├── state.ts                       # charts / todoplus / drag / hover timers state
+    ├── lifecycle.ts                   # RenderDisposer + disposeAllRenderers()
+    ├── dom-helpers.ts                 # getCSSVar / emptyChildren / setTextShortcut
+    ├── section-title.ts               # renderColumnTitle + protection check
+    ├── drag-and-drop.ts               # dragstart/dragend/dragover/drop listeners (with dispose)
+    ├── wikilink-inline.ts             # renderTextWithLinks / renderInlineMarkdown
+    │                                   #   renderInlineToken / renderWikilink
+    │                                   #   renderExternalLink + hover bridge
+    ├── reminder-popup.ts              # renderReminderButton / showReminderPopup
+    │                                   # closeAllReminderPopups
+    ├── chart-pool.ts                  # chartInstances + acquireChart / releaseChart
+    ├── heatmap.ts                     # tracker heatmap
+    ├── search.ts                      # getSearchableFiles
+    ├── dashboard/
+    │   ├── render-dashboard.ts        # top-level renderDashboard
+    │   ├── render-section.ts          # renderSection
+    │   ├── render-card.ts             # renderCard / renderCardBody
+    │   ├── card-bodies/
+    │   │   ├── memo.ts                # renderMemoBody
+    │   │   ├── todo.ts                # renderTaskBody
+    │   │   ├── note.ts                # renderNoteBody
+    │   │   ├── link.ts                # renderLinkBody
+    │   │   ├── project.ts             # renderProjectBody
+    │   │   ├── habit.ts               # renderHabitBody
+    │   │   ├── todoplus/
+    │   │   │   ├── render.ts          # renderTodoPlusBody
+    │   │   │   ├── item.ts            # renderTodoPlusItem
+    │   │   │   ├── slice.ts           # resolveTodoPlusSlice / waitForFileCache
+    │   │   │   ├── parser.ts          # parseTodoPlusSourceLink / parseTodoPlusChecklist
+    │   │   │   ├── watcher.ts         # MutationObserver pool (disconnect on dispose)
+    │   │   │   ├── ops.ts             # set/add/remove/edit operations
+    │   │   │   ├── modals.ts          # note search modal / heading ensure
+    │   │   │   └── index.ts
+    │   │   └── index.ts
+    │   └── weather-body.ts            # renderWeatherBody / renderWeatherContent
+    └── sidebar/
+        ├── render-sidebar.ts          # top-level sidebar entry
+        ├── sidebar-weather.ts
+        ├── sidebar-heatmap.ts
+        ├── sidebar-pomodoro.ts
+        ├── sidebar-countdown.ts
+        └── sidebar-reading.ts
+```
+
+## Acceptance criteria
+
+- `npm test` all passing
+- `tsc --noEmit` passing
+- `node esbuild.config.mjs production` passing; output `main.js` behavior identical to v1.4.13
+- `src/renderer.ts` becomes a < 30-line barrel file
+- Every file in `src/render/` is < 500 lines (Agents.md §6 red line)
+- 30+ files have **0 import-path changes** (preserve original export names/signatures)
+- Manual smoke test: every existing feature behaves identically to v1.4.13
+  - Dashboard load / re-render
+  - All 7 card types (memo / todo / note / link / project / habit / todoplus)
+  - All 6 sidebar widgets (weather / heatmap / pomodoro / countdown / reading / activity selector)
+  - Drag (task / project item)
+  - Wikilink render + Ctrl/Cmd hover preview
+  - Reminder popup
+  - Chart.js (pomodoro / reading)
+
+## Potential follow-up optimizations (NOT in this refactor)
+
+Detailed in chat "Potential optimizations" section: dirty-check render, ViewModel layer, EventBus replacing singleton callback, `requestIdleCallback` batched render, error boundary, skeleton screen, a11y, expanded unit tests.
+
+## Breaking change declaration
+
+**Zero breaking change**.
+- No user-visible behavior / interaction / visual change
+- No frontmatter schema change
+- No i18n key change
+- No settings change
+- No command id change
+- No CSS class change (only magic strings hoisted to constants table)
+- No API change (30+ files have 0 import change)

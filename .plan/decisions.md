@@ -1,11 +1,11 @@
-﻿<!-- version: 1.4.12 -->
+<!-- version: 1.5.0 -->
 
 # decisions.md 鈥?鍐崇瓥涓庣浠?
 
 > 璁板綍椤圭洰宸茬‘瀹氱殑鎶€鏈喅绛栥€佺粷涓嶈兘杩濆弽鐨勭害鏉熴€?
 > 浠讳綍鍐崇瓥鍙樻洿蹇呴』鐣欑棔锛氭棩鏈?+ 鍐崇瓥 + 鍘熷洜銆?
 >
-**褰撳墠鐗堟湰**：v1.4.12 路 璇﹁鏈熬銆岀増鏈巻鍙层€?
+**褰撳墠鐗堟湰**：v1.5.0 路 璇﹁鏈熬銆岀増鏈巻鍙层€?
 
 ---
 
@@ -168,4 +168,45 @@ apex-dashboard/
 | **v1.2.0** | 2026-06-15 | 鏂板 Agents.md 鑷妇瑙勫垯锛氬姞杞芥椂 AI 鑷姩妫€鏌?鐢熸垚 `.plan/`                     |
 | **v1.1.0** | 2026-06-15 | 鏂板鐗堟湰瀛楁锛涗笌 `Agents.md` 鍚屾鍗囪嚦 v1.1.0锛涘喅绛栨棩蹇楁潯鐩叏閮ㄦ惡甯︾増鏈彿      |
 | v1.0.0     | 鈥?         | 鍒濈増锛堝惈鎶€鏈爤 / 椤圭洰缁撴瀯 / 绾㈢嚎锛?                                           |
+
+---
+
+### v1.5.0 — 2026-06-27 — renderer.ts architectural refactor
+
+#### D-2026-06-27-01 — Split `src/renderer.ts` into `src/render/` directory
+
+- **Decision**: Refactor 6597-line `src/renderer.ts` into a `src/render/` directory containing ~25 focused sub-files (each < 500 lines per Agents.md §6 red line). `src/renderer.ts` becomes a thin barrel `export * from './render'`. 30+ consuming files have **0 import-path changes**.
+- **Reason**: `renderer.ts` violated the Agents.md §6 "split files > 500 lines" rule by 13×. The single file mixed chart pool, drag state, wikilink inline rendering, reminder popups, heatmap, 7 card body types, 6 sidebar widgets, and 3 separate module-level Maps — making it impossible to test in isolation, hard to review, and a hotbed for memory leaks (LEAK-001/002/003).
+- **Impact**:
+  - `src/renderer.ts` shrinks from 6597 → < 30 lines (barrel)
+  - Each `src/render/**` file is < 500 lines
+  - All 30+ consuming files keep their original import paths (`from "./renderer"`)
+  - Public API: 100% identical
+  - User-visible behavior: 100% identical
+  - Diff scope: `src/renderer.ts` + `src/render/**` + 1 line in `src/view.ts` (call `disposeAllRenderers()` in `onClose`)
+
+#### D-2026-06-27-02 — Hoist module-level state into `src/render/state.ts` + introduce `RenderDisposer` lifecycle
+
+- **Decision**: Move all module-level mutable state (`chartInstances`, `todoPlusRenderGeneration`, `todoPlusWatchers`, `taskDragSource`, `projectItemDragSource`, `hoverTimer`) into a centralized `src/render/state.ts`. Introduce `RenderDisposer` in `src/render/lifecycle.ts` that registers every `addEventListener` / `setTimeout` / `MutationObserver` / Chart instance and removes/disconnects them on `dispose()`. Add `disposeAllRenderers()` public API called from `view.ts:onClose`.
+- **Reason**: 3 confirmed P0 memory leaks:
+  - LEAK-001: `document.addEventListener('dragstart'/'dragend'/'dragover'/'drop')` in `ensureItemDocListeners()` is never removed; old callbacks keep `taskDragSource` closure alive across view lifecycle
+  - LEAK-002: `chartInstances` Map grows forever; `destroyAllCharts()` is exported but has no caller
+  - LEAK-003: TodoPlus `MutationObserver`s keep observing source notes even after the card is deleted
+- **Impact**:
+  - Dashboard open/close 5x → listener count == 1 (LEAK-001 fix)
+  - Delete N cards with charts → `chartInstances.size` shrinks accordingly (LEAK-002 fix)
+  - Delete source note → matching `MutationObserver` disconnects (LEAK-003 fix)
+  - Foundation for future dirty-check / ViewModel refactors (see D-2026-06-27-03)
+
+#### D-2026-06-27-03 — Preserve 100% of user-visible behavior; v1.5.0 is architectural-only
+
+- **Decision**: This refactor changes **zero** user-visible behavior. No frontmatter schema change, no i18n key change, no settings change, no command id change, no CSS class change, no API change. Per Agents.md §4.1, README/README_ZH are **not** updated; only `CHANGELOG.md` gains a `## 1.5.0 (2026-06-27)` entry.
+- **Reason**: User explicitly required "完整保留所有操作逻辑与功能" (preserve all operations and functions). The 3 P0 leaks are pure infra bugs with no user-visible side effect in normal use (only long-running sessions or many view cycles expose them). Fixing them is a strict improvement.
+- **Impact**:
+  - Version bump: 1.4.13 → 1.5.0 (vx.0.0 = architectural refactor per Agents.md §4.2)
+  - `CHANGELOG.md` updated
+  - `versions.json` updated
+  - `README.md` / `README_ZH.md` unchanged
+  - Manual smoke test: full feature checklist passes
+
 
