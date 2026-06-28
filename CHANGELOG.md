@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.5.3 (2026-06-28)
+
+### Fixed
+
+- **Drag-to-reorder no longer drops the moved item** — the workbench and the embedded view now share the same three pure data-mutation helpers (`SyncEngine.reorderProjectItemData`, `SyncEngine.moveProjectItemToCardData`, `SyncEngine.removeProjectItemData`). Previously the embedded view re-implemented the three operations inline against `card.projectDocs` and called `synthesizeProjectBodyFromDocs` to re-derive the body — two parallel implementations of the same operation, with the usual consequences: stale `projectDocs` length after a reload, a body synthesis that occasionally produced one fewer section than the source array had entries, and an index that could resolve to "off by one" relative to the renderer's `titles[]` array. Net symptom: dragging the third project item (index 2) in a 3-item card silently dropped the entry on the next render. The unified helpers update body and `projectDocs` together, with explicit bounds checks on every index, so the renderer and the data can no longer disagree about how many items a card holds
+- **Embedded "add project item" no longer lands on the wrong card** — the workbench and the embedded view now share the exact same data-mutation helper (`SyncEngine.addDocToCardData`). Previously the embedded view re-implemented the add-doc logic inline and mutated the card object in-place. When the embedded data was reloaded from disk between render and input (e.g. an external edit, or a vault `modify` event that fired after the plugin's own save), the closure captured a stale card object; the lookup then matched that stale ID against the freshly-loaded data and silently appended to the first card with a matching ID. The unified helper returns a new data object so the closure can never go stale, and a defensive `allCardIds.includes(cardId)` check refuses to write if the captured ID is no longer present. Net effect: typing in the third project's input now adds to the third project, every time
+- **Workbench and embedded view no longer drift apart on "add doc to card"** — the two implementations of "append a doc to a project card" (3-way wrap rule, duplicate guard, append-not-replace) now live in one place (`SyncEngine.addDocToCardData`) instead of two. Future changes to the wrap rule, the duplicate guard, or the structured-`projectDocs` mirror will automatically apply to both surfaces
+
+## 1.5.2 (2026-06-28)
+
+### Fixed
+
+- **Navbar active tab is now visually clear** — the embedded note tab was setting `dashboard-view-nav-tab--active` on the _wrap_ element while the CSS rule targeted the inner button, so the active highlight never matched. The class now lands on the button (matching the main tab) and the active rule uses Obsidian's `var(--interactive-accent)` background with `var(--text-on-accent)` text (the previous `--db-accent-bg` / `--db-accent-text` were never defined in any theme preset, so the fallback was almost invisible). A dedicated hover override keeps the active state intact when the user mouses over it. Font weight bumped to 600
+
 ## 1.5.1 (2026-06-27)
 
 ### Fixed

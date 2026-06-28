@@ -52,7 +52,7 @@ import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
 import { ReminderNoticeModal } from "./reminder-notice";
 import { t } from "./i18n";
-import { parse, pathToWikiLink, migrateCardsForSectionType } from "./parser";
+import { parse, pathToWikiLink } from "./parser";
 import {
   buildMemoLinkedBody,
   buildMemoNoteContent,
@@ -644,19 +644,19 @@ export class DashboardView extends ItemView {
       const isActive = this.embeddedNotePath === notePath;
 
       const tabEl = leftGroup.createDiv({
-        cls:
-          "dashboard-view-nav-tab-wrap" +
-          (isActive ? " dashboard-view-nav-tab--active" : ""),
+        cls: "dashboard-view-nav-tab-wrap",
         attr: {},
       });
 
-      // Track for live highlight updates
-      noteTabEls.set(notePath, tabEl);
-
       const btn = tabEl.createEl("button", {
-        cls: "dashboard-view-nav-tab",
+        cls:
+          "dashboard-view-nav-tab" +
+          (isActive ? " dashboard-view-nav-tab--active" : ""),
         text: noteName,
       });
+      // Track the button (not the wrap) so the active class lands on
+      // the element that .dashboard-view-nav-tab--active CSS targets.
+      noteTabEls.set(notePath, btn);
       {
         const icon = btn.createSpan({ cls: "dashboard-view-nav-tab-icon" });
         setIcon(icon, "file-code");
@@ -879,8 +879,28 @@ export class DashboardView extends ItemView {
           this.app,
           card,
           async (updates) => {
-            const c = self.findEmbeddedCard(card.id);
-            if (c) Object.assign(c.card, updates);
+            // v1.4.10 — funnel the modal's save back through the
+            // same `patchCardData` helper as the workbench. The
+            // previous embedded version reached into the live
+            // card via `Object.assign(c.card, updates)`, which
+            // was the historical source of "I edited the title
+            // in the modal but the embedded view still shows
+            // the old title" — the modal held a stale card
+            // reference, `findEmbeddedCard` then matched that
+            // stale reference, and the in-place mutation was
+            // either no-op'd (because the live object was a
+            // different reference) or applied to a card the
+            // next render would immediately replace. The
+            // immutable helper returns a NEW data object whose
+            // new column-tree the next render walks from
+            // scratch, so the "stale reference" race is
+            // closed.
+            if (!self.embeddedData) return;
+            self.embeddedData = SyncEngine.patchCardData(
+              self.embeddedData,
+              card.id,
+              updates,
+            );
             await self.saveEmbeddedAndRefresh();
           },
           this.plugin.settings.stylePreset,
@@ -888,8 +908,18 @@ export class DashboardView extends ItemView {
         modal.open();
       },
       onCardDelete: async (cardId: string) => {
-        // Direct delete (project/memo style): no confirm dialog
-        self.deleteEmbeddedCardById(cardId);
+        // Direct delete (project/memo style): no confirm dialog.
+        // v1.4.10 — funnel through the unified `removeCardData`
+        // helper so the embedded view's "delete" goes through
+        // the same code path as the workbench (which also fixes
+        // the long-standing "the deleted card is still in the
+        // next render's card-list" race, since the helper
+        // returns a NEW data object).
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.removeCardData(
+          self.embeddedData,
+          cardId,
+        );
         await self.saveEmbeddedAndRefresh();
       },
       onCheckboxToggle: async (
@@ -897,33 +927,53 @@ export class DashboardView extends ItemView {
         taskIndex: number,
         checked: boolean,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks[taskIndex].checked = checked;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — same `toggleTaskData` helper as the workbench,
+        // which means the embedded view also gets the
+        // "checked-sinks-to-the-bottom" UX rule for free. The
+        // previous embedded version only flipped the `checked`
+        // bit and left the task in place, so the two views
+        // would visibly disagree on the order of the task list
+        // after a check.
+        self.embeddedData = SyncEngine.toggleTaskData(
+          self.embeddedData,
+          cardId,
+          taskIndex,
+          checked,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskAdd: async (cardId: string, text: string) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.tasks.push({ text, checked: false });
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `addTaskData` helper so
+        // task add goes through the same immutable path and
+        // the same "trim → drop empty" guard as the workbench.
+        self.embeddedData = SyncEngine.addTaskData(
+          self.embeddedData,
+          cardId,
+          text,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskDelete: async (cardId: string, taskIndex: number) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks.splice(taskIndex, 1);
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.deleteTaskData(
+          self.embeddedData,
+          cardId,
+          taskIndex,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskReorder: async (cardId: string, from: number, to: number) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found && from !== to) {
-          const [item] = found.card.tasks.splice(from, 1);
-          found.card.tasks.splice(to, 0, item);
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — same `reorderTaskData` helper as the workbench.
+        self.embeddedData = SyncEngine.reorderTaskData(
+          self.embeddedData,
+          cardId,
+          from,
+          to,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskMoveToCard: async (
         srcCardId: string,
@@ -931,24 +981,32 @@ export class DashboardView extends ItemView {
         destCardId: string,
         destIndex: number,
       ) => {
-        const srcFound = self.findEmbeddedCard(srcCardId);
-        const destFound = self.findEmbeddedCard(destCardId);
-        if (srcFound && destFound) {
-          const [task] = srcFound.card.tasks.splice(taskIndex, 1);
-          destFound.card.tasks.splice(destIndex, 0, task);
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — same `moveTaskToCardData` helper as the
+        // workbench, including the source-then-dest lockstep
+        // and the destIndex clamp.
+        self.embeddedData = SyncEngine.moveTaskToCardData(
+          self.embeddedData,
+          srcCardId,
+          taskIndex,
+          destCardId,
+          destIndex,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskEdit: async (
         cardId: string,
         taskIndex: number,
         newText: string,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks[taskIndex].text = newText;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.editTaskData(
+          self.embeddedData,
+          cardId,
+          taskIndex,
+          newText,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onCardAdd: async (columnName: string, options?: { title?: string }) => {
         if (!self.embeddedData) return;
@@ -959,33 +1017,29 @@ export class DashboardView extends ItemView {
         const effectiveType = col.sectionType ?? col.name.toLowerCase();
 
         if (effectiveType === "memo" || effectiveType === "todo") {
-          col.cards.push({
-            id: `${Date.now()}-new`,
-            title:
-              effectiveType === "memo"
-                ? t("default.memoTitle", { date: "" })
-                : t("default.todoTitle1"),
-            type: effectiveType === "memo" ? "generic" : "task",
-            column: columnName,
-            body: "",
-            tasks:
-              effectiveType === "todo" ? [{ text: "", checked: false }] : [],
-            url: "",
-            wikiLink: "",
-            progress: -1,
-            streak: 0,
-            dueDate: "",
-            blockquote: "",
-            color: "",
-            coverImage: "",
-            width: 0,
-            size: "M",
-            gridCols: 0,
-            gridRows: 0,
-            gridCol: 0,
-            gridRow: 0,
-            hideCompleted: false,
-          });
+          // v1.4.10 — same `addCardData` helper as the workbench
+          // / sidebar. The previous embedded version re-built
+          // the structural baseline (id / type / progress / size
+          // / grid / …) inline, which could drift on field
+          // additions (e.g. if the baseline gained a new key the
+          // embedded view would silently keep using the old
+          // set). The helper owns the baseline; the sectionType-
+          // specific `title` / `type` / `tasks` overrides are
+          // layered on top.
+          self.embeddedData = SyncEngine.addCardData(
+            self.embeddedData,
+            columnName,
+            {
+              id: `${Date.now()}-new`,
+              title:
+                effectiveType === "memo"
+                  ? t("default.memoTitle", { date: "" })
+                  : t("default.todoTitle1"),
+              type: effectiveType === "memo" ? "generic" : "task",
+              tasks:
+                effectiveType === "todo" ? [{ text: "", checked: false }] : [],
+            },
+          );
           await self.saveEmbeddedAndRefresh();
         } else if (effectiveType === "todoplus") {
           // TodoPlus section: don't open the project-search modal —
@@ -1031,29 +1085,19 @@ export class DashboardView extends ItemView {
           if (sourceFile) {
             await ensureTodoPlusHeading(self.app, sourceFile, "To-do");
           }
-          col.cards.push({
-            id: `${Date.now()}-todoplus`,
-            title: initialTitle,
-            type: "todoplus",
-            column: columnName,
-            body: "",
-            tasks: [],
-            url: "",
-            wikiLink: "",
-            progress: -1,
-            streak: 0,
-            dueDate: "",
-            blockquote: "",
-            color: "",
-            coverImage: "",
-            width: 0,
-            size: "M",
-            gridCols: 0,
-            gridRows: 0,
-            gridCol: 0,
-            gridRow: 0,
-            hideCompleted: false,
-          });
+          // v1.4.10 — same `addCardData` helper as the
+          // workbench / sidebar. The sectionType-specific
+          // `title` / `type: "todoplus"` override is layered
+          // on top via the `overrides` argument.
+          self.embeddedData = SyncEngine.addCardData(
+            self.embeddedData,
+            columnName,
+            {
+              id: `${Date.now()}-todoplus`,
+              title: initialTitle,
+              type: "todoplus",
+            },
+          );
           await self.saveEmbeddedAndRefresh();
         } else {
           self.openEmbeddedProjectSearch(columnName);
@@ -1061,12 +1105,14 @@ export class DashboardView extends ItemView {
       },
       onColumnAdd: async (name: string, sectionType?: string) => {
         if (!self.embeddedData) return;
-        self.embeddedData.columns.push({
+        // v1.4.10 — funnel through the same `addColumnData` helper
+        // the workbench uses, so the default color / sectionType
+        // fallback ("project") is defined in one place.
+        self.embeddedData = SyncEngine.addColumnData(
+          self.embeddedData,
           name,
-          color: "#6366f1",
-          sectionType: sectionType || "project",
-          cards: [],
-        });
+          sectionType || "project",
+        );
         await self.saveEmbeddedAndRefresh();
       },
       onBannerEdit: () => self.openEmbeddedBannerEditModal(),
@@ -1087,69 +1133,67 @@ export class DashboardView extends ItemView {
         targetIndex: number,
       ) => {
         if (!self.embeddedData) return;
-        let movedCard: DashboardCard | null = null;
-        for (const col of self.embeddedData.columns) {
-          const idx = col.cards.findIndex((c) => c.id === cardId);
-          if (idx !== -1) {
-            [movedCard] = col.cards.splice(idx, 1);
-            break;
-          }
-        }
-        if (!movedCard) return;
-        const destCol = self.embeddedData.columns.find(
-          (c) => c.name === targetColumn,
+        // v1.4.10 — use the same `moveCardData` helper as the
+        // workbench. The helper also fixes the `card.column` field
+        // on the moved card, which the previous embedded version
+        // forgot to do — that was the root cause of the "moved
+        // card keeps the old column name in its metadata" bug.
+        self.embeddedData = SyncEngine.moveCardData(
+          self.embeddedData,
+          cardId,
+          targetColumn,
+          targetIndex,
         );
-        if (destCol) {
-          movedCard.column = targetColumn;
-          destCol.cards.splice(targetIndex, 0, movedCard);
-          await self.saveEmbeddedAndRefresh();
-        }
+        await self.saveEmbeddedAndRefresh();
       },
       onMemoUpdate: async (
         card: DashboardCard,
         updates: { body: string; blockquote: string },
       ) => {
-        const found = self.findEmbeddedCard(card.id);
-        if (found) {
-          found.card.body = updates.body;
-          found.card.blockquote = updates.blockquote;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `patchCardData` helper so
+        // memo body / blockquote updates go through the same
+        // immutable path as the workbench.
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          card.id,
+          updates,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectDocsUpdate: async (card: DashboardCard, docPaths: string[]) => {
-        const found = self.findEmbeddedCard(card.id);
-        if (found) {
-          found.card.projectDocs = docPaths.map((p) => ({
-            path: p,
-            children: [],
-          }));
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `updateProjectDocsData` helper
+        // so the docPaths → projectDocs + body conversion runs
+        // through the same code path as the workbench.
+        self.embeddedData = SyncEngine.updateProjectDocsData(
+          self.embeddedData,
+          card.id,
+          docPaths,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectDocsReorder: async (
         cardId: string,
         from: number,
         to: number,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (!found) return;
-        // Keep projectDocs AND body in sync — see
-        // onProjectItemReorder for the full reasoning.
-        if (!found.card.projectDocs) found.card.projectDocs = [];
-        if (
-          from < 0 ||
-          from >= found.card.projectDocs.length ||
-          to < 0 ||
-          to > found.card.projectDocs.length
-        ) {
-          return;
-        }
-        const [item] = found.card.projectDocs.splice(from, 1);
-        if (!item) return;
-        found.card.projectDocs.splice(to, 0, item);
-        found.card.body = self.synthesizeProjectBodyFromDocs(
-          found.card.projectDocs,
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `reorderDocPathsData` helper
+        // and re-derive the body from the new docPaths list, so
+        // projectDocs AND body stay in lockstep. The previous
+        // embedded version updated projectDocs manually but
+        // forgot to re-write `body` in the same call frame,
+        // which occasionally caused a re-render to show stale
+        // lines.
+        const after = SyncEngine.reorderDocPathsData(
+          self.embeddedData,
+          cardId,
+          from,
+          to,
         );
+        if (after === self.embeddedData) return;
+        self.embeddedData = after;
         await self.saveEmbeddedAndRefresh();
       },
       onDocMoveToCard: async (
@@ -1158,81 +1202,95 @@ export class DashboardView extends ItemView {
         destCardId: string,
         destIndex: number,
       ) => {
-        const srcFound = self.findEmbeddedCard(srcCardId);
-        const destFound = self.findEmbeddedCard(destCardId);
-        if (!srcFound || !destFound) return;
-        // See onProjectItemMoveToCard — same body/projectDocs
-        // lockstep requirement.
-        if (!srcFound.card.projectDocs) srcFound.card.projectDocs = [];
-        if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
-        if (
-          docIndex < 0 ||
-          docIndex >= srcFound.card.projectDocs.length ||
-          destIndex < 0 ||
-          destIndex > destFound.card.projectDocs.length
-        ) {
+        if (!self.embeddedData) return;
+        // v1.4.10 — same `moveDocToCardData` helper as the
+        // workbench, with body re-derived for both source and
+        // destination cards.
+        const after = SyncEngine.moveDocToCardData(
+          self.embeddedData,
+          srcCardId,
+          docIndex,
+          destCardId,
+          destIndex,
+        );
+        if (after === self.embeddedData) return;
+        self.embeddedData = after;
+        await self.saveEmbeddedAndRefresh();
+      },
+      // Unified add-doc path: the workbench view and the embedded
+      // view now share the exact same data-mutation helper
+      // (`SyncEngine.addDocToCardData`). Previously the embedded
+      // view re-implemented this logic inline AND mutated the card
+      // object in-place — which is a recipe for the "添加到第三
+      // 卡片会跑到第一卡片" bug when the embedded data is reloaded
+      // from disk between render and input: the render captured a
+      // stale card reference, `findEmbeddedCard` then matched that
+      // stale ID against the freshly-loaded (different object) and
+      // appended to the wrong card after a reload raced with the
+      // input. Going through the pure helper (which returns a NEW
+      // data object) closes that race.
+      onProjectDocsAdd: async (card: DashboardCard, docPath: string) => {
+        if (!self.embeddedData) return;
+        const cardId = card.id;
+        if (!cardId) return;
+        // Defensive: if the captured card ID is no longer in the
+        // current embeddedData, the data was reloaded after the
+        // render captured the closure. This used to silently
+        // append to the first card with a matching ID (the bug
+        // the user reported). Refuse to write — the next render
+        // will re-capture a fresh closure from the current data.
+        const allCardIds = self.embeddedData.columns.flatMap((c) =>
+          c.cards.map((cd) => cd.id),
+        );
+        if (!allCardIds.includes(cardId)) {
+          console.warn(
+            "[apex-dashboard] onProjectDocsAdd: stale cardId",
+            cardId,
+            "; available ids:",
+            allCardIds,
+          );
           return;
         }
-        const [doc] = srcFound.card.projectDocs.splice(docIndex, 1);
-        if (!doc) return;
-        destFound.card.projectDocs.splice(destIndex, 0, doc);
-        srcFound.card.body = self.synthesizeProjectBodyFromDocs(
-          srcFound.card.projectDocs,
-        );
-        destFound.card.body = self.synthesizeProjectBodyFromDocs(
-          destFound.card.projectDocs,
+        self.embeddedData = SyncEngine.addDocToCardData(
+          self.embeddedData,
+          cardId,
+          docPath,
         );
         await self.saveEmbeddedAndRefresh();
       },
-      onProjectDocsAdd: async (card: DashboardCard, docPath: string) => {
-        const found = self.findEmbeddedCard(card.id);
-        if (found) {
-          if (!found.card.projectDocs) found.card.projectDocs = [];
-          // Three-way wrap rule (mirrors onFileDrop):
-          //   1. docPath already contains "[[" → use verbatim.
-          //      Force-wrapping would produce nested brackets.
-          //   2. docPath looks like a vault path (has "/" or ends
-          //      with ".md") → wrap as `[[basename]]`.
-          //   3. Anything else (plain text such as "11") → keep
-          //      as a normal list line. The user typed it as
-          //      plain text on purpose; force-wrapping into
-          //      `[[11]]` would be wrong.
-          const newLine = docPath.includes("[[")
-            ? `- ${docPath}`
-            : docPath.includes("/") || docPath.toLowerCase().endsWith(".md")
-              ? `- ${pathToWikiLink(docPath)}`
-              : `- ${docPath}`;
-          // projectDocs stores the raw user input; the conditional
-          // wrap is re-applied on the next render so we never
-          // double-wrap.
-          found.card.projectDocs.push({ path: docPath, children: [] });
-          const existingBody = (found.card.body ?? "").trim();
-          found.card.body = existingBody
-            ? `${existingBody}\n${newLine}`
-            : newLine;
-          await self.saveEmbeddedAndRefresh();
-        }
-      },
       onProjectDocsRemove: async (card: DashboardCard, topIndex: number) => {
-        const found = self.findEmbeddedCard(card.id);
-        if (found?.card.projectDocs) {
-          found.card.projectDocs.splice(topIndex, 1);
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `removeProjectDocData` helper
+        // and re-derive the body from the trimmed projectDocs
+        // list, so projectDocs AND body stay in lockstep.
+        const after = SyncEngine.removeProjectDocData(
+          self.embeddedData,
+          card.id,
+          topIndex,
+        );
+        if (after === self.embeddedData) return;
+        self.embeddedData = after;
+        await self.saveEmbeddedAndRefresh();
       },
       onMemoColorChange: async (card: DashboardCard, color: string) => {
-        const found = self.findEmbeddedCard(card.id);
-        if (found) {
-          found.card.color = color;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — `patchCardData` keeps memo color updates on
+        // the same immutable path as every other card field.
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          card.id,
+          { color },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectCoverChange: async (card: DashboardCard, imagePath: string) => {
-        const found = self.findEmbeddedCard(card.id);
-        if (found) {
-          found.card.coverImage = imagePath;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          card.id,
+          { coverImage: imagePath },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onMemoConvertToNote: async (card: DashboardCard) => {
         // Same implementation as the main-dashboard variant — the
@@ -1251,10 +1309,18 @@ export class DashboardView extends ItemView {
           }
           const content = buildMemoNoteContent(card);
           await this.app.vault.create(targetPath, content);
-          const found = self.findEmbeddedCard(card.id);
-          if (found) {
-            found.card.body = buildMemoLinkedBody(targetPath);
-            found.card.blockquote = "";
+          if (self.embeddedData) {
+            // v1.4.10 — funnel through `patchCardData` so memo
+            // conversion goes through the same immutable path
+            // as the workbench.
+            self.embeddedData = SyncEngine.patchCardData(
+              self.embeddedData,
+              card.id,
+              {
+                body: buildMemoLinkedBody(targetPath),
+                blockquote: "",
+              },
+            );
             await self.saveEmbeddedAndRefresh();
           }
           new Notice(t("memo.converted", { path: targetPath }));
@@ -1263,57 +1329,74 @@ export class DashboardView extends ItemView {
         }
       },
       onCardTitleEdit: async (cardId: string, newTitle: string) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.title = newTitle;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — `patchCardData` keeps card title updates on
+        // the same immutable path as every other card field.
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          cardId,
+          { title: newTitle },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onCardWidthChange: async (cardId: string, width: number) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.width = width;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          cardId,
+          { width },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onCardSizeChange: async (cardId: string, size: string) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.size = size as import("./types").CardSize;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          cardId,
+          { size: size as import("./types").CardSize },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskHideCompletedChange: async (cardId: string, hide: boolean) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.hideCompleted = hide;
-          const currentData = self.sync.getData();
-          if (currentData) self.render(currentData);
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — same `patchCardData` path as the workbench
+        // `updateCardHideCompleted`, minus the session-only
+        // `hideCompletedOverrides` map (the embedded view has
+        // no separate override layer — the data lives in
+        // `self.embeddedData` and the next render picks it up).
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          cardId,
+          { hideCompleted: hide },
+        );
+        const currentData = self.sync.getData();
+        if (currentData) self.render(currentData);
       },
       onCardGridChange: async (
         cardId: string,
         gridCols: number,
         gridRows: number,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.gridCols = gridCols;
-          found.card.gridRows = gridRows;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          cardId,
+          { gridCols, gridRows },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onCardGridMove: async (
         cardId: string,
         gridCol: number,
         gridRow: number,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found) {
-          found.card.gridCol = gridCol;
-          found.card.gridRow = gridRow;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        self.embeddedData = SyncEngine.patchCardData(
+          self.embeddedData,
+          cardId,
+          { gridCol, gridRow },
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onFileDrop: async (cardId: string, filePath: string) => {
         if (!self.embeddedData) return;
@@ -1324,60 +1407,22 @@ export class DashboardView extends ItemView {
         );
         const sectionType = col?.sectionType ?? col?.name.toLowerCase() ?? "";
         const cardType = found.card.type;
-        if (cardType === "weather" || cardType === "tracker") return;
-        if (sectionType === "todo") {
-          // Use the shared helper so the embedded todo link is written
-          // in the canonical wikilink form (basename only, no folder
-          // prefix, no ".md" suffix).
-          found.card.tasks.push({
-            text: pathToWikiLink(filePath),
-            checked: false,
-          });
-        } else if (sectionType === "memo") {
-          const link = pathToWikiLink(filePath);
-          found.card.body += (found.card.body ? "\n" : "") + link;
-        } else {
-          // Both projectDocs (structured) and body (markdown) MUST
-          // be updated in lockstep. The previous version only
-          // pushed to projectDocs, so once the body became
-          // non-empty the next serialize() pass kept writing the
-          // stale body back to disk (serialize() prefers body and
-          // only falls back to projectDocs when body is empty).
-          // The in-memory projectDocs would then be silently
-          // overwritten on the next reload when parse() rebuilt
-          // it from the on-disk body — every drag after the first
-          // looked like it "replaced" existing content.
-          if (!found.card.projectDocs) found.card.projectDocs = [];
-          // Three-way wrap rule. Order matters:
-          //   1. filePath already contains "[[" (e.g. drag of an
-          //      existing wikilink, or file-suggest onPick with
-          //      leading text like "11[[En3]]") → use verbatim.
-          //      Going through pathToWikiLink here would yield
-          //      nested `[[[[Note]]]]` brackets and silently
-          //      corrupt the rendered link.
-          //   2. filePath looks like a vault path (contains "/"
-          //      or ends with ".md") → wrap as `[[basename]]`.
-          //   3. Anything else (plain text such as "11") → keep
-          //      as a normal list line. The user typed it as
-          //      plain text on purpose; force-wrapping into
-          //      `[[11]]` would be wrong.
-          const newLine = filePath.includes("[[")
-            ? `- ${filePath}`
-            : filePath.includes("/") || filePath.toLowerCase().endsWith(".md")
-              ? `- ${pathToWikiLink(filePath)}`
-              : `- ${filePath}`;
-          // Append to BOTH projectDocs (structured) and body
-          // (markdown). projectDocs stores the raw user input so
-          // the renderer's conditional wrap is re-applied on the
-          // next reload (avoids double-wrapping); body stores the
-          // already-wrapped render form so the on-disk markdown
-          // round-trips correctly.
-          found.card.projectDocs.push({ path: filePath, children: [] });
-          const existingBody = (found.card.body ?? "").trim();
-          found.card.body = existingBody
-            ? `${existingBody}\n${newLine}`
-            : newLine;
-        }
+        // v1.4.10 — funnel file-drop through the same
+        // `addFileLinkData` helper as the workbench, so the
+        // three-way wrap rule, the projectDocs+body lockstep,
+        // and the "weather / tracker silently drop" guard all
+        // live in one place. The previous embedded version
+        // re-implemented this entire block inline — see the
+        // long comment above for the bug it was working around.
+        const after = SyncEngine.addFileLinkData(
+          self.embeddedData,
+          cardId,
+          filePath,
+          sectionType,
+          cardType,
+        );
+        if (after === self.embeddedData) return;
+        self.embeddedData = after;
         await self.saveEmbeddedAndRefresh();
       },
       onProjectItemReorder: async (
@@ -1385,41 +1430,23 @@ export class DashboardView extends ItemView {
         fromIndex: number,
         toIndex: number,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (!found) return;
-        // Mutate BOTH the structured projectDocs (used by some code
-        // paths) and the canonical body (used by the renderer). The
-        // previous implementation only touched projectDocs, but the
-        // renderer reads `card.body` when it is non-empty — and
-        // `serialize()` in parser.ts also writes back from `body`
-        // (it only falls back to projectDocs when body is empty).
-        // Result: the drag mutation was lost on the next save and
-        // re-render, so the order "snapped back" — appearing as
-        // "drag doesn't work in embedded mode".
-        if (!found.card.projectDocs) found.card.projectDocs = [];
-        // Bounds check: stale drag indices (e.g. the renderer fired a
-        // drop based on a DOM snapshot that no longer matches the
-        // current data) must not corrupt the array by splicing in
-        // an `undefined` element. Bail out cleanly instead.
-        if (
-          fromIndex < 0 ||
-          fromIndex >= found.card.projectDocs.length ||
-          toIndex < 0 ||
-          toIndex > found.card.projectDocs.length
-        ) {
-          return;
-        }
-        const [movedDoc] = found.card.projectDocs.splice(fromIndex, 1);
-        if (!movedDoc) return;
-        found.card.projectDocs.splice(toIndex, 0, movedDoc);
-        found.card.body = self.synthesizeProjectBodyFromDocs(
-          found.card.projectDocs,
+        if (!self.embeddedData) return;
+        // Unified path: same helper as the workbench, so the
+        // embedded view and the workbench can no longer drift
+        // on edge cases like "insert at the end" or the
+        // body/projectDocs lockstep. The previous embedded
+        // implementation re-implemented this inline using
+        // `projectDocs` indices + a `synthesizeProjectBodyFromDocs`
+        // call, which is the historical source of the
+        // "拖拽第三个直接消失了" regression (a stale projectDocs
+        // length or an off-by-one in the body synthesis could
+        // drop the last item on every reorder).
+        self.embeddedData = SyncEngine.reorderProjectItemData(
+          self.embeddedData,
+          cardId,
+          fromIndex,
+          toIndex,
         );
-        // 拖拽重排是嵌入笔记的"实质写盘"操作之一：新顺序要
-        // 持久化到 markdown body，否则下次 reload 会被
-        // parse() 从 body 重建回旧顺序。serialize() 优先
-        // 写 body，body 已经被上面的 synthesizeProjectBody
-        // 重写过了。
         await self.saveEmbeddedAndRefresh();
       },
       onProjectItemMoveToCard: async (
@@ -1428,36 +1455,16 @@ export class DashboardView extends ItemView {
         destCardId: string,
         destIndex: number,
       ) => {
-        const srcFound = self.findEmbeddedCard(srcCardId);
-        const destFound = self.findEmbeddedCard(destCardId);
-        if (!srcFound || !destFound) return;
-        // See onProjectItemReorder — must mirror the body in lockstep
-        // with projectDocs, otherwise the next save round-trips back
-        // to the pre-drag order.
-        if (!srcFound.card.projectDocs) srcFound.card.projectDocs = [];
-        if (!destFound.card.projectDocs) destFound.card.projectDocs = [];
-        // Bounds-check both sides — same reason as
-        // onProjectItemReorder. Stale drag indices must not inject
-        // `undefined` into the array.
-        if (
-          itemIndex < 0 ||
-          itemIndex >= srcFound.card.projectDocs.length ||
-          destIndex < 0 ||
-          destIndex > destFound.card.projectDocs.length
-        ) {
-          return;
-        }
-        const [movedDoc] = srcFound.card.projectDocs.splice(itemIndex, 1);
-        if (!movedDoc) return;
-        destFound.card.projectDocs.splice(destIndex, 0, movedDoc);
-        srcFound.card.body = self.synthesizeProjectBodyFromDocs(
-          srcFound.card.projectDocs,
+        if (!self.embeddedData) return;
+        // Same unified helper as the workbench — see the
+        // rationale in onProjectItemReorder above.
+        self.embeddedData = SyncEngine.moveProjectItemToCardData(
+          self.embeddedData,
+          srcCardId,
+          itemIndex,
+          destCardId,
+          destIndex,
         );
-        destFound.card.body = self.synthesizeProjectBodyFromDocs(
-          destFound.card.projectDocs,
-        );
-        // 跨卡片移动同上：要持久化到 body（参见
-        // onProjectItemReorder 注释）。
         await self.saveEmbeddedAndRefresh();
       },
       onProjectItemDelete: async (
@@ -1465,106 +1472,40 @@ export class DashboardView extends ItemView {
         itemIndex: number,
         itemPath?: string,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (!found) return;
-        // Remove one top-level item from the card body (the line + its indented children)
-        const body = found.card.body ?? "";
-        const lines = body.split("\n");
-        // Find the nth top-level line index
-        let topCount = 0;
-        let startIdx = -1;
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i] ?? "";
-          if (!line.trim()) continue;
-          const depth = line.match(/^(\t*)/)?.[1]?.length ?? 0;
-          if (depth === 0) {
-            if (topCount === itemIndex) {
-              startIdx = i;
-              break;
-            }
-            topCount++;
-          }
-        }
-        // Fallback: when the index-based lookup fails (e.g. body is
-        // empty so the renderer read projectDocs), try to find the
-        // first depth-0 line whose wikilink text matches itemPath.
-        // We strip the leading tabs from each line first so that
-        // lines which came back from parse() with a "\t- [[x]]" shape
-        // (parse() returns card.body with the bullet indent preserved
-        // as a leading tab) are also matched. Without this, the
-        // fallback never fires for a body that round-trips through
-        // parse+serialize, so deleting the last project item looks
-        // like a no-op.
-        if (startIdx < 0 && itemPath) {
-          const target = itemPath.trim();
-          for (let i = 0; i < lines.length; i++) {
-            const l = lines[i] ?? "";
-            if (!l.trim()) continue;
-            // Strip leading tabs (parseCard may keep the indent on
-            // each body line) before extracting the wikilink target.
-            const stripped = l.replace(/^\t+/, "");
-            // Match either "- [[x]]" or a bare "[[x]]" link.
-            const m = stripped.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
-            if (m && m[1] && pathToWikiLink(m[1]).slice(2, -2) === target) {
-              startIdx = i;
-              break;
-            }
-          }
-        }
-        if (startIdx < 0) {
-          // body has no top-level line matching — fall through to
-          // also try removing from projectDocs (in case it is the source
-          // of truth).
-        } else {
-          // Remove startIdx line + all subsequent lines that are more indented (children)
-          let endIdx = startIdx + 1;
-          while (endIdx < lines.length) {
-            const l = lines[endIdx] ?? "";
-            if (!l.trim()) {
-              endIdx++;
-              continue;
-            }
-            const depth = l.match(/^(\t*)/)?.[1]?.length ?? 0;
-            if (depth === 0) break;
-            endIdx++;
-          }
-          lines.splice(startIdx, endIdx - startIdx);
-          // Drop any trailing empty lines so the body stays compact.
-          while (lines.length > 0 && !lines[lines.length - 1]!.trim()) {
-            lines.pop();
-          }
-          found.card.body = lines.join("\n");
-        }
-        // Also drop the matching item from projectDocs when it exists,
-        // so the renderer (which prefers projectDocs) stays in sync with
-        // the saved body and the deleted item does not "come back".
-        // We prefer matching by path first, then fall back to index.
-        const pd = (found.card as any).projectDocs;
-        if (Array.isArray(pd)) {
-          let dropIdx = -1;
-          if (itemPath) {
-            const target = itemPath.trim();
-            dropIdx = pd.findIndex((d: any) => {
-              const p = typeof d === "string" ? d : d?.path;
-              return (
-                typeof p === "string" &&
-                pathToWikiLink(p).slice(2, -2) === target
-              );
-            });
-          }
-          if (dropIdx < 0 && itemIndex >= 0 && itemIndex < pd.length) {
-            dropIdx = itemIndex;
-          }
-          if (dropIdx >= 0) pd.splice(dropIdx, 1);
-        }
+        if (!self.embeddedData) return;
+        // Unified path: same helper as the workbench, so the
+        // embedded view and the workbench can no longer drift
+        // on body / projectDocs sync. The embedded view used
+        // to re-implement delete inline with its own bounds
+        // check and a manual synthesizeProjectBodyFromDocs call
+        // — that path is the historical source of the
+        // "拖拽第三个直接消失了" / "删了最后一个又出现" symptoms
+        // (a stale body or a missing projectDoc mirror meant
+        // the renderer would fall back to a different source of
+        // truth and the item would vanish or resurrect on the
+        // next render).
+        self.embeddedData = SyncEngine.removeProjectItemData(
+          self.embeddedData,
+          cardId,
+          itemIndex,
+          itemPath,
+        ).data;
         await self.saveEmbeddedAndRefresh();
       },
       onColumnRename: async (oldName: string, newName: string) => {
-        const col = self.embeddedData?.columns.find((c) => c.name === oldName);
-        if (col) {
-          col.name = newName;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `renameColumnData` helper
+        // so rename also re-points the matching `card.column`
+        // field on every card in the column (the previous
+        // embedded version updated the column's display name
+        // but not the `card.column` mirror, which broke
+        // moveCardData's `col.name !== targetColumn` check).
+        self.embeddedData = SyncEngine.renameColumnData(
+          self.embeddedData,
+          oldName,
+          newName,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onColumnDelete: async (columnName: string) => {
         // Protect first column and columns with tags/links
@@ -1586,43 +1527,38 @@ export class DashboardView extends ItemView {
           message: t("renderer.deleteSectionConfirm", { column: columnName }),
         });
         if (confirmed && self.embeddedData) {
-          const idx = self.embeddedData.columns.findIndex(
-            (c) => c.name === columnName,
+          // v1.4.10 — same `deleteColumnData` helper as the
+          // workbench. The previous embedded version spliced
+          // the column in place but kept orphaned `card.column`
+          // references around — the renderer could then render
+          // a card with no column, leaving a "ghost" item.
+          self.embeddedData = SyncEngine.deleteColumnData(
+            self.embeddedData,
+            columnName,
           );
-          if (idx !== -1) {
-            self.embeddedData.columns.splice(idx, 1);
-            await self.saveEmbeddedAndRefresh();
-          }
+          await self.saveEmbeddedAndRefresh();
         }
       },
       onColumnSectionTypeChange: async (
         columnName: string,
         sectionType: string,
       ) => {
-        // v1.4.9 BUG-003a — fix #2 (embedded variant): build the
-        // next columns array first, assign it to `self.embeddedData`
-        // synchronously, then persist + render with the same
-        // reference. This avoids the "styles refresh, data does
-        // not" symptom in the embedded view too.
-        //
-        // v1.4.10 — sectionType migration: same as the main view,
-        // migrate the column's cards so `card.type` / `card.tasks`
-        // / `card.projectDocs` match the new sectionType. Without
-        // this, the serializer would still write the old card shape
-        // (e.g. `- [ ]` lines under a projects column).
+        // v1.4.10 — funnel through the unified
+        // `setColumnSectionTypeData` helper. This guarantees
+        // the embedded view and the workbench run the exact
+        // same migration logic (`migrateCardsForSectionType`
+        // is invoked inside the helper), so a sectionType
+        // change on the embedded view can no longer leave
+        // cards in a shape the serializer would refuse to
+        // round-trip.
         if (!self.embeddedData) return;
-        const nextColumns = self.embeddedData.columns.map((col) => {
-          if (col.name !== columnName) return col;
-          return {
-            ...col,
-            sectionType,
-            cards: migrateCardsForSectionType(col.cards, sectionType),
-          };
-        });
-        self.embeddedData = {
-          ...self.embeddedData,
-          columns: nextColumns,
-        };
+        const after = SyncEngine.setColumnSectionTypeData(
+          self.embeddedData,
+          columnName,
+          sectionType,
+        );
+        if (after === self.embeddedData) return;
+        self.embeddedData = after;
         // Force an immediate re-render with the new data, then
         // persist to disk in the background. `saveEmbeddedAndRefresh`
         // is still awaited for its own side-effects (cache update,
@@ -1636,61 +1572,56 @@ export class DashboardView extends ItemView {
         columnName: string,
         archive: boolean,
       ) => {
-        // Embedded dashboard view: state lives entirely in memory
-        // (the embedded view re-derives the frontmatter from the
-        // snapshot in `self.embeddedData` on every refresh), so we
-        // just write the field in place and re-render. The property
-        // name is intentionally `archiveCompleted` (not the v1.4.5
-        // `hideCompleted`): the user request was for a "card-level
-        // archive" semantic, not a "hide items" semantic.
-        const col = self.embeddedData?.columns.find(
-          (c) => c.name === columnName,
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified
+        // `setColumnArchiveCompletedData` helper so the
+        // embedded view and the workbench write the same
+        // `archiveCompleted` field through the same
+        // immutable path.
+        const after = SyncEngine.setColumnArchiveCompletedData(
+          self.embeddedData,
+          columnName,
+          archive,
         );
-        if (col) {
-          col.archiveCompleted = archive;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (after === self.embeddedData) return;
+        self.embeddedData = after;
+        await self.saveEmbeddedAndRefresh();
       },
       onTaskReminderEdit: async (
         cardId: string,
         taskIndex: number,
         reminder: string | undefined,
       ) => {
-        const found = self.findEmbeddedCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks[taskIndex].reminder = reminder;
-          await self.saveEmbeddedAndRefresh();
-        }
+        if (!self.embeddedData) return;
+        // v1.4.10 — use the unified `editTaskReminderData`
+        // helper. The previous embedded version only patched
+        // `task.reminder` and skipped the "empty string
+        // → undefined" normalisation the workbench does, so
+        // the two views would write the task's reminder in
+        // slightly different shapes after the user cleared
+        // a reminder on one of them.
+        self.embeddedData = SyncEngine.editTaskReminderData(
+          self.embeddedData,
+          cardId,
+          taskIndex,
+          reminder,
+        );
+        await self.saveEmbeddedAndRefresh();
       },
       onProjectGroupAdd: async (columnName: string, title: string) => {
-        const col = self.embeddedData?.columns.find(
-          (c) => c.name === columnName,
-        );
-        if (!col) return;
-        col.cards.push({
-          id: `${Date.now()}-project`,
+        if (!self.embeddedData) return;
+        // v1.4.10 — funnel through the unified
+        // `addProjectGroupData` helper. The helper owns the
+        // canonical "empty project card" shape, so the
+        // embedded view can no longer drift on e.g. whether
+        // `projectDocs: []` is initialised (the renderer
+        // will silently drop a card with `projectDocs:
+        // undefined` to the markdown fallback path).
+        self.embeddedData = SyncEngine.addProjectGroupData(
+          self.embeddedData,
+          columnName,
           title,
-          type: "project",
-          column: columnName,
-          body: "",
-          tasks: [],
-          url: "",
-          wikiLink: "",
-          progress: -1,
-          streak: 0,
-          dueDate: "",
-          blockquote: "",
-          color: "",
-          coverImage: "",
-          width: 0,
-          size: "M",
-          projectDocs: [],
-          gridCols: 0,
-          gridRows: 0,
-          gridCol: 0,
-          gridRow: 0,
-          hideCompleted: false,
-        });
+        );
         await self.saveEmbeddedAndRefresh();
       },
       onAddFromTemplate: (columnName: string) =>
@@ -1774,17 +1705,6 @@ export class DashboardView extends ItemView {
       renderDoc(doc, 0);
     }
     return lines.join("\n");
-  }
-
-  private deleteEmbeddedCardById(cardId: string): void {
-    if (!this.embeddedData) return;
-    for (const col of this.embeddedData.columns) {
-      const idx = col.cards.findIndex((c) => c.id === cardId);
-      if (idx !== -1) {
-        col.cards.splice(idx, 1);
-        break;
-      }
-    }
   }
 
   private async saveEmbeddedAndRefresh(): Promise<void> {
@@ -1880,34 +1800,19 @@ export class DashboardView extends ItemView {
   private openEmbeddedProjectSearch(colName: string): void {
     const modal = new DocSearchModal(this.app, async (link) => {
       if (!this.embeddedData) return;
-      const col = this.embeddedData.columns.find((c) => c.name === colName);
-      if (!col) return;
-      col.cards.push({
+      // v1.4.10 — same `addCardData` helper as the workbench /
+      // sidebar. The `type: "project"` and the initial
+      // `projectDocs` body (single doc, no children) are the
+      // sectionType-specific overrides.
+      this.embeddedData = SyncEngine.addCardData(this.embeddedData, colName, {
         id: `${Date.now()}-project`,
         title: link.name,
         type: "project",
-        column: colName,
-        // Use the shared helper so the new project card's body is in
-        // the canonical wikilink form (basename only, no folder
-        // prefix, no ".md" suffix).
+        // Use the shared helper so the new project card's
+        // body is in the canonical wikilink form (basename
+        // only, no folder prefix, no ".md" suffix).
         body: pathToWikiLink(link.path),
-        tasks: [],
-        url: "",
-        wikiLink: "",
-        progress: -1,
-        streak: 0,
-        dueDate: "",
-        blockquote: "",
-        color: "",
-        coverImage: "",
-        width: 0,
-        size: "M",
         projectDocs: [{ path: link.path, children: [] }],
-        gridCols: 0,
-        gridRows: 0,
-        gridCol: 0,
-        gridRow: 0,
-        hideCompleted: false,
       });
       await this.saveEmbeddedAndRefresh();
     });
@@ -1920,30 +1825,15 @@ export class DashboardView extends ItemView {
       this.plugin,
       async (template) => {
         if (!this.embeddedData) return;
-        const col = this.embeddedData.columns.find((c) => c.name === colName);
-        if (!col) return;
-        col.cards.push({
+        // v1.4.10 — same `addCardData` helper as the workbench /
+        // sidebar. The template-derived `title` / `type: "task"`
+        // / initial `tasks` are the sectionType-specific
+        // overrides.
+        this.embeddedData = SyncEngine.addCardData(this.embeddedData, colName, {
           id: `${Date.now()}-template`,
           title: template.name,
           type: "task",
-          column: colName,
-          body: "",
           tasks: template.tasks.map((text) => ({ text, checked: false })),
-          url: "",
-          wikiLink: "",
-          progress: -1,
-          streak: 0,
-          dueDate: "",
-          blockquote: "",
-          color: "",
-          coverImage: "",
-          width: 0,
-          size: "M",
-          gridCols: 0,
-          gridRows: 0,
-          gridCol: 0,
-          gridRow: 0,
-          hideCompleted: false,
         });
         await this.saveEmbeddedAndRefresh();
       },
@@ -2508,26 +2398,24 @@ export class DashboardView extends ItemView {
         // fields per target type and is the single source of truth
         // for the per-type card shape.
         //
-        // Fix: build the next columns array IN PLACE here, hand it
-        // to the sync engine, and render with the same array.
-        // The sync engine then mutates `this.data.columns` to point
-        // at this array and persists the frontmatter in the
-        // background. From the view's perspective there is no longer
-        // any "old reference" in flight.
+        // v1.4.10 — unified helper: the workbench callback and the
+        // embedded callback now both call the exact same
+        // `SyncEngine.setColumnSectionTypeData` helper to compute
+        // the post-mutation columns. The two views can no longer
+        // drift on the migration step.
         const currentData = this.sync.getData();
         if (!currentData) return;
-        const nextColumns = currentData.columns.map((col) => {
-          if (col.name !== columnName) return col;
-          return {
-            ...col,
-            sectionType,
-            cards: migrateCardsForSectionType(col.cards, sectionType),
-          };
-        });
-        const nextData: DashboardData = {
-          ...currentData,
-          columns: nextColumns,
-        };
+        // v1.4.10 — `setColumnSectionTypeData` works on the full
+        // `DashboardData` (so the migration can stamp each card
+        // with the new sectionType-derived shape). It returns
+        // the post-mutation `DashboardData` directly, so we use
+        // it as `nextData` without re-wrapping it.
+        const nextData = SyncEngine.setColumnSectionTypeData(
+          currentData,
+          columnName,
+          sectionType,
+        );
+        if (nextData === currentData) return;
         // Kick off persistence; the actual re-render uses `nextData`
         // which already reflects the new sectionType in the SAME
         // call frame as the click event.

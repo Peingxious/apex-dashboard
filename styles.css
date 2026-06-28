@@ -2150,16 +2150,22 @@
 }
 
 .dashboard-view-nav-tab--active {
-  color: var(--db-accent-text, var(--text-accent));
-  background: var(--db-accent-bg, var(--background-modifier-border-focus));
-  border-color: var(--db-accent-bg, var(--background-modifier-border-focus));
-  font-weight: 500;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  font-weight: 600;
   /* NOTE: do NOT set pointer-events: none here. The active tab must
      remain interactive so the user can dblclick to open the md in
      a horizontal split, right-click for the Open/Close menu, and
      single-click an active main tab to keep the dashboard interactive.
      Keeping pointer-events disabled previously made the active tab
      look "stuck" and silently broke dblclick + right-click. */
+}
+
+.dashboard-view-nav-tab--active:hover {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent-hover, var(--interactive-accent));
+  border-color: var(--interactive-accent-hover, var(--interactive-accent));
 }
 
 /* Tab wrapper for note tabs (contains button + close) */
@@ -2621,7 +2627,8 @@
   transition: opacity 0.15s ease;
 }
 
-.dashboard-sidebar-countdown:hover-disabled .dashboard-sidebar-countdown-settings-btn {
+.dashboard-sidebar-countdown:hover-disabled
+  .dashboard-sidebar-countdown-settings-btn {
   visibility: visible;
   opacity: 0.5;
 }
@@ -3671,7 +3678,8 @@
   right: 4px;
 }
 .dashboard-reading-book-card:hover-disabled .dashboard-reading-book-card-edit,
-.dashboard-reading-book-card:hover-disabled .dashboard-reading-book-card-remove {
+.dashboard-reading-book-card:hover-disabled
+  .dashboard-reading-book-card-remove {
   opacity: 0.4;
 }
 .dashboard-reading-book-card-edit:hover-disabled,
@@ -4356,8 +4364,10 @@
     background 0.15s;
   flex-shrink: 0;
 }
-.dashboard-reading-stats-record:hover-disabled .dashboard-reading-stats-record-del,
-.dashboard-reading-book-list-row:hover-disabled .dashboard-reading-stats-record-del {
+.dashboard-reading-stats-record:hover-disabled
+  .dashboard-reading-stats-record-del,
+.dashboard-reading-book-list-row:hover-disabled
+  .dashboard-reading-stats-record-del {
   opacity: 0.5;
 }
 .dashboard-reading-stats-record-del:hover-disabled {
@@ -4986,7 +4996,9 @@
   height: 14px;
 }
 
-.dashboard-qa-header:hover-disabled .dashboard-qa-btn-group .dashboard-qa-pin-btn {
+.dashboard-qa-header:hover-disabled
+  .dashboard-qa-btn-group
+  .dashboard-qa-pin-btn {
   opacity: 0.5;
 }
 
@@ -5190,7 +5202,9 @@
   outline: none;
 }
 
-.dashboard-qa-header:hover-disabled .dashboard-qa-btn-group .dashboard-qa-add-btn {
+.dashboard-qa-header:hover-disabled
+  .dashboard-qa-btn-group
+  .dashboard-qa-add-btn {
   opacity: 1;
 }
 
@@ -5658,7 +5672,8 @@
   flex-shrink: 0;
 }
 
-.dashboard-section-row[data-section-type="memo"] .dashboard-card:hover-disabled {
+.dashboard-section-row[data-section-type="memo"]
+  .dashboard-card:hover-disabled {
   overflow: hidden;
 }
 
@@ -5705,7 +5720,8 @@
     box-shadow 0.2s ease;
 }
 
-.dashboard-section-row[data-section-type="memo"] .dashboard-card:hover-disabled {
+.dashboard-section-row[data-section-type="memo"]
+  .dashboard-card:hover-disabled {
   overflow: hidden;
 }
 
@@ -6212,14 +6228,21 @@
   font-size: 0.9em;
   color: var(--text-accent);
 }
-.dashboard-inline-bold { font-weight: 700; }
-.dashboard-inline-italic { font-style: italic; }
+.dashboard-inline-bold {
+  font-weight: 700;
+}
+.dashboard-inline-italic {
+  font-style: italic;
+}
 .dashboard-inline-highlight {
   background: var(--text-highlight-bg, rgba(255, 220, 0, 0.3));
   color: var(--text-normal);
   padding: 0 2px;
 }
-.dashboard-inline-strike { text-decoration: line-through; opacity: 0.7; }
+.dashboard-inline-strike {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
 
 .theme-light .dashboard-memo-textarea {
   color: var(--db-text);
@@ -7545,7 +7568,8 @@
   border-color: rgba(139, 92, 246, 0.15);
 }
 
-.peingxious-dashboard-root[data-theme="aurora"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="aurora"]
+  .dashboard-add-section:hover-disabled {
   border-color: rgba(139, 92, 246, 0.4);
   box-shadow: 0 0 12px rgba(139, 92, 246, 0.06);
 }
@@ -7573,7 +7597,8 @@
   border-color: rgba(244, 63, 94, 0.15);
 }
 
-.peingxious-dashboard-root[data-theme="prism"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="prism"]
+  .dashboard-add-section:hover-disabled {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 12px rgba(244, 63, 94, 0.06);
 }
@@ -7585,7 +7610,8 @@
   border-color: rgba(217, 119, 6, 0.25);
 }
 
-.peingxious-dashboard-root[data-theme="earth"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="earth"]
+  .dashboard-add-section:hover-disabled {
   border-color: #d97706;
 }
 
@@ -7609,7 +7635,8 @@
   border-color: rgba(100, 116, 139, 0.25);
 }
 
-.peingxious-dashboard-root[data-theme="nordic"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="nordic"]
+  .dashboard-add-section:hover-disabled {
   border-color: #3b82f6;
 }
 
@@ -7655,7 +7682,8 @@
   letter-spacing: 0.02em;
 }
 
-.peingxious-dashboard-root[data-theme="island"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-add-section:hover-disabled {
   border-color: #19c8b9;
   background: rgba(25, 200, 185, 0.06);
   box-shadow: 0 4px 0 0 #a8c8a5;
@@ -7753,7 +7781,10 @@
   background: #e0b800;
   border-color: #e0b800;
 }
-.theme-dark [data-theme="island"] .dashboard-modal-actions .mod-cta:hover-disabled {
+.theme-dark
+  [data-theme="island"]
+  .dashboard-modal-actions
+  .mod-cta:hover-disabled {
   background: #e0b800;
   border-color: #e0b800;
 }
@@ -7786,7 +7817,8 @@
 }
 
 /* Island: sidebar links — ocean tint on hover */
-.peingxious-dashboard-root[data-theme="island"] .dashboard-quick-link:hover-disabled {
+.peingxious-dashboard-root[data-theme="island"]
+  .dashboard-quick-link:hover-disabled {
   background: #e4f0f8;
 }
 
@@ -7828,7 +7860,8 @@
   border-color: rgba(217, 119, 6, 0.25);
 }
 
-.peingxious-dashboard-root[data-theme="tundra"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="tundra"]
+  .dashboard-add-section:hover-disabled {
   border-color: #d97706;
 }
 
@@ -7922,7 +7955,8 @@
   letter-spacing: 0.08em;
 }
 
-.peingxious-dashboard-root[data-theme="haze"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="haze"]
+  .dashboard-add-section:hover-disabled {
   border-color: rgba(0, 240, 255, 0.5);
   box-shadow: 0 0 8px rgba(0, 240, 255, 0.1);
 }
@@ -7994,7 +8028,10 @@
   background: rgba(0, 240, 255, 0.25);
   box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
 }
-.theme-light [data-theme="haze"] .dashboard-modal-actions .mod-cta:hover-disabled {
+.theme-light
+  [data-theme="haze"]
+  .dashboard-modal-actions
+  .mod-cta:hover-disabled {
   background: rgba(8, 145, 178, 0.18);
   box-shadow: 0 0 8px rgba(8, 145, 178, 0.08);
 }
@@ -8023,7 +8060,8 @@
   border-color: rgba(244, 63, 94, 0.15);
 }
 
-.peingxious-dashboard-root[data-theme="blossom"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="blossom"]
+  .dashboard-add-section:hover-disabled {
   border-color: rgba(244, 63, 94, 0.4);
   box-shadow: 0 0 12px rgba(244, 63, 94, 0.06);
 }
@@ -8111,7 +8149,8 @@
   border-radius: 14px;
   border-color: rgba(143, 170, 152, 0.15);
 }
-.peingxious-dashboard-root[data-theme="matcha"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="matcha"]
+  .dashboard-add-section:hover-disabled {
   border-color: rgba(143, 170, 152, 0.4);
   box-shadow: 0 0 12px rgba(143, 170, 152, 0.06);
 }
@@ -8198,7 +8237,8 @@
   border-radius: 14px;
   border-color: rgba(184, 160, 200, 0.15);
 }
-.peingxious-dashboard-root[data-theme="lilac"] .dashboard-add-section:hover-disabled {
+.peingxious-dashboard-root[data-theme="lilac"]
+  .dashboard-add-section:hover-disabled {
   border-color: rgba(184, 160, 200, 0.4);
   box-shadow: 0 0 12px rgba(184, 160, 200, 0.06);
 }
@@ -9319,7 +9359,8 @@
   padding: 16px;
 }
 
-.dashboard-section-row[data-section-type="dashboard"] .dashboard-card:hover-disabled {
+.dashboard-section-row[data-section-type="dashboard"]
+  .dashboard-card:hover-disabled {
   transform: none;
   box-shadow: var(--db-shadow-card);
 }

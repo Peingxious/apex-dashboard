@@ -16,6 +16,7 @@ import {
   serializeInto,
   generateEmptyDashboardMarkdown,
   pathToWikiLink,
+  migrateCardsForSectionType,
 } from "./parser";
 import { t } from "./i18n";
 
@@ -249,25 +250,12 @@ export class SyncEngine {
     checked: boolean,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          if (taskIndex >= card.tasks.length) return card;
-          const newTasks: TaskItem[] = card.tasks.map((t, i) =>
-            i === taskIndex ? { ...t, checked } : t,
-          );
-          if (checked) {
-            const [moved] = newTasks.splice(taskIndex, 1);
-            newTasks.push(moved!);
-          }
-          return { ...card, tasks: newTasks };
-        }),
-      })),
-    };
+    this.data = SyncEngine.toggleTaskData(
+      this.data,
+      cardId,
+      taskIndex,
+      checked,
+    );
     await this.writeToDisk();
   }
 
@@ -277,23 +265,12 @@ export class SyncEngine {
     toIndex: number,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          if (fromIndex < 0 || fromIndex >= card.tasks.length) return card;
-          if (toIndex < 0 || toIndex >= card.tasks.length) return card;
-          const tasks = [...card.tasks];
-          const moved = tasks[fromIndex]!;
-          tasks.splice(fromIndex, 1);
-          tasks.splice(toIndex, 0, moved);
-          return { ...card, tasks };
-        }),
-      })),
-    };
+    this.data = SyncEngine.reorderTaskData(
+      this.data,
+      cardId,
+      fromIndex,
+      toIndex,
+    );
     await this.writeToDisk();
   }
 
@@ -304,34 +281,13 @@ export class SyncEngine {
     destIndex: number,
   ): Promise<void> {
     if (!this.data) return;
-
-    let movedTask: TaskItem | undefined;
-
-    const columnsWithout = this.data.columns.map((col) => ({
-      ...col,
-      cards: col.cards.map((card) => {
-        if (card.id !== srcCardId) return card;
-        if (taskIndex < 0 || taskIndex >= card.tasks.length) return card;
-        movedTask = card.tasks[taskIndex];
-        return { ...card, tasks: card.tasks.filter((_, i) => i !== taskIndex) };
-      }),
-    }));
-
-    if (!movedTask) return;
-
-    this.data = {
-      ...this.data,
-      columns: columnsWithout.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== destCardId) return card;
-          const tasks = [...card.tasks];
-          const clamped = Math.min(destIndex, tasks.length);
-          tasks.splice(clamped, 0, movedTask!);
-          return { ...card, tasks };
-        }),
-      })),
-    };
+    this.data = SyncEngine.moveTaskToCardData(
+      this.data,
+      srcCardId,
+      taskIndex,
+      destCardId,
+      destIndex,
+    );
     await this.writeToDisk();
   }
 
@@ -341,40 +297,13 @@ export class SyncEngine {
     newText: string,
   ): Promise<void> {
     if (!this.data || !newText) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          if (taskIndex >= card.tasks.length) return card;
-          const tasks = card.tasks.map((t, i) =>
-            i === taskIndex ? { ...t, text: newText } : t,
-          );
-          return { ...card, tasks };
-        }),
-      })),
-    };
+    this.data = SyncEngine.editTaskData(this.data, cardId, taskIndex, newText);
     await this.writeToDisk();
   }
 
   async addTask(cardId: string, text: string): Promise<void> {
     if (!this.data || !text.trim()) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          return {
-            ...card,
-            tasks: [...card.tasks, { text: text.trim(), checked: false }],
-          };
-        }),
-      })),
-    };
+    this.data = SyncEngine.addTaskData(this.data, cardId, text);
     await this.writeToDisk();
   }
 
@@ -394,18 +323,7 @@ export class SyncEngine {
       this.pushUndo({ kind: "task", cardId, taskIndex, task: snapshot });
     }
 
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          if (taskIndex >= card.tasks.length) return card;
-          const newTasks = card.tasks.filter((_, i) => i !== taskIndex);
-          return { ...card, tasks: newTasks };
-        }),
-      })),
-    };
+    this.data = SyncEngine.deleteTaskData(this.data, cardId, taskIndex);
     await this.writeToDisk();
   }
 
@@ -430,16 +348,7 @@ export class SyncEngine {
     >,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) =>
-          card.id === cardId ? { ...card, ...updates } : card,
-        ),
-      })),
-    };
+    this.data = SyncEngine.patchCardData(this.data, cardId, updates);
     await this.writeToDisk();
   }
 
@@ -449,21 +358,12 @@ export class SyncEngine {
     reminder: string | undefined,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          if (taskIndex >= card.tasks.length) return card;
-          const tasks = card.tasks.map((t, i) =>
-            i === taskIndex ? { ...t, reminder } : t,
-          );
-          return { ...card, tasks };
-        }),
-      })),
-    };
+    this.data = SyncEngine.editTaskReminderData(
+      this.data,
+      cardId,
+      taskIndex,
+      reminder,
+    );
     await this.writeToDisk();
   }
 
@@ -491,13 +391,7 @@ export class SyncEngine {
     }
     if (snapshot) this.pushUndo({ kind: "card", ...snapshot });
 
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.filter((c) => c.id !== cardId),
-      })),
-    };
+    this.data = SyncEngine.removeCardData(this.data, cardId);
     await this.writeToDisk();
   }
 
@@ -541,27 +435,13 @@ export class SyncEngine {
       ...overrides,
     };
 
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) =>
-        col.name === columnName
-          ? { ...col, cards: [...col.cards, newCard] }
-          : col,
-      ),
-    };
+    this.data = SyncEngine.addCardData(this.data, columnName, newCard);
     await this.writeToDisk();
   }
 
   async addColumn(name: string, sectionType?: string): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: [
-        ...this.data.columns,
-        { name, color: "#6366f1", sectionType, cards: [] },
-      ],
-    };
+    this.data = SyncEngine.addColumnData(this.data, name, sectionType);
     await this.writeToDisk();
   }
 
@@ -570,25 +450,15 @@ export class SyncEngine {
     config: import("./types").LibraryConfig,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) =>
-        col.name === columnName ? { ...col, libraryConfig: config } : col,
-      ),
-    };
+    this.data = SyncEngine.patchColumnData(this.data, columnName, {
+      libraryConfig: config,
+    });
     await this.writeToDisk();
   }
 
   async renameColumn(oldName: string, newName: string): Promise<void> {
     if (!this.data || !newName || oldName === newName) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) =>
-        col.name === oldName ? { ...col, name: newName } : col,
-      ),
-    };
+    this.data = SyncEngine.renameColumnData(this.data, oldName, newName);
     await this.writeToDisk();
   }
 
@@ -606,11 +476,22 @@ export class SyncEngine {
     // explicit `notifyCallbacks` here). Going through
     // `updateColumnsField` guarantees the data update is followed by
     // a synchronous `notifyCallbacks` → `view.requestRender(newData)`.
-    await this.updateColumnsField((cols) =>
-      cols.map((col) =>
-        col.name === columnName ? { ...col, sectionType } : col,
-      ),
+    //
+    // v1.4.10 — also migrate the column's cards so `card.type` /
+    // `card.tasks` / `card.projectDocs` match the new sectionType.
+    // The view's `onColumnSectionTypeChange` callback also does the
+    // migration explicitly and goes through `persistColumnMutation`
+    // (the frontmatter-only write). The two entry-points converge
+    // on the same `setColumnSectionTypeData` helper to guarantee
+    // identical behaviour.
+    const nextData = SyncEngine.setColumnSectionTypeData(
+      this.data,
+      columnName,
+      sectionType,
     );
+    if (nextData === this.data) return;
+    this.data = nextData;
+    await this.persistColumnMutation(nextData);
   }
 
   /**
@@ -629,12 +510,17 @@ export class SyncEngine {
   ): Promise<void> {
     if (!this.data) return;
     // v1.4.9 BUG-003c: columns-only write path (see
-    // `setColumnSectionType` for rationale).
-    await this.updateColumnsField((cols) =>
-      cols.map((col) =>
-        col.name === columnName ? { ...col, archiveCompleted: archive } : col,
-      ),
+    // `setColumnSectionType` for rationale). v1.4.10 — funnel
+    // through the same `setColumnArchiveCompletedData` helper as
+    // the embedded view so the two paths can no longer drift.
+    const nextData = SyncEngine.setColumnArchiveCompletedData(
+      this.data,
+      columnName,
+      archive,
     );
+    if (nextData === this.data) return;
+    this.data = nextData;
+    await this.persistColumnMutation(nextData);
   }
 
   async deleteColumn(name: string): Promise<void> {
@@ -651,10 +537,7 @@ export class SyncEngine {
       });
     }
 
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.filter((col) => col.name !== name),
-    };
+    this.data = SyncEngine.deleteColumnData(this.data, name);
     await this.writeToDisk();
   }
 
@@ -664,31 +547,12 @@ export class SyncEngine {
     targetIndex: number,
   ): Promise<void> {
     if (!this.data) return;
-
-    let movedCard: DashboardCard | null = null;
-
-    const columnsWithout = this.data.columns.map((col) => {
-      const idx = col.cards.findIndex((c) => c.id === cardId);
-      if (idx !== -1) {
-        movedCard = { ...col.cards[idx]!, column: targetColumn };
-        return {
-          ...col,
-          cards: [...col.cards.slice(0, idx), ...col.cards.slice(idx + 1)],
-        };
-      }
-      return col;
-    });
-
-    if (!movedCard) return;
-
-    const newColumns = columnsWithout.map((col) => {
-      if (col.name !== targetColumn) return col;
-      const cards = [...col.cards];
-      cards.splice(targetIndex, 0, movedCard!);
-      return { ...col, cards };
-    });
-
-    this.data = { ...this.data, columns: newColumns };
+    this.data = SyncEngine.moveCardData(
+      this.data,
+      cardId,
+      targetColumn,
+      targetIndex,
+    );
     await this.writeToDisk();
   }
 
@@ -760,16 +624,7 @@ export class SyncEngine {
     updates: { body: string; blockquote: string },
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) =>
-          card.id === cardId ? { ...card, ...updates } : card,
-        ),
-      })),
-    };
+    this.data = SyncEngine.patchCardData(this.data, cardId, updates);
     await this.writeToDisk();
   }
 
@@ -779,30 +634,12 @@ export class SyncEngine {
     toIndex: number,
   ): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          const paths = card.body
-            .split("\n")
-            .map((l) => l.trim())
-            .filter((l) => l.startsWith("- ") || l.startsWith("[["))
-            .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
-            .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
-          if (fromIndex < 0 || fromIndex >= paths.length) return card;
-          if (toIndex < 0 || toIndex >= paths.length) return card;
-          const moved = paths[fromIndex]!;
-          paths.splice(fromIndex, 1);
-          paths.splice(toIndex, 0, moved);
-          // Always write back in the canonical "- [[x]]" form.
-          const body = paths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
-          return { ...card, body };
-        }),
-      })),
-    };
+    this.data = SyncEngine.reorderDocPathsData(
+      this.data,
+      cardId,
+      fromIndex,
+      toIndex,
+    );
     await this.writeToDisk();
   }
 
@@ -813,77 +650,559 @@ export class SyncEngine {
     destIndex: number,
   ): Promise<void> {
     if (!this.data) return;
-
-    let movedDocPath: string | undefined;
-
-    const columnsWithout = this.data.columns.map((col) => ({
-      ...col,
-      cards: col.cards.map((card) => {
-        if (card.id !== srcCardId) return card;
-        const paths = card.body
-          .split("\n")
-          .map((l) => l.trim())
-          .filter((l) => l.startsWith("- ") || l.startsWith("[["))
-          .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
-          .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
-        if (docIndex < 0 || docIndex >= paths.length) return card;
-        movedDocPath = paths[docIndex];
-        const newPaths = paths.filter((_, i) => i !== docIndex);
-        // Always write back in the canonical "- [[x]]" form so the
-        // body format stays consistent across all mutators.
-        const body = newPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
-        return { ...card, body };
-      }),
-    }));
-
-    if (!movedDocPath) return;
-
-    this.data = {
-      ...this.data,
-      columns: columnsWithout.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== destCardId) return card;
-          const paths = card.body
-            .split("\n")
-            .map((l) => l.trim())
-            .filter((l) => l.startsWith("- ") || l.startsWith("[["))
-            .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
-            .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
-          const clamped = Math.min(destIndex, paths.length);
-          paths.splice(clamped, 0, movedDocPath!);
-          const body = paths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
-          return { ...card, body };
-        }),
-      })),
-    };
+    this.data = SyncEngine.moveDocToCardData(
+      this.data,
+      srcCardId,
+      docIndex,
+      destCardId,
+      destIndex,
+    );
     await this.writeToDisk();
   }
 
   async updateProjectDocs(cardId: string, docPaths: string[]): Promise<void> {
     if (!this.data) return;
-
-    // Always write back in the canonical "- [[x]]" form.
-    const body = docPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) =>
-          card.id === cardId ? { ...card, body } : card,
-        ),
-      })),
-    };
+    this.data = SyncEngine.updateProjectDocsData(this.data, cardId, docPaths);
     await this.writeToDisk();
   }
 
-  async addDocToCard(cardId: string, filePath: string): Promise<void> {
-    if (!this.data) return;
+  /**
+   * Generic, pure, immutable card-mapper. Returns a new `DashboardData`
+   * with the card matching `cardId` replaced by `updater(card)`. If
+   * no card matches, the input is returned unchanged. The single
+   * "find card → map card → replace card" loop lives in one place,
+   * which means the workbench view, the embedded view, and any
+   * future caller can no longer drift on the closure-vs-data-object
+   * split (the previous embedded callbacks re-implemented this loop
+   * inline via `findEmbeddedCard` and mutated the card in place —
+   * the canonical source of the "添加到第三卡片会跑到第一卡片" bug).
+   */
+  static mapCardData(
+    data: DashboardData,
+    cardId: string,
+    updater: (card: DashboardCard) => DashboardCard,
+  ): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.map((col) => ({
+        ...col,
+        cards: col.cards.map((card) =>
+          card.id === cardId ? updater(card) : card,
+        ),
+      })),
+    };
+  }
 
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
+  /**
+   * Generic, pure, immutable column-mapper by name. Returns a new
+   * `DashboardData` with the column whose `name` matches `columnName`
+   * replaced by `updater(column)`. If no column matches, the input
+   * is returned unchanged. Mirrors `mapCardData` for column-level
+   * operations.
+   */
+  static mapColumnData(
+    data: DashboardData,
+    columnName: string,
+    updater: (col: DashboardColumn) => DashboardColumn,
+  ): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.map((col) =>
+        col.name === columnName ? updater(col) : col,
+      ),
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for partial card updates. Equivalent
+   * to `mapCardData(data, cardId, c => ({ ...c, ...updates }))` but
+   * with a stable name and shape that both the workbench `updateCard`
+   * method and every embedded "field update" callback route through.
+   * Returns the input unchanged if no card matches `cardId`.
+   */
+  static patchCardData(
+    data: DashboardData,
+    cardId: string,
+    updates: Partial<DashboardCard>,
+  ): DashboardData {
+    return SyncEngine.mapCardData(data, cardId, (card) => ({
+      ...card,
+      ...updates,
+    }));
+  }
+
+  /**
+   * Pure data-mutation helper for card removal. Returns a new data
+   * object with the matching card filtered out of its column. The
+   * single source of truth for "delete this card by id" — the
+   * workbench `deleteCard` undo-snapshot logic and the embedded
+   * "remove card" code path both use it.
+   */
+  static removeCardData(data: DashboardData, cardId: string): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.map((col) => ({
+        ...col,
+        cards: col.cards.filter((c) => c.id !== cardId),
+      })),
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for adding a new empty column. Mirrors
+   * the workbench `addColumn` shape: `color: "#6366f1"`,
+   * `sectionType` defaults to `"project"`, `cards: []`. Returns the
+   * input unchanged if a column with the same name already exists
+   * (workbench behaviour: it shows a notice, embedded just no-ops).
+   */
+  static addColumnData(
+    data: DashboardData,
+    name: string,
+    sectionType?: string,
+  ): DashboardData {
+    if (data.columns.some((c) => c.name === name)) return data;
+    return {
+      ...data,
+      columns: [
+        ...data.columns,
+        {
+          name,
+          color: "#6366f1",
+          sectionType: sectionType || "project",
+          cards: [],
+        },
+      ],
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for renaming a column in place. The
+   * column's `name` is updated AND every card whose `column` field
+   * referenced the old name is rewritten to the new name, so a
+   * serialized round-trip finds every card back in the right column.
+   */
+  static renameColumnData(
+    data: DashboardData,
+    oldName: string,
+    newName: string,
+  ): DashboardData {
+    if (!newName || oldName === newName) return data;
+    return {
+      ...data,
+      columns: data.columns.map((col) => {
+        if (col.name !== oldName) return col;
+        return {
+          ...col,
+          name: newName,
+          cards: col.cards.map((card) =>
+            card.column === oldName ? { ...card, column: newName } : card,
+          ),
+        };
+      }),
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for deleting a column by name.
+   * Returns the input unchanged if no column matches. The workbench
+   * keeps the "first column / [[…]] / #… protected" guard on its
+   * own (because it needs to surface a Notice); this helper is the
+   * mechanical "remove by name" piece.
+   */
+  static deleteColumnData(data: DashboardData, name: string): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.filter((c) => c.name !== name),
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for partial column updates. The
+   * `libraryConfig` / column-banner / `dueSoonDays` style fields
+   * are all single-column tweaks that share this one path. The
+   * helper returns the input unchanged when no column matches the
+   * name.
+   */
+  static patchColumnData(
+    data: DashboardData,
+    columnName: string,
+    updates: Partial<DashboardColumn>,
+  ): DashboardData {
+    return SyncEngine.mapColumnData(data, columnName, (col) => ({
+      ...col,
+      ...updates,
+    }));
+  }
+
+  /**
+   * Pure data-mutation helper for changing a column's `sectionType`
+   * AND migrating the column's cards so `card.type` /
+   * `card.tasks` / `card.projectDocs` match the new sectionType.
+   * The two operations are bundled so callers can no longer flip
+   * the sectionType without re-deriving the per-card shape — that
+   * "stale `card.type`" condition is the historical source of the
+   * "switch section type → serializer writes the old card shape"
+   * regression.
+   */
+  static setColumnSectionTypeData(
+    data: DashboardData,
+    columnName: string,
+    sectionType: string,
+  ): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.map((col) => {
+        if (col.name !== columnName) return col;
+        return {
+          ...col,
+          sectionType,
+          cards: migrateCardsForSectionType(col.cards, sectionType),
+        };
+      }),
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for the per-column "archive completed
+   * tasks" toggle. The flag lives on the column (not the card) so
+   * a single helper is enough; the workbench `setColumnArchiveCompleted`
+   * and the embedded `onColumnArchiveCompletedChange` callback both
+   * go through it.
+   */
+  static setColumnArchiveCompletedData(
+    data: DashboardData,
+    columnName: string,
+    archive: boolean,
+  ): DashboardData {
+    return SyncEngine.mapColumnData(data, columnName, (col) => ({
+      ...col,
+      archiveCompleted: archive,
+    }));
+  }
+
+  /**
+   * Pure data-mutation helper for moving a card to a different
+   * column / index. Updates the card's `.column` field AND moves
+   * it in the cards arrays so the on-disk serialization (which
+   * walks columns → cards) sees the card in its new home. Returns
+   * the input unchanged if the source card is not found or the
+   * destination column is not found.
+   */
+  static moveCardData(
+    data: DashboardData,
+    cardId: string,
+    targetColumn: string,
+    targetIndex: number,
+  ): DashboardData {
+    let movedCard: DashboardCard | null = null;
+    const without = {
+      ...data,
+      columns: data.columns.map((col) => {
+        const idx = col.cards.findIndex((c) => c.id === cardId);
+        if (idx === -1) return col;
+        const [m] = col.cards.splice(idx, 1);
+        if (m) movedCard = m;
+        return { ...col, cards: [...col.cards] };
+      }),
+    };
+    if (!movedCard) return data;
+    return {
+      ...without,
+      columns: without.columns.map((col) => {
+        if (col.name !== targetColumn) return col;
+        movedCard!.column = targetColumn;
+        const clamped = Math.min(targetIndex, col.cards.length);
+        return {
+          ...col,
+          cards: [
+            ...col.cards.slice(0, clamped),
+            movedCard!,
+            ...col.cards.slice(clamped),
+          ],
+        };
+      }),
+    };
+  }
+
+  /**
+   * Pure data-mutation helper for the dispatch in `onFileDrop`.
+   * Handles the three cases the renderer asks for: todo, memo,
+   * and "everything else" (which is project). Returns the input
+   * unchanged when the card's type is `weather` or `tracker` (the
+   * drop is silently dropped, matching the previous workbench and
+   * embedded behaviour).
+   */
+  static addFileLinkData(
+    data: DashboardData,
+    cardId: string,
+    filePath: string,
+    sectionType: string,
+    cardType: string,
+  ): DashboardData {
+    if (cardType === "weather" || cardType === "tracker") return data;
+    if (cardType === "task" || sectionType === "todo") {
+      return SyncEngine.mapCardData(data, cardId, (card) => ({
+        ...card,
+        tasks: [
+          ...card.tasks,
+          { text: pathToWikiLink(filePath), checked: false },
+        ],
+      }));
+    }
+    if (sectionType === "memo") {
+      return SyncEngine.mapCardData(data, cardId, (card) => {
+        const link = pathToWikiLink(filePath);
+        if (card.body.includes(link)) return card;
+        const body = card.body ? `${card.body}\n${link}` : link;
+        return { ...card, body };
+      });
+    }
+    // Project / "everything else" — use the shared 3-way wrap rule
+    // and the body+projectDocs lockstep. This is the same logic as
+    // addDocToCardData; routed through the file-link entry point
+    // so the two callers (renderer drag-drop and
+    // `onProjectDocsAdd`) cannot drift.
+    return SyncEngine.addDocToCardData(data, cardId, filePath);
+  }
+
+  /**
+   * Pure data-mutation helper for adding a new project-group card
+   * (a `type: "project"` card with empty body and an empty
+   * `projectDocs`) to a column. The id is derived from the
+   * timestamp + suffix so the new card is unique within the
+   * column. Returns the input unchanged if the column does not
+   * exist. Mirrors the workbench `addCard` path for `type:
+   * "project"` and the embedded `onProjectGroupAdd` callback.
+   */
+  static addProjectGroupData(
+    data: DashboardData,
+    columnName: string,
+    title: string,
+  ): DashboardData {
+    const col = data.columns.find((c) => c.name === columnName);
+    if (!col) return data;
+    const newCard: DashboardCard = {
+      id: `${Date.now()}-project`,
+      title,
+      type: "project",
+      column: columnName,
+      body: "",
+      tasks: [],
+      url: "",
+      wikiLink: "",
+      progress: -1,
+      streak: 0,
+      dueDate: "",
+      blockquote: "",
+      color: "",
+      coverImage: "",
+      width: 0,
+      size: "M",
+      projectDocs: [],
+      gridCols: 0,
+      gridRows: 0,
+      gridCol: 0,
+      gridRow: 0,
+      hideCompleted: false,
+    };
+    return SyncEngine.mapColumnData(data, columnName, (c) => ({
+      ...c,
+      cards: [...c.cards, newCard],
+    }));
+  }
+
+  /**
+   * Pure data-mutation helper for editing a single task's
+   * `reminder` field. Returns the input unchanged when the card
+   * or the task index is out of range. Used by both the
+   * workbench `editTaskReminder` method and the embedded
+   * `onTaskReminderEdit` callback.
+   */
+  static editTaskReminderData(
+    data: DashboardData,
+    cardId: string,
+    taskIndex: number,
+    reminder: string | undefined,
+  ): DashboardData {
+    // Empty string is normalised to `undefined` so the on-disk
+    // representation of "no reminder" is consistent across both
+    // views (and across a card that's been edited on both).
+    const normalised = reminder || undefined;
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      if (taskIndex < 0 || taskIndex >= card.tasks.length) return card;
+      return {
+        ...card,
+        tasks: card.tasks.map((t, i) =>
+          i === taskIndex ? { ...t, reminder: normalised } : t,
+        ),
+      };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for replacing a card's `body` and
+   * `blockquote` together (the memo-editor save path). Returns
+   * the input unchanged when no card matches.
+   */
+  static updateMemoCardData(
+    data: DashboardData,
+    cardId: string,
+    updates: { body: string; blockquote: string },
+  ): DashboardData {
+    return SyncEngine.patchCardData(data, cardId, updates);
+  }
+
+  /**
+   * Pure data-mutation helper for replacing a card's `body` and
+   * `projectDocs` (the project-editor "save all docs" path).
+   * Always writes `body` in the canonical `- [[x]]` form so the
+   * on-disk markdown round-trips correctly. Returns the input
+   * unchanged when no card matches.
+   */
+  static updateProjectDocsData(
+    data: DashboardData,
+    cardId: string,
+    docPaths: string[],
+  ): DashboardData {
+    const body = docPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
+    return SyncEngine.patchCardData(data, cardId, { body });
+  }
+
+  /**
+   * Pure data-mutation helper for reordering the top-level doc
+   * lines in a project card's `body`. Both the workbench
+   * `reorderDocPaths` method and the embedded
+   * `onProjectDocsReorder` callback go through this. Operates on
+   * `body` (the canonical source) and re-derives `projectDocs`
+   * when the card carries one, so the structured array stays in
+   * lockstep with the body.
+   */
+  static reorderDocPathsData(
+    data: DashboardData,
+    cardId: string,
+    fromIndex: number,
+    toIndex: number,
+  ): DashboardData {
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      const paths = card.body
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("- ") || l.startsWith("[["))
+        .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
+        .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
+      if (fromIndex < 0 || fromIndex >= paths.length) return card;
+      if (toIndex < 0) return card;
+      const insertAt = Math.min(toIndex, paths.length - 1);
+      const moved = paths[fromIndex]!;
+      const newPaths = paths.filter((_, i) => i !== fromIndex);
+      newPaths.splice(insertAt, 0, moved);
+      const body = newPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
+      return { ...card, body };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for moving a top-level doc line
+   * from one project card to another. Operates on `body` and
+   * returns a new data object with both the source card and the
+   * destination card updated in lockstep. Returns the input
+   * unchanged when the source / dest card is not found, the
+   * source index is out of range, or the dest index is negative.
+   */
+  static moveDocToCardData(
+    data: DashboardData,
+    srcCardId: string,
+    docIndex: number,
+    destCardId: string,
+    destIndex: number,
+  ): DashboardData {
+    if (destIndex < 0) return data;
+
+    // Step 1: extract the moved path from the source card.
+    let movedPath: string | null = null;
+    const afterSrc = SyncEngine.mapCardData(data, srcCardId, (card) => {
+      const paths = card.body
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("- ") || l.startsWith("[["))
+        .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
+        .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
+      if (docIndex < 0 || docIndex >= paths.length) return card;
+      movedPath = paths[docIndex] ?? null;
+      if (movedPath == null) return card;
+      const newPaths = paths.filter((_, i) => i !== docIndex);
+      const body = newPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
+      return { ...card, body };
+    });
+    if (movedPath == null) return data;
+
+    // Step 2: insert into the destination card.
+    return SyncEngine.mapCardData(afterSrc, destCardId, (card) => {
+      const paths = card.body
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("- ") || l.startsWith("[["))
+        .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
+        .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
+      const clamped = Math.min(destIndex, paths.length);
+      paths.splice(clamped, 0, movedPath!);
+      const body = paths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
+      return { ...card, body };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for removing a top-level doc line
+   * from a project card's `body`. Returns the input unchanged
+   * when the index is out of range.
+   */
+  static removeProjectDocData(
+    data: DashboardData,
+    cardId: string,
+    topIndex: number,
+  ): DashboardData {
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      const paths = card.body
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith("- ") || l.startsWith("[["))
+        .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
+        .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
+      if (topIndex < 0 || topIndex >= paths.length) return card;
+      const newPaths = paths.filter((_, i) => i !== topIndex);
+      const body = newPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
+      return { ...card, body };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper used by both the workbench and the
+   * embedded dashboard view. Operates on the supplied `DashboardData`
+   * and returns a NEW data object with the doc appended to the card
+   * matching `cardId`. The caller is responsible for persisting the
+   * result (workbench → `writeToDisk`; embedded → `saveEmbeddedAndRefresh`)
+   * and re-rendering.
+   *
+   * The 3-way wrap rule and the append-not-replace behaviour are the
+   * exact mirror of what `view.ts#onFileDrop` and the embedded
+   * `onProjectDocsAdd` callback used to do inline — extracting them
+   * here means there is now exactly ONE definition of "add a doc to
+   * a card", so the embedded and workbench views can no longer drift
+   * apart. This is the fix for "工作台和非工作台是两套逻辑" and
+   * "添加到第三卡片会跑到第一卡片" (the previous two implementations
+   * had a subtle divergence: the workbench checked for duplicates,
+   * the embedded didn't, and the embedded mutated the card object
+   * in-place — a recipe for stale-closure bugs when the data was
+   * reloaded from disk between render and input).
+   */
+  static addDocToCardData(
+    data: DashboardData,
+    cardId: string,
+    filePath: string,
+  ): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.map((col) => ({
         ...col,
         cards: col.cards.map((card) => {
           if (card.id !== cardId) return card;
@@ -917,14 +1236,424 @@ export class SyncEngine {
           // silently dropped any earlier plain-text entries.
           const existingBody = card.body.trim();
           const body = existingBody ? `${existingBody}\n${newLine}` : newLine;
+          // Mirror the new doc into projectDocs (if the card carries
+          // one) so the structured-array stays in lockstep with
+          // `body`. Without this, drag-reorder, re-render and
+          // serialize all see a body that mentions a doc the
+          // structured array does not know about — the canonical
+          // source of the "添加会跑到别的卡片" symptom, because
+          // the next reload from disk would round-trip `body` and
+          // get a *different* (longer) projectDocs than the in-
+          // memory copy, leaving the user's input in a weird limbo
+          // where the UI shows it in the wrong card after reload.
+          const projectDocs = Array.isArray(
+            (card as { projectDocs?: unknown }).projectDocs,
+          )
+            ? [
+                ...(card as { projectDocs: ProjectDocNode[] }).projectDocs,
+                { path: filePath, children: [] } as ProjectDocNode,
+              ]
+            : card.projectDocs;
+          return { ...card, body, projectDocs };
+        }),
+      })),
+    };
+  }
+
+  async addDocToCard(cardId: string, filePath: string): Promise<void> {
+    if (!this.data) return;
+    this.data = SyncEngine.addDocToCardData(this.data, cardId, filePath);
+    await this.writeToDisk();
+  }
+
+  /**
+   * Pure data-mutation helper for task toggling. Mirrors the
+   * workbench `toggleTask` behaviour: a `checked: true` toggle
+   * also moves the task to the end of the card's task list
+   * (a long-standing "checked sinks to the bottom" UX rule).
+   * Returns the input unchanged when the card or task index is
+   * out of range.
+   */
+  static toggleTaskData(
+    data: DashboardData,
+    cardId: string,
+    taskIndex: number,
+    checked: boolean,
+  ): DashboardData {
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      if (taskIndex < 0 || taskIndex >= card.tasks.length) return card;
+      const newTasks: TaskItem[] = card.tasks.map((t, i) =>
+        i === taskIndex ? { ...t, checked } : t,
+      );
+      if (checked) {
+        const [moved] = newTasks.splice(taskIndex, 1);
+        if (moved) newTasks.push(moved);
+      }
+      return { ...card, tasks: newTasks };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for task reorder within a single
+   * card. Returns the input unchanged when the indices are out
+   * of range or equal.
+   */
+  static reorderTaskData(
+    data: DashboardData,
+    cardId: string,
+    fromIndex: number,
+    toIndex: number,
+  ): DashboardData {
+    if (fromIndex === toIndex) return data;
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      if (fromIndex < 0 || fromIndex >= card.tasks.length) return card;
+      if (toIndex < 0) return card;
+      const tasks = [...card.tasks];
+      const [moved] = tasks.splice(fromIndex, 1);
+      if (!moved) return card;
+      const insertAt = Math.min(toIndex, tasks.length);
+      tasks.splice(insertAt, 0, moved);
+      return { ...card, tasks };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for moving a task from one card to
+   * another. Returns the input unchanged when the source / dest
+   * card is missing, the source index is out of range, or the
+   * dest index is negative.
+   */
+  static moveTaskToCardData(
+    data: DashboardData,
+    srcCardId: string,
+    taskIndex: number,
+    destCardId: string,
+    destIndex: number,
+  ): DashboardData {
+    if (destIndex < 0) return data;
+    let movedTask: TaskItem | null = null;
+    const afterSrc = SyncEngine.mapCardData(data, srcCardId, (card) => {
+      if (taskIndex < 0 || taskIndex >= card.tasks.length) return card;
+      movedTask = card.tasks[taskIndex] ?? null;
+      if (!movedTask) return card;
+      return {
+        ...card,
+        tasks: card.tasks.filter((_, i) => i !== taskIndex),
+      };
+    });
+    if (!movedTask) return data;
+    return SyncEngine.mapCardData(afterSrc, destCardId, (card) => {
+      const tasks = [...card.tasks];
+      const clamped = Math.min(destIndex, tasks.length);
+      tasks.splice(clamped, 0, movedTask!);
+      return { ...card, tasks };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for editing a task's text. Returns
+   * the input unchanged when the card or task index is out of
+   * range, or `newText` is empty.
+   */
+  static editTaskData(
+    data: DashboardData,
+    cardId: string,
+    taskIndex: number,
+    newText: string,
+  ): DashboardData {
+    if (!newText) return data;
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      if (taskIndex < 0 || taskIndex >= card.tasks.length) return card;
+      return {
+        ...card,
+        tasks: card.tasks.map((t, i) =>
+          i === taskIndex ? { ...t, text: newText } : t,
+        ),
+      };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for adding a new task to a card.
+   * Returns the input unchanged when `text` is empty after trim.
+   * Used by both the workbench `addTask` method and the embedded
+   * `onTaskAdd` callback.
+   */
+  static addTaskData(
+    data: DashboardData,
+    cardId: string,
+    text: string,
+  ): DashboardData {
+    const trimmed = text.trim();
+    if (!trimmed) return data;
+    return SyncEngine.mapCardData(data, cardId, (card) => ({
+      ...card,
+      tasks: [...card.tasks, { text: trimmed, checked: false }],
+    }));
+  }
+
+  /**
+   * Pure data-mutation helper for deleting a task by index.
+   * Returns the input unchanged when the card or task index is
+   * out of range. Used by both the workbench `deleteTask` method
+   * and the embedded `onTaskDelete` callback.
+   */
+  static deleteTaskData(
+    data: DashboardData,
+    cardId: string,
+    taskIndex: number,
+  ): DashboardData {
+    return SyncEngine.mapCardData(data, cardId, (card) => {
+      if (taskIndex < 0 || taskIndex >= card.tasks.length) return card;
+      return {
+        ...card,
+        tasks: card.tasks.filter((_, i) => i !== taskIndex),
+      };
+    });
+  }
+
+  /**
+   * Pure data-mutation helper for adding a new card to a column.
+   * The new card starts as a generic, empty `type: "generic"` card
+   * (the sectionType-specific defaults — todo/memo/migrate — live
+   * on top of this in the workbench `addCard` method, but the
+   * structural shape is owned here so both views start from the
+   * same baseline).
+   */
+  static addCardData(
+    data: DashboardData,
+    columnName: string,
+    overrides?: Partial<DashboardCard>,
+  ): DashboardData {
+    const baseCard: DashboardCard = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title: "",
+      type: "generic",
+      column: columnName,
+      body: "",
+      tasks: [],
+      url: "",
+      wikiLink: "",
+      progress: -1,
+      streak: 0,
+      dueDate: "",
+      blockquote: "",
+      color: "",
+      coverImage: "",
+      width: 0,
+      size: "M",
+      gridCols: 0,
+      gridRows: 0,
+      gridCol: 0,
+      gridRow: 0,
+      hideCompleted: false,
+      ...overrides,
+    };
+    return SyncEngine.mapColumnData(data, columnName, (col) => ({
+      ...col,
+      cards: [...col.cards, baseCard],
+    }));
+  }
+
+  /**
+   * Pure data-mutation helper for project-item reorder. Operates on
+   * the supplied `DashboardData` and returns a NEW data object with
+   * the item at `fromIndex` moved to `toIndex` in the card matching
+   * `cardId`. The body AND the structured `projectDocs` array (when
+   * present) are kept in lockstep. Returns the input data unchanged
+   * if the indices are out of range or the card is not found.
+   *
+   * The embedded view used to re-implement this logic inline using
+   * `projectDocs` indices + a manual `synthesizeProjectBodyFromDocs`
+   * call. The two implementations had a subtle divergence on the
+   * "insert at the end" bound: the workbench bailed out when
+   * `toIndex >= length` (forbidding insertion at the end), the
+   * embedded accepted `toIndex === length`. With body-based sections
+   * + projectDocs mirror in one place, the rule is now uniform and
+   * `toIndex === length` is allowed (matches the array splice
+   * semantics and what the drag-and-drop UI naturally produces when
+   * the user drops an item "past" the last existing item).
+   */
+  static reorderProjectItemData(
+    data: DashboardData,
+    cardId: string,
+    fromIndex: number,
+    toIndex: number,
+  ): DashboardData {
+    return {
+      ...data,
+      columns: data.columns.map((col) => ({
+        ...col,
+        cards: col.cards.map((card) => {
+          if (card.id !== cardId) return card;
+          const sections = SyncEngine.splitProjectSections(card.body);
+          if (fromIndex < 0 || fromIndex >= sections.length) return card;
+          // Clamp `toIndex` to the post-splice length so that
+          // "insert at the end" works (splice itself clamps but
+          // we need the clamp value to keep projectDocs in sync).
+          if (toIndex < 0) return card;
+          const [moved] = sections.splice(fromIndex, 1);
+          if (!moved) return card;
+          const insertAt = Math.min(toIndex, sections.length);
+          sections.splice(insertAt, 0, moved);
+          const body = sections.join("\n");
+          // Mirror the move into projectDocs (when the card
+          // carries one) so the structured array stays in
+          // lockstep with the canonical body.
+          const projectDocs = Array.isArray(
+            (card as { projectDocs?: unknown }).projectDocs,
+          )
+            ? (() => {
+                const docs = [
+                  ...(card as { projectDocs: ProjectDocNode[] }).projectDocs,
+                ];
+                if (fromIndex < 0 || fromIndex >= docs.length) return docs;
+                const [m] = docs.splice(fromIndex, 1);
+                if (!m) return docs;
+                const ins = Math.min(toIndex, docs.length);
+                docs.splice(ins, 0, m);
+                return docs;
+              })()
+            : card.projectDocs;
+          return { ...card, body, projectDocs };
+        }),
+      })),
+    };
+  }
+
+  async reorderProjectItem(
+    cardId: string,
+    fromIndex: number,
+    toIndex: number,
+  ): Promise<void> {
+    if (!this.data) return;
+    this.data = SyncEngine.reorderProjectItemData(
+      this.data,
+      cardId,
+      fromIndex,
+      toIndex,
+    );
+    await this.writeToDisk();
+  }
+
+  /**
+   * Pure data-mutation helper for moving a project item from one
+   * card to another. Updates both the source card (removes the
+   * item + its children) and the destination card (inserts the
+   * item at the requested index). Returns the input data unchanged
+   * if the source/dest card is not found, the source index is out
+   * of range, or `destIndex` is negative.
+   *
+   * As with the other project helpers, body AND projectDocs are
+   * updated together so the renderer and the serializer never see
+   * a divergent view. This is the single definition of "move a
+   * project item to another card" — the workbench and the embedded
+   * view both go through it.
+   */
+  static moveProjectItemToCardData(
+    data: DashboardData,
+    srcCardId: string,
+    itemIndex: number,
+    destCardId: string,
+    destIndex: number,
+  ): DashboardData {
+    // Step 1: find the source card and extract the moved section
+    // + the moved projectDoc node (if any). We do a single pass
+    // through the columns and return a tuple describing what was
+    // extracted and the new (source-updated) data, so step 2
+    // doesn't have to re-walk the columns to find the dest.
+    let movedSection: string | null = null;
+    let movedDoc: ProjectDocNode | null = null;
+    let srcFound = false;
+
+    const afterSrc = {
+      ...data,
+      columns: data.columns.map((col) => ({
+        ...col,
+        cards: col.cards.map((card) => {
+          if (card.id !== srcCardId) return card;
+          srcFound = true;
+          const sections = SyncEngine.splitProjectSections(card.body);
+          if (itemIndex < 0 || itemIndex >= sections.length) return card;
+          movedSection = sections[itemIndex] ?? null;
+          if (movedSection == null) return card;
+          sections.splice(itemIndex, 1);
+          // Mirror removal into projectDocs when the card carries
+          // them. Capture the moved projectDoc node so we can
+          // re-insert it into the destination.
+          const existingDocs = (card as { projectDocs?: unknown }).projectDocs;
+          if (Array.isArray(existingDocs)) {
+            const docs = [...(existingDocs as ProjectDocNode[])];
+            if (itemIndex >= 0 && itemIndex < docs.length) {
+              const [extracted] = docs.splice(itemIndex, 1);
+              if (extracted) movedDoc = extracted;
+            }
+            return { ...card, body: sections.join("\n"), projectDocs: docs };
+          }
+          return { ...card, body: sections.join("\n") };
+        }),
+      })),
+    };
+
+    if (!srcFound || movedSection == null) return data;
+    if (destIndex < 0) return afterSrc;
+
+    // Step 2: insert into the destination card. The dest card is
+    // allowed to be the same as the source (in which case the
+    // moved section has already been removed from sections and
+    // needs to be re-inserted at the (already adjusted) destIndex).
+    return {
+      ...afterSrc,
+      columns: afterSrc.columns.map((col) => ({
+        ...col,
+        cards: col.cards.map((card) => {
+          if (card.id !== destCardId) return card;
+          const sections = SyncEngine.splitProjectSections(card.body);
+          const insertAt = Math.min(destIndex, sections.length);
+          sections.splice(insertAt, 0, movedSection!);
+          const body = sections.join("\n");
+          // Mirror insertion into projectDocs when the dest
+          // card carries them. If the source extracted a
+          // projectDoc node, we re-insert it; if not, the dest
+          // projectDocs stays unchanged (some cards in workbench
+          // mode do not carry a projectDocs array).
+          if (movedDoc) {
+            const existingDocs = (card as { projectDocs?: unknown })
+              .projectDocs;
+            const docs: ProjectDocNode[] = Array.isArray(existingDocs)
+              ? (existingDocs as ProjectDocNode[]).map((d) => ({
+                  path: d.path,
+                  children: d.children ?? [],
+                }))
+              : [];
+            const clamped = Math.min(destIndex, docs.length);
+            docs.splice(clamped, 0, movedDoc);
+            return { ...card, body, projectDocs: docs };
+          }
           return { ...card, body };
         }),
       })),
     };
+  }
+
+  async moveProjectItemToCard(
+    srcCardId: string,
+    itemIndex: number,
+    destCardId: string,
+    destIndex: number,
+  ): Promise<void> {
+    if (!this.data) return;
+    this.data = SyncEngine.moveProjectItemToCardData(
+      this.data,
+      srcCardId,
+      itemIndex,
+      destCardId,
+      destIndex,
+    );
     await this.writeToDisk();
   }
 
-  private splitProjectSections(body: string): string[] {
+  static splitProjectSections(body: string): string[] {
     if (!body.trim()) return [];
     const lines = body.split("\n");
     const sections: string[] = [];
@@ -944,181 +1673,58 @@ export class SyncEngine {
     return sections;
   }
 
-  async reorderProjectItem(
-    cardId: string,
-    fromIndex: number,
-    toIndex: number,
-  ): Promise<void> {
-    if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          const sections = this.splitProjectSections(card.body);
-          if (fromIndex < 0 || fromIndex >= sections.length) return card;
-          if (toIndex < 0 || toIndex >= sections.length) return card;
-          const [moved] = sections.splice(fromIndex, 1);
-          sections.splice(toIndex, 0, moved!);
-          return { ...card, body: sections.join("\n") };
-        }),
-      })),
-    };
-    await this.writeToDisk();
-  }
-
-  async moveProjectItemToCard(
-    srcCardId: string,
-    itemIndex: number,
-    destCardId: string,
-    destIndex: number,
-  ): Promise<void> {
-    if (!this.data) return;
-
-    let movedSection = "";
-    // Track the moved projectDoc node (if any) so we can mirror the
-    // move into the structured projectDocs array on the dest card.
-    // Without this, dragging the last item out of a card leaves
-    // body="" while projectDocs still references the moved item.
-    // The serializer would then fall back to projectDocs synthesis
-    // and crash on ".includes is not a function" for ProjectDocNode
-    // children.
-    let movedDoc: import("./types").ProjectDocNode | undefined;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== srcCardId) return card;
-          const sections = this.splitProjectSections(card.body);
-          if (itemIndex < 0 || itemIndex >= sections.length) return card;
-          movedSection = sections[itemIndex]!;
-          sections.splice(itemIndex, 1);
-
-          // Mirror the removal into projectDocs (if the card
-          // carries them) so the two data sources stay in lockstep.
-          const existingDocs = (card as { projectDocs?: unknown }).projectDocs;
-          if (Array.isArray(existingDocs)) {
-            const docs = existingDocs as import("./types").ProjectDocNode[];
-            if (itemIndex >= 0 && itemIndex < docs.length) {
-              const [extracted] = docs.splice(itemIndex, 1);
-              if (extracted) movedDoc = extracted;
-            }
-          }
-
-          return { ...card, body: sections.join("\n") };
-        }),
-      })),
-    };
-
-    if (!movedSection) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== destCardId) return card;
-          const sections = this.splitProjectSections(card.body);
-          const insertIdx = Math.min(destIndex, sections.length);
-          sections.splice(insertIdx, 0, movedSection);
-
-          // Mirror the insertion into projectDocs (if the dest
-          // card carries them) so renderer + serializer stay in
-          // sync with body.
-          if (movedDoc) {
-            const existingDocs = (card as { projectDocs?: unknown })
-              .projectDocs;
-            const docs: import("./types").ProjectDocNode[] = Array.isArray(
-              existingDocs,
-            )
-              ? (existingDocs as import("./types").ProjectDocNode[]).map(
-                  (d) => ({
-                    path: d.path,
-                    children: d.children ?? [],
-                  }),
-                )
-              : [];
-            const clamped = Math.min(destIndex, docs.length);
-            docs.splice(clamped, 0, movedDoc);
-            return { ...card, body: sections.join("\n"), projectDocs: docs };
-          }
-
-          return { ...card, body: sections.join("\n") };
-        }),
-      })),
-    };
-    await this.writeToDisk();
-  }
-
   async removeProjectDoc(cardId: string, topIndex: number): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          // Accept both "- [[x]]" and bare "[[x]]" body formats.
-          const paths = card.body
-            .split("\n")
-            .map((l) => l.trim())
-            .filter((l) => l.startsWith("- ") || l.startsWith("[["))
-            .map((l) => (l.startsWith("- ") ? l.slice(2) : l))
-            .map((l) => l.replace(/^\[\[/, "").replace(/\]\]$/, ""));
-          if (topIndex < 0 || topIndex >= paths.length) return card;
-          const newPaths = paths.filter((_, i) => i !== topIndex);
-          // Normalize through pathToWikiLink so any hand-written path
-          // (e.g. [[folder/note.md]]) is collapsed to basename form,
-          // and always write back in the canonical "- [[x]]" form.
-          const body = newPaths.map((p) => `- ${pathToWikiLink(p)}`).join("\n");
-          return { ...card, body };
-        }),
-      })),
-    };
+    this.data = SyncEngine.removeProjectDocData(this.data, cardId, topIndex);
     await this.writeToDisk();
   }
 
   /**
-   * Remove a top-level project item (the line + its indented children) from
-   * a card's body. Used by the dashboard project's per-item delete button.
+   * Pure data-mutation helper for removing a project item (the
+   * line + its indented children) from a card's body. Updates
+   * both `card.body` and `card.projectDocs` (when present) so the
+   * two stay in lockstep. Returns a tuple of `{ data, removed }`
+   * where `removed` is a snapshot the caller can use for undo
+   * (the workbench pushes it onto the undo stack; the embedded
+   * view simply discards it).
    *
-   * The caller passes `itemIndex` (0-based index among the depth-0 lines)
-   * and optionally `itemPath` — the wikilink target text of the item to
-   * delete. If `itemPath` is provided and the index-based lookup fails
-   * (e.g. because the index is stale or the body format is unexpected),
-   * we fall back to finding the first depth-0 line whose wikilink text
-   * matches `itemPath`. This prevents the "delete the last item and it
-   * comes back" symptom when the in-memory card.body and the rendered
-   * titles[] are out of sync.
+   * The lookup is index-first (matches the renderer's titles[]
+   * ordering) with a path-based fallback for stale indices — the
+   * "delete the last item and it comes back" symptom happens when
+   * the in-memory body and the rendered titles[] are out of sync
+   * (e.g. body="" but projectDocs still has the entry), and the
+   * fallback is what makes the user-visible delete always succeed.
    */
-  async removeProjectItem(
+  static removeProjectItemData(
+    data: DashboardData,
     cardId: string,
     itemIndex: number,
     itemPath?: string,
-  ): Promise<void> {
-    if (!this.data) return;
+  ): {
+    data: DashboardData;
+    removed: {
+      removedLines: string[];
+      removedPath: string | undefined;
+      removedProjectDocIdx: number;
+    } | null;
+  } {
+    let removed: {
+      removedLines: string[];
+      removedPath: string | undefined;
+      removedProjectDocIdx: number;
+    } | null = null;
 
-    // Undo snapshot: captured inside the .map() below and pushed to
-    // the undo stack right before writeToDisk() so Ctrl+Z can
-    // re-insert the removed lines + projectDoc entry verbatim.
-    let undoSnapshot: Extract<UndoEntry, { kind: "projectItem" }> | null = null;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
+    const next: DashboardData = {
+      ...data,
+      columns: data.columns.map((col) => ({
         ...col,
         cards: col.cards.map((card) => {
           if (card.id !== cardId) return card;
           const lines = (card.body ?? "").split("\n");
 
           // First pass: try to find the item by its index among
-          // depth-0 lines (the fast path that matches the renderer's
-          // titles[] ordering).
+          // depth-0 lines (the fast path that matches the
+          // renderer's titles[] ordering).
           let startIdx = -1;
           let topCount = 0;
           for (let i = 0; i < lines.length; i++) {
@@ -1134,10 +1740,11 @@ export class SyncEngine {
             }
           }
 
-          // Fallback: if the index didn't resolve but we have a path
-          // hint, search the body for a depth-0 line whose wikilink
-          // text matches. This handles stale indices and out-of-sync
-          // bodies so the user-visible delete always succeeds.
+          // Fallback: if the index didn't resolve but we have a
+          // path hint, search the body for a depth-0 line whose
+          // wikilink text matches. This handles stale indices
+          // and out-of-sync bodies so the user-visible delete
+          // always succeeds.
           if (startIdx < 0 && itemPath) {
             const target = itemPath.trim();
             for (let i = 0; i < lines.length; i++) {
@@ -1145,8 +1752,6 @@ export class SyncEngine {
               if (!l.trim()) continue;
               const depth = l.match(/^(\t*)/)?.[1]?.length ?? 0;
               if (depth !== 0) continue;
-              // Extract the bare wikilink text from this line, in
-              // either "- [[x]]" or bare "[[x]]" form.
               const m = l.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
               if (m && m[1] && pathToWikiLink(m[1]).slice(2, -2) === target) {
                 startIdx = i;
@@ -1167,39 +1772,42 @@ export class SyncEngine {
             if (depth === 0) break;
             endIdx++;
           }
-          // Capture the wikilink path of the line we are about to
-          // remove so we can mirror the deletion into projectDocs.
-          // Without this, an in-memory projectDocs array can resurrect
-          // the item on the next render (when card.body is empty,
-          // the renderer falls back to projectDocs as the source of
-          // truth). This was the "delete the last item and it comes
-          // back" symptom.
+          // Capture the wikilink path of the line we are about
+          // to remove so we can mirror the deletion into
+          // projectDocs. Without this, an in-memory projectDocs
+          // array can resurrect the item on the next render
+          // (when card.body is empty, the renderer falls back
+          // to projectDocs as the source of truth). This was
+          // the "delete the last item and it comes back"
+          // symptom.
           const removedPath = (() => {
             const raw = (lines[startIdx] ?? "").replace(/^\t+/, "");
             const m = raw.replace(/^-+\s*/, "").match(/^\[\[([^\]|]+)/);
             if (!m || !m[1]) return undefined;
             return pathToWikiLink(m[1]).slice(2, -2);
           })();
-          // Snapshot the lines (and any indented children) BEFORE the
-          // splice so the undo path can re-insert them verbatim.
+          // Snapshot the lines (and any indented children)
+          // BEFORE the splice so the caller (workbench) can
+          // push an undo entry.
           const removedLines = lines.slice(startIdx, endIdx);
           lines.splice(startIdx, endIdx - startIdx);
-          // Normalize: drop any trailing empty lines that the splice
-          // may have introduced so the body stays compact.
+          // Normalize: drop any trailing empty lines that the
+          // splice may have introduced so the body stays
+          // compact.
           while (lines.length > 0 && !lines[lines.length - 1]!.trim()) {
             lines.pop();
           }
           const body = lines.join("\n");
 
           // Mirror the removal into projectDocs so the two data
-          // sources stay in sync. We try the captured wikilink path
-          // first, then fall back to the index-based position.
+          // sources stay in sync. We try the captured wikilink
+          // path first, then fall back to the index-based
+          // position.
           type DocEntry = { path: string; children?: unknown[] } | string;
           let nextProjectDocs: DocEntry[] | undefined = (
-            card as {
-              projectDocs?: DocEntry[];
-            }
+            card as { projectDocs?: DocEntry[] }
           ).projectDocs;
+          let removedProjectDocIdx = -1;
           if (Array.isArray(nextProjectDocs) && nextProjectDocs.length > 0) {
             let dropIdx = -1;
             if (removedPath) {
@@ -1220,45 +1828,21 @@ export class SyncEngine {
               dropIdx = itemIndex;
             }
             if (dropIdx >= 0) {
+              removedProjectDocIdx = dropIdx;
               nextProjectDocs = nextProjectDocs.filter((_, i) => i !== dropIdx);
-              // Capture for the undo entry: the removed body lines +
-              // the path + the projectDoc slot it was dropped from.
-              undoSnapshot = {
-                kind: "projectItem",
-                cardId,
-                itemPath,
-                removedLines,
-                removedPath,
-                removedProjectDocIdx: dropIdx,
-              };
-            } else if (removedLines.length > 0) {
-              // No projectDoc entry to mirror, but still snapshot the
-              // body lines so undo can re-insert them.
-              undoSnapshot = {
-                kind: "projectItem",
-                cardId,
-                itemPath,
-                removedLines,
-                removedPath,
-                removedProjectDocIdx: -1,
-              };
             }
-          } else if (removedLines.length > 0) {
-            undoSnapshot = {
-              kind: "projectItem",
-              cardId,
-              itemPath,
-              removedLines,
-              removedPath,
-              removedProjectDocIdx: -1,
-            };
           }
+          removed = {
+            removedLines,
+            removedPath,
+            removedProjectDocIdx,
+          };
 
           // Normalize projectDocs back to ProjectDocNode[] (the
-          // shape DashboardCard expects). If the source array held
-          // plain strings we promote them, matching the other sync
-          // helpers (addDocToCard etc.) which always store
-          // {path, children}.
+          // shape DashboardCard expects). If the source array
+          // held plain strings we promote them, matching the
+          // other sync helpers (addDocToCard etc.) which always
+          // store {path, children}.
           const normalizedProjectDocs:
             | import("./types").ProjectDocNode[]
             | undefined = Array.isArray(nextProjectDocs)
@@ -1278,29 +1862,49 @@ export class SyncEngine {
         }),
       })),
     };
-    if (undoSnapshot) this.pushUndo(undoSnapshot);
+    return { data: next, removed };
+  }
+
+  async removeProjectItem(
+    cardId: string,
+    itemIndex: number,
+    itemPath?: string,
+  ): Promise<void> {
+    if (!this.data) return;
+    const { data, removed } = SyncEngine.removeProjectItemData(
+      this.data,
+      cardId,
+      itemIndex,
+      itemPath,
+    );
+    this.data = data;
+    if (removed) {
+      this.pushUndo({
+        kind: "projectItem",
+        cardId,
+        itemPath,
+        removedLines: removed.removedLines,
+        removedPath: removed.removedPath,
+        removedProjectDocIdx: removed.removedProjectDocIdx,
+      });
+    }
     await this.writeToDisk();
   }
 
   async addFileLinkToMemo(cardId: string, filePath: string): Promise<void> {
     if (!this.data) return;
-
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) => {
-          if (card.id !== cardId) return card;
-          // Use the shared helper so memo file links are written in
-          // the canonical wikilink form (basename only, no folder
-          // prefix, no ".md" suffix).
-          const link = pathToWikiLink(filePath);
-          if (card.body.includes(link)) return card;
-          const body = card.body ? `${card.body}\n${link}` : link;
-          return { ...card, body };
-        }),
-      })),
-    };
+    // v1.4.10 — funnel through the unified `addFileLinkData`
+    // helper so memo file links go through the same code path
+    // as the embedded view (and the in-workbench file-drop on
+    // a memo card). The helper picks the right format based on
+    // the card's sectionType / cardType.
+    this.data = SyncEngine.addFileLinkData(
+      this.data,
+      cardId,
+      filePath,
+      "memo",
+      "memo",
+    );
     await this.writeToDisk();
   }
 
@@ -1324,18 +1928,10 @@ export class SyncEngine {
     hideCompleted: boolean,
   ): Promise<void> {
     if (!this.data) return;
-
     this.hideCompletedOverrides.set(cardId, hideCompleted);
-    this.data = {
-      ...this.data,
-      columns: this.data.columns.map((col) => ({
-        ...col,
-        cards: col.cards.map((card) =>
-          card.id === cardId ? { ...card, hideCompleted } : card,
-        ),
-      })),
-    };
-
+    this.data = SyncEngine.patchCardData(this.data, cardId, {
+      hideCompleted,
+    });
     this.notifyCallbacks();
   }
 

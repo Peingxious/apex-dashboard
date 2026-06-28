@@ -303,3 +303,17 @@
   - **Module shape audit** â€” `src/render/sidebar/` now has 7 files, largest is `sidebar-reading.ts` at 1046 lines (intentionally kept as single file because the 3 modals are private to it; see 8.8.2 widget exception); other 6 files are 90-664 lines. Total `src/*.ts` files: 68. Top 5 largest: `view.ts` 3136 / `renderer.ts` 3046 / `parser.ts` 1881 / `sync.ts` 1873 / `library-section.ts` 1744 (4 of these are out-of-scope of the renderer.ts refactor)
   - **Barrel wiring verified** â€” bottom of `src/renderer.ts` re-exports `destroyAllCharts` (chart-pool), `renderWeatherBody`/`renderTrackerBody` (dashboard card-bodies), `renderSidebarPomodoro`/`renderSidebarCountdown`/`renderSidebarReading`/`renderSidebarWeather`/`renderSidebarHeatmap`/`renderSidebarWeekCalendar`/`renderSidebarWidgets` (sidebar). No call site import path changed.
   - **Residual**: `renderer.ts` is still 3046 lines because it hosts the `renderDashboard` tree (lines 157-1881 + 1882-2726 + 2726-2993) plus the re-export footer. The 8.8.0 CHANGELOG entry explicitly deferred that as a separate sub-task ("8.8.0B"). 8.8.1 (`< 30 lines barrel`) is **deferred to 8.8.0B**, not done. This is the only open item from 8.8.x.
+
+---
+
+## Step 9 ¡ª v1.5.2 Bug fix: Navbar active tab invisible
+
+User feedback: `Ç°ºóÑ¡ÔñÇøÓò£¬Ã»ÓÐ¸ßÁÁ£¬²»Çå³þÊÇµã¿ªµÄÊÇÄÄ¸ö`. Root cause analysis and the two changes are documented in the v1.5.2 changelog entry and D-2026-06-28-01 decision.
+
+- [x] **9.1** src/view.ts:renderViewNavBar() ¡ª move dashboard-view-nav-tab--active from the wrap onto the inner button (matches the main tab and makes the existing CSS rule actually match). 
+oteTabEls now tracks the button so the live efreshActiveHighlight writes to the right element
+- [x] **9.2** styles.css:.dashboard-view-nav-tab--active ¡ª swap undefined --db-accent-bg / --db-accent-text for Obsidian's standard --text-accent / --background-modifier-hover / --background-modifier-border-hover. Bump font-weight 500 ¡ú 600
+- [x] **9.3** Bump version: manifest.json 1.5.1 ¡ú 1.5.2, package.json 1.5.1 ¡ú 1.5.2
+- [x] **9.4** CHANGELOG.md: prepended ## 1.5.2 (2026-06-28) with the fix description
+- [x] **9.5** Verify: 	sc --noEmit exit 0, esbuild production exit 0, 
+pm test 27/27 pass

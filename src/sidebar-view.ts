@@ -15,11 +15,7 @@ import { t } from "./i18n";
 import type { HolidayInfo } from "./holiday-service";
 import { PomodoroService } from "./pomodoro-service";
 import { ReadingService } from "./reading-service";
-import {
-  parse as parseMarkdown,
-  serializeInto,
-  migrateCardsForSectionType,
-} from "./parser";
+import { parse as parseMarkdown, serializeInto } from "./parser";
 import {
   buildMemoLinkedBody,
   buildMemoNoteContent,
@@ -294,20 +290,14 @@ export class SidebarView extends ItemView {
   private createOverlayCallbacks() {
     const self = this;
 
-    function findColumn(name: string) {
-      return self.data?.columns.find((c) => c.name === name);
-    }
-
-    function findCard(
-      cardId: string,
-    ): { col: import("./types").DashboardColumn; card: DashboardCard } | null {
-      if (!self.data) return null;
-      for (const col of self.data.columns) {
-        const card = col.cards.find((c) => c.id === cardId);
-        if (card) return { col, card };
-      }
-      return null;
-    }
+    // v1.4.10 — every callback below now uses the same
+    // `SyncEngine.*Data` immutable helpers as the workbench and
+    // the embedded view in `view.ts`, so the overlay / sidebar
+    // view can no longer drift on the data-mutation step.
+    // The previous implementation reached into the live card
+    // via local `findColumn` / `findCard` helpers and mutated
+    // the card in place, which had the same "stale card
+    // reference" race as the embedded view.
 
     async function saveAndRefresh(): Promise<void> {
       if (!self.data || !self.overlayNotePath) return;
@@ -325,21 +315,26 @@ export class SidebarView extends ItemView {
 
     return {
       onCardEdit: async (card: DashboardCard) => {
-        const found = findCard(card.id);
-        if (found) {
-          Object.assign(found.card, card);
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `patchCardData` helper as the workbench
+        // and the embedded view in `view.ts`. The previous
+        // sidebar version reached into the live card via
+        // `Object.assign(found.card, card)`, which had the
+        // same "stale card reference" race as the embedded
+        // view (modal holds a snapshot, findCard matches that
+        // snapshot, in-place mutation goes to the wrong
+        // object). The helper returns a NEW data object so
+        // the next render starts from a clean column-tree.
+        self.data = SyncEngine.patchCardData(self.data, card.id, card);
+        await saveAndRefresh();
       },
       onCardDelete: async (cardId: string) => {
         if (!self.data) return;
-        for (const col of self.data.columns) {
-          const idx = col.cards.findIndex((c) => c.id === cardId);
-          if (idx !== -1) {
-            col.cards.splice(idx, 1);
-            break;
-          }
-        }
+        // v1.4.10 — same `removeCardData` helper as the workbench
+        // and the embedded view. Replaces the inline
+        // `splice(idx, 1)` mutation that was prone to leaving
+        // the live `col.cards` array in a stale state.
+        self.data = SyncEngine.removeCardData(self.data, cardId);
         await saveAndRefresh();
       },
       onCheckboxToggle: async (
@@ -347,37 +342,42 @@ export class SidebarView extends ItemView {
         taskIndex: number,
         checked: boolean,
       ) => {
-        const found = findCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks[taskIndex].checked = checked;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `toggleTaskData` helper as the
+        // workbench / embedded view, so the
+        // "checked-sinks-to-the-bottom" UX rule now applies
+        // in the sidebar too.
+        self.data = SyncEngine.toggleTaskData(
+          self.data,
+          cardId,
+          taskIndex,
+          checked,
+        );
+        await saveAndRefresh();
       },
       onTaskAdd: async (cardId: string, text: string) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.tasks.push({ text, checked: false });
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.addTaskData(self.data, cardId, text);
+        await saveAndRefresh();
       },
       onTaskDelete: async (cardId: string, taskIndex: number) => {
-        const found = findCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks.splice(taskIndex, 1);
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.deleteTaskData(self.data, cardId, taskIndex);
+        await saveAndRefresh();
       },
       onTaskReorder: async (
         cardId: string,
         fromIndex: number,
         toIndex: number,
       ) => {
-        const found = findCard(cardId);
-        if (found && fromIndex !== toIndex) {
-          const [item] = found.card.tasks.splice(fromIndex, 1);
-          found.card.tasks.splice(toIndex, 0, item);
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.reorderTaskData(
+          self.data,
+          cardId,
+          fromIndex,
+          toIndex,
+        );
+        await saveAndRefresh();
       },
       onTaskMoveToCard: async (
         srcCardId: string,
@@ -385,28 +385,34 @@ export class SidebarView extends ItemView {
         destCardId: string,
         destIndex: number,
       ) => {
-        const srcFound = findCard(srcCardId);
-        const destFound = findCard(destCardId);
-        if (srcFound && destFound) {
-          const [task] = srcFound.card.tasks.splice(taskIndex, 1);
-          destFound.card.tasks.splice(destIndex, 0, task);
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.moveTaskToCardData(
+          self.data,
+          srcCardId,
+          taskIndex,
+          destCardId,
+          destIndex,
+        );
+        await saveAndRefresh();
       },
       onTaskEdit: async (
         cardId: string,
         taskIndex: number,
         newText: string,
       ) => {
-        const found = findCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks[taskIndex].text = newText;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.editTaskData(
+          self.data,
+          cardId,
+          taskIndex,
+          newText,
+        );
+        await saveAndRefresh();
       },
       onCardAdd: async (columnName: string, options?: { title?: string }) => {
-        const col = findColumn(columnName);
-        if (!col || !self.data) return;
+        if (!self.data) return;
+        const col = self.data.columns.find((c) => c.name === columnName);
+        if (!col) return;
         const effectiveType = col.sectionType ?? columnName.toLowerCase();
 
         if (effectiveType === "todoplus") {
@@ -420,12 +426,17 @@ export class SidebarView extends ItemView {
             const pipeIdx = inner.indexOf("|");
             const linkPart = pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner;
             const hashIdx = linkPart.indexOf("#");
-            const linkPath = (hashIdx >= 0 ? linkPart.slice(0, hashIdx) : linkPart).trim();
+            const linkPath = (
+              hashIdx >= 0 ? linkPart.slice(0, hashIdx) : linkPart
+            ).trim();
             if (linkPath) {
               // Use Obsidian's standard link resolver for wikilinks
               // (handles basename-only links correctly, unlike plain
               // getFileByPath which requires a full vault path).
-              const resolved = self.app.metadataCache.getFirstLinkpathDest(linkPath, self.overlayNotePath ?? "");
+              const resolved = self.app.metadataCache.getFirstLinkpathDest(
+                linkPath,
+                self.overlayNotePath ?? "",
+              );
               if (resolved instanceof TFile) {
                 sourceFile = resolved;
               }
@@ -434,70 +445,48 @@ export class SidebarView extends ItemView {
           if (sourceFile) {
             await ensureTodoPlusHeading(self.app, sourceFile, "To-do");
           }
-          col.cards.push({
+          // v1.4.10 — funnel through the same `addCardData` helper
+          // as the workbench / embedded view, so the structural
+          // baseline (id, type, progress, size, grid, …) is
+          // defined in one place. The sectionType-specific
+          // `title` / `type: "todoplus"` override is layered on
+          // top via the `overrides` argument.
+          self.data = SyncEngine.addCardData(self.data, columnName, {
             id: `${Date.now()}-todoplus`,
             title: initialTitle,
             type: "todoplus",
-            column: columnName,
-            body: "",
-            tasks: [],
-            url: "",
-            wikiLink: "",
-            progress: -1,
-            streak: 0,
-            dueDate: "",
-            blockquote: "",
-            color: "",
-            coverImage: "",
-            width: 0,
-            size: "M",
-            gridCols: 0,
-            gridRows: 0,
-            gridCol: 0,
-            gridRow: 0,
-            hideCompleted: false,
           });
           await saveAndRefresh();
         } else {
-          const newCard: DashboardCard = {
+          // v1.4.10 — same `addCardData` helper as the workbench /
+          // embedded view. The `effectiveType`-derived `title` /
+          // `type` / `tasks` overrides are layered on top.
+          self.data = SyncEngine.addCardData(self.data, columnName, {
             id: `${Date.now()}-new`,
             title:
               effectiveType === "memo"
                 ? t("default.memoTitle", { date: "" })
                 : t("default.todoTitle1"),
             type: effectiveType === "memo" ? "generic" : "task",
-            column: columnName,
-            body: "",
             tasks:
               effectiveType === "todo" ? [{ text: "", checked: false }] : [],
-            url: "",
-            wikiLink: "",
-            progress: -1,
-            streak: 0,
-            dueDate: "",
-            blockquote: "",
-            color: "",
-            coverImage: "",
-            width: 0,
-            size: "M",
-            gridCols: 0,
-            gridRows: 0,
-            gridCol: 0,
-            gridRow: 0,
-            hideCompleted: false,
-          };
-          col.cards.push(newCard);
+          });
           await saveAndRefresh();
         }
       },
       onColumnAdd: async (name: string, sectionType?: string) => {
         if (!self.data) return;
-        self.data.columns.push({
+        // v1.4.10 — same `addColumnData` helper as the workbench
+        // and the embedded view, so the default color /
+        // sectionType fallback ("project") is defined in one
+        // place. The previous sidebar version re-implemented
+        // the push inline and could drift on the default
+        // color or the sectionType fallback rules.
+        self.data = SyncEngine.addColumnData(
+          self.data,
           name,
-          color: "#6366f1",
-          sectionType: sectionType || "project",
-          cards: [],
-        });
+          sectionType || "project",
+        );
         await saveAndRefresh();
       },
       onBannerEdit: () => {},
@@ -509,32 +498,31 @@ export class SidebarView extends ItemView {
         targetIndex: number,
       ) => {
         if (!self.data) return;
-        let movedCard: DashboardCard | null = null;
-        for (const col of self.data.columns) {
-          const idx = col.cards.findIndex((c) => c.id === cardId);
-          if (idx !== -1) {
-            [movedCard] = col.cards.splice(idx, 1);
-            break;
-          }
-        }
-        if (!movedCard) return;
-        const destCol = findColumn(targetColumn);
-        if (destCol) {
-          movedCard.column = targetColumn;
-          destCol.cards.splice(targetIndex, 0, movedCard);
-          await saveAndRefresh();
-        }
+        // v1.4.10 — same `moveCardData` helper as the workbench
+        // and the embedded view. The previous sidebar version
+        // re-implemented the move inline with two separate
+        // `col.cards.splice` calls and a manual
+        // `movedCard.column = targetColumn` assignment — the
+        // helper does the same thing atomically and clamps
+        // `targetIndex` to the destination column's length.
+        self.data = SyncEngine.moveCardData(
+          self.data,
+          cardId,
+          targetColumn,
+          targetIndex,
+        );
+        await saveAndRefresh();
       },
       onMemoUpdate: async (
         card: DashboardCard,
         updates: { body: string; blockquote: string },
       ) => {
-        const found = findCard(card.id);
-        if (found) {
-          found.card.body = updates.body;
-          found.card.blockquote = updates.blockquote;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `patchCardData` helper as the
+        // workbench / embedded view, so the body + blockquote
+        // update goes through the same immutable path.
+        self.data = SyncEngine.patchCardData(self.data, card.id, updates);
+        await saveAndRefresh();
       },
       onProjectDocsUpdate: () => {},
       onProjectDocsReorder: () => {},
@@ -542,18 +530,19 @@ export class SidebarView extends ItemView {
       onProjectDocsAdd: () => {},
       onProjectDocsRemove: () => {},
       onMemoColorChange: async (card: DashboardCard, color: string) => {
-        const found = findCard(card.id);
-        if (found) {
-          found.card.color = color;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `patchCardData` helper as the
+        // workbench / embedded view.
+        self.data = SyncEngine.patchCardData(self.data, card.id, { color });
+        await saveAndRefresh();
       },
       onProjectCoverChange: async (card: DashboardCard, imagePath: string) => {
-        const found = findCard(card.id);
-        if (found) {
-          found.card.coverImage = imagePath;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `patchCardData` helper.
+        self.data = SyncEngine.patchCardData(self.data, card.id, {
+          coverImage: imagePath,
+        });
+        await saveAndRefresh();
       },
       onMemoConvertToNote: async (card: DashboardCard) => {
         // Convert a Memo card to a standalone note in the vault's
@@ -573,74 +562,77 @@ export class SidebarView extends ItemView {
           }
           const content = buildMemoNoteContent(card);
           await this.app.vault.create(targetPath, content);
-          const found = findCard(card.id);
-          if (found) {
-            found.card.body = buildMemoLinkedBody(targetPath);
-            found.card.blockquote = "";
-            await saveAndRefresh();
-          }
+          if (!self.data) return;
+          // v1.4.10 — same `patchCardData` helper as the
+          // workbench / embedded view, so the "convert to note"
+          // body re-derivation goes through the same immutable
+          // path. The body is now the wikilink to the new note
+          // and the blockquote is reset to empty.
+          self.data = SyncEngine.patchCardData(self.data, card.id, {
+            body: buildMemoLinkedBody(targetPath),
+            blockquote: "",
+          });
+          await saveAndRefresh();
           new Notice(t("memo.converted", { path: targetPath }));
         } catch (e) {
-          new Notice(
-            t("memo.convertError", { message: (e as Error).message }),
-          );
+          new Notice(t("memo.convertError", { message: (e as Error).message }));
         }
       },
       onCardTitleEdit: async (cardId: string, newTitle: string) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.title = newTitle;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `patchCardData` helper as the
+        // workbench / embedded view.
+        self.data = SyncEngine.patchCardData(self.data, cardId, {
+          title: newTitle,
+        });
+        await saveAndRefresh();
       },
       onCardWidthChange: async (cardId: string, width: number) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.width = width;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.patchCardData(self.data, cardId, { width });
+        await saveAndRefresh();
       },
       onCardSizeChange: async (cardId: string, size: CardSize) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.size = size;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.patchCardData(self.data, cardId, { size });
+        await saveAndRefresh();
       },
       onCardGridChange: async (
         cardId: string,
         gridCols: number,
         gridRows: number,
       ) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.gridCols = gridCols;
-          found.card.gridRows = gridRows;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.patchCardData(self.data, cardId, {
+          gridCols,
+          gridRows,
+        });
+        await saveAndRefresh();
       },
       onCardGridMove: async (
         cardId: string,
         gridCol: number,
         gridRow: number,
       ) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.gridCol = gridCol;
-          found.card.gridRow = gridRow;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        self.data = SyncEngine.patchCardData(self.data, cardId, {
+          gridCol,
+          gridRow,
+        });
+        await saveAndRefresh();
       },
       onFileDrop: () => {},
       onProjectItemReorder: () => {},
       onProjectItemMoveToCard: () => {},
       onProjectItemDelete: () => {},
       onColumnRename: async (oldName: string, newName: string) => {
-        const col = findColumn(oldName);
-        if (col) {
-          col.name = newName;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `renameColumnData` helper as the
+        // workbench / embedded view, so the rename also
+        // re-points the matching `card.column` field on
+        // every card in the column.
+        self.data = SyncEngine.renameColumnData(self.data, oldName, newName);
+        await saveAndRefresh();
       },
       onColumnDelete: async (columnName: string) => {
         // Protect first column and columns with tags/links
@@ -656,64 +648,79 @@ export class SidebarView extends ItemView {
           }
         }
         if (!self.data) return;
-        const idx = self.data.columns.findIndex((c) => c.name === columnName);
-        if (idx !== -1) {
-          self.data.columns.splice(idx, 1);
-          await saveAndRefresh();
-        }
+        // v1.4.10 — same `deleteColumnData` helper as the
+        // workbench / embedded view.
+        self.data = SyncEngine.deleteColumnData(self.data, columnName);
+        await saveAndRefresh();
       },
       onColumnSectionTypeChange: async (
         columnName: string,
         sectionType: string,
       ) => {
-        const col = findColumn(columnName);
-        if (col) {
-          // v1.4.10 — sectionType migration: same as the main /
-          // embedded views, migrate the column's cards so the
-          // in-memory shape and the on-disk shape match the new
-          // sectionType. Without this the sidebar would silently
-          // keep the old `card.type` / `card.tasks` even though the
-          // header now says the new section, and the next save would
-          // write a mix of formats inside a single column.
-          col.sectionType = sectionType;
-          col.cards = migrateCardsForSectionType(col.cards, sectionType);
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `setColumnSectionTypeData` helper as
+        // the workbench / embedded view, which now bundles
+        // the sectionType change AND the per-card migration
+        // (type / tasks / projectDocs shape) into a single
+        // immutable step. The previous sidebar version only
+        // flipped `col.sectionType` and re-derived
+        // `col.cards` via `migrateCardsForSectionType`, which
+        // was correct in isolation but lived in three
+        // separate call sites (workbench, embedded,
+        // sidebar) — easy to drift on edge cases.
+        const next = SyncEngine.setColumnSectionTypeData(
+          self.data,
+          columnName,
+          sectionType,
+        );
+        if (next === self.data) return;
+        self.data = next;
+        await saveAndRefresh();
       },
       onColumnArchiveCompletedChange: async (
         columnName: string,
         archive: boolean,
       ) => {
-        // Sidebar view: writes through `saveAndRefresh` so the new
-        // `archiveCompleted: bool` is persisted in the dashboard
-        // file's `columns:` block on the next save — this is the
-        // user-facing behaviour requested in v1.4.6 ("todo /
-        // todoplus: hide the entire card when all tasks are
-        // completed; default on; persisted in the column's
-        // properties").
-        const col = findColumn(columnName);
-        if (col) {
-          col.archiveCompleted = archive;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // Sidebar view: writes through `saveAndRefresh` so the
+        // new `archiveCompleted: bool` is persisted in the
+        // dashboard file's `columns:` block on the next save —
+        // this is the user-facing behaviour requested in v1.4.6
+        // ("todo / todoplus: hide the entire card when all tasks
+        // are completed; default on; persisted in the column's
+        // properties"). v1.4.10 — same `setColumnArchiveCompletedData`
+        // helper as the workbench / embedded view.
+        self.data = SyncEngine.setColumnArchiveCompletedData(
+          self.data,
+          columnName,
+          archive,
+        );
+        await saveAndRefresh();
       },
       onTaskReminderEdit: async (
         cardId: string,
         taskIndex: number,
         reminder: string | undefined,
       ) => {
-        const found = findCard(cardId);
-        if (found && found.card.tasks[taskIndex]) {
-          found.card.tasks[taskIndex].reminder = reminder;
-          await saveAndRefresh();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `editTaskReminderData` helper as the
+        // workbench / embedded view, including the
+        // "empty string → undefined" normalisation.
+        self.data = SyncEngine.editTaskReminderData(
+          self.data,
+          cardId,
+          taskIndex,
+          reminder,
+        );
+        await saveAndRefresh();
       },
       onTaskHideCompletedChange: async (cardId: string, hide: boolean) => {
-        const found = findCard(cardId);
-        if (found) {
-          found.card.hideCompleted = hide;
-          self.render();
-        }
+        if (!self.data) return;
+        // v1.4.10 — same `patchCardData` helper.
+        self.data = SyncEngine.patchCardData(self.data, cardId, {
+          hideCompleted: hide,
+        });
+        self.render();
       },
       onProjectGroupAdd: () => {},
       onAddFromTemplate: () => {},
